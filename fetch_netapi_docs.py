@@ -7,17 +7,19 @@
 #     "markdownify>=0.13",
 # ]
 # ///
-"""Fetch the salt-api ``rest_tornado`` reference page and emit clean markdown.
+"""Fetch salt-api netapi reference pages and emit clean markdown.
 
-The raw HTML is cached to disk on first run so subsequent runs (while we tweak
-the extraction/conversion steps) don't re-hit the network. Delete the cache
-file or pass --refresh to force a fresh fetch.
+Handles both ``rest_tornado`` and ``rest_cherrypy`` (see TARGETS). The raw HTML
+is cached to disk on first run so subsequent runs (while we tweak the
+extraction/conversion steps) don't re-hit the network. Delete the cache file or
+pass --refresh to force a fresh fetch.
 
 Run with uv (auto-installs deps into an ephemeral env):
 
-    uv run fetch_rest_tornado.py
+    uv run fetch_netapi_docs.py                  # regenerate all targets
+    uv run fetch_netapi_docs.py --target rest_cherrypy
 
-Output: docs/salt-api-rest_tornado.md
+Output: docs/salt-api-<target>.md
 """
 
 from __future__ import annotations
@@ -33,11 +35,23 @@ from markdownify import MarkdownConverter
 
 HEADING_TAGS = ("h1", "h2", "h3", "h4", "h5", "h6")
 
-URL = "https://docs.saltproject.io/en/master/ref/netapi/all/salt.netapi.rest_tornado.html"
-
 HERE = Path(__file__).resolve().parent
-CACHE_FILE = HERE / ".cache" / "rest_tornado.html"
-OUTPUT_FILE = HERE / "docs" / "salt-api-rest_tornado.md"
+
+# Known salt-api netapi reference pages. The key doubles as the cache stem and
+# the output filename stem: .cache/<target>.html <-> docs/salt-api-<target>.md.
+_BASE_URL = "https://docs.saltproject.io/en/master/ref/netapi/all/salt.netapi.{}.html"
+TARGETS = {
+    "rest_tornado": _BASE_URL.format("rest_tornado"),
+    "rest_cherrypy": _BASE_URL.format("rest_cherrypy"),
+}
+
+
+def cache_path(target: str) -> Path:
+    return HERE / ".cache" / f"{target}.html"
+
+
+def output_path(target: str) -> Path:
+    return HERE / "docs" / f"salt-api-{target}.md"
 
 # Elements inside the article that are chrome, not content.
 JUNK_SELECTORS = [
@@ -47,20 +61,23 @@ JUNK_SELECTORS = [
     "footer.prev-next-footer",        # prev/next nav
     "div.prev-next-area",
     "a.headerlink",                   # the ¶ anchors next to headings
+    "nav.contents",                   # the local ".. contents::" TOC (redundant
+                                      # with the doc's own headings; renders as a
+                                      # broken nested list once flattened)
 ]
 
 
-def fetch_html(refresh: bool = False) -> str:
+def fetch_html(url: str, cache_file: Path, refresh: bool = False) -> str:
     """Return the page HTML, using the on-disk cache when available."""
-    if CACHE_FILE.exists() and not refresh:
-        return CACHE_FILE.read_text(encoding="utf-8")
+    if cache_file.exists() and not refresh:
+        return cache_file.read_text(encoding="utf-8")
 
-    resp = requests.get(URL, timeout=30, headers={"User-Agent": "papurika-docs-fetcher"})
+    resp = requests.get(url, timeout=30, headers={"User-Agent": "papurika-docs-fetcher"})
     resp.raise_for_status()
     html = resp.text
 
-    CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
-    CACHE_FILE.write_text(html, encoding="utf-8")
+    cache_file.parent.mkdir(parents=True, exist_ok=True)
+    cache_file.write_text(html, encoding="utf-8")
     return html
 
 
@@ -75,6 +92,12 @@ def extract_article(html: str) -> Tag:
     for selector in JUNK_SELECTORS:
         for node in article.select(selector):
             node.decompose()
+
+    # Section titles are wrapped in a back-link to the (now-stripped) local TOC,
+    # e.g. <h2><a class="toc-backref" href="#id3">Title</a></h2>. Unwrap them to
+    # plain heading text so we neither emit dead links nor keep the TOC ids.
+    for backref in article.select("a.toc-backref"):
+        backref.unwrap()
 
     return article
 
@@ -160,8 +183,38 @@ class SaltMarkdownConverter(MarkdownConverter):
         code = code.rstrip("\n")
         return f"\n\n```{lang}\n{code}\n```\n\n"
 
+    # Sphinx renders API descriptions (Python classes/methods, HTTP routes) and
+    # field lists (Request Headers, Status Codes, …) as <dl>/<dt>/<dd>.
+    # markdownify's default turns these into PHP-Markdown-Extra definition lists
+    # (``term`` / ``:   def``), which many renderers — notably VS Code's
+    # markdown-it preview — don't support, mushing term and definition onto one
+    # line. We render the term as a bold label and the definition as ordinary
+    # following content instead, which reads correctly everywhere. Nested <dl>s
+    # flatten naturally; the qualified term names (``GET /stats``, ``Request
+    # Headers:``) carry the structure.
 
-def to_markdown(article: Tag) -> str:
+    _LEADING_ANCHOR_RE = re.compile(r"((?:zzANCHORINLINE\d+zz)+)\s*(.*)", re.DOTALL)
+
+    def convert_dt(self, el, text, parent_tags):
+        text = (text or "").strip()
+        if not text:
+            return ""
+        # Keep any injected anchor marker(s) outside the bold span so the jump
+        # target stays valid and the bold wraps only the visible label.
+        match = self._LEADING_ANCHOR_RE.match(text)
+        if match:
+            prefix, label = match.group(1), match.group(2).strip()
+            return f"\n\n{prefix}**{label}**\n" if label else f"\n\n{prefix}\n"
+        return f"\n\n**{text}**\n"
+
+    def convert_dd(self, el, text, parent_tags):
+        text = (text or "").strip()
+        if not text:
+            return ""
+        return f"\n\n{text}\n"
+
+
+def to_markdown(article: Tag, source_url: str) -> str:
     converter = SaltMarkdownConverter(
         heading_style="ATX",
         bullets="-",
@@ -189,31 +242,43 @@ def to_markdown(article: Tag) -> str:
     body = "\n".join(cleaned).strip()
 
     header = (
-        "<!-- Generated by fetch_rest_tornado.py — do not edit by hand. -->\n"
-        f"<!-- Source: {URL} -->\n\n"
+        "<!-- Generated by fetch_netapi_docs.py — do not edit by hand. -->\n"
+        f"<!-- Source: {source_url} -->\n\n"
     )
     return header + body + "\n"
+
+
+def build_target(target: str, refresh: bool = False) -> Path:
+    """Fetch, convert, and write the markdown for a single netapi target."""
+    url = TARGETS[target]
+    html = fetch_html(url, cache_path(target), refresh=refresh)
+    article = extract_article(html)
+    inject_anchors(article)
+    markdown = to_markdown(article, url)
+
+    out = output_path(target)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(markdown, encoding="utf-8")
+    print(f"Wrote {len(markdown):,} bytes to {out}", file=sys.stderr)
+    return out
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--refresh", action="store_true", help="Ignore the cache and re-fetch the page."
+        "--target",
+        choices=[*TARGETS, "all"],
+        default="all",
+        help="Which netapi reference to build (default: all).",
     )
     parser.add_argument(
-        "-o", "--output", type=Path, default=OUTPUT_FILE, help="Output markdown path."
+        "--refresh", action="store_true", help="Ignore the cache and re-fetch the page(s)."
     )
     args = parser.parse_args(argv)
 
-    html = fetch_html(refresh=args.refresh)
-    article = extract_article(html)
-    inject_anchors(article)
-    markdown = to_markdown(article)
-
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(markdown, encoding="utf-8")
-
-    print(f"Wrote {len(markdown):,} bytes to {args.output}", file=sys.stderr)
+    targets = list(TARGETS) if args.target == "all" else [args.target]
+    for target in targets:
+        build_target(target, refresh=args.refresh)
     return 0
 
 
