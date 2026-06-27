@@ -129,3 +129,52 @@ Source refs: `salt/runners/manage.py` (`_ping` L33, `status` L68, `up` L187,
 `down` L153, `list_state` L216, `present`/`alived`/… L279–460);
 `salt/utils/minions.py` `connected_ids` L987; `salt/client/__init__.py`
 `get_cli_event_returns` (placeholder yield, `expect_minions` default True).
+
+---
+
+## 5. Regression analysis — introduced in 3008.0 (PR candidate)
+
+This is a **regression**, not longstanding behavior. The trigger is the default
+of `expect_minions` in `LocalClient.get_cli_event_returns`
+(`salt/client/__init__.py`), which `manage._ping` calls. When `True`, the
+gather injects a `{"out":"no_return","ret":"Minion did not return…"}` placeholder
+for every non-responder; `_ping` counts every yielded entry as a return, so
+non-responders land in `up`.
+
+Confirmed by version (release tags **and** the matching public
+`ghcr.io/cdalvaro/docker-salt-master:<ver>` images, **and** live behavior):
+
+| version | `get_cli_event_returns` `expect_minions` default | `manage.status` w/ dead, key-accepted minion |
+|---------|--------------------------------------------------|----------------------------------------------|
+| 3006.9  | `False` | correct → minion in `down` |
+| 3007.14 | `False` | correct → minion in `down` |
+| 3008.0 / 3008.1 | **`True`** | **broken → minion in `up`, `down` empty** |
+
+(All tested live: stop the minion via `supervisorctl stop salt-minion`, then
+`salt-run manage.status` — 3006/3007 report `down`, 3008 reports `up`, while a
+direct `salt '*' test.ping` always correctly shows no response.)
+
+**Introducing change:** the `expect_minions` default flipped `False → True`
+between v3007.14 and v3008.0, bundled into the 3008 "resource registry /
+resource-id targeting" work (in this tree, commit `4075aeb096`, with the comment
+*"Default True: `salt` must still emit per-target timeout rows … even without
+`-v`"*). That change is correct for the `salt` **CLI** (it wants timeout rows),
+but it silently broke `manage._ping`, which was never updated to ignore the
+placeholders. (`_ping` itself is byte-identical 3007→3008.)
+*Before filing upstream, cross-check the canonical `saltproject/salt` commit/PR
+for this hunk — the local history here has unusual metadata.*
+
+**Proposed fix (surgical, preserves the CLI behavior):** have `_ping` request
+only real returns by passing `expect_minions=False` to `get_cli_event_returns`:
+
+```python
+for fn_ret in client.get_cli_event_returns(
+    pub_data["jid"], pub_data["minions"], client._get_timeout(timeout),
+    tgt, tgt_type, gather_job_timeout=gather_job_timeout,
+    expect_minions=False,          # <-- runner wants actual returns, not timeout placeholders
+):
+```
+
+Alternative (if the placeholders are wanted for logging): skip them when
+counting — `if isinstance(data, dict) and data.get("out") == "no_return": continue`.
+Either restores 3006/3007 behavior: dead minions correctly report in `down`.
