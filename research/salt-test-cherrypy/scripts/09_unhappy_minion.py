@@ -30,9 +30,23 @@ def dexec(*args):
 # Precondition: minion up & accepted.
 c.banner("stopping salt-minion (key stays accepted)")
 dexec("supervisorctl", "stop", "salt-minion")
-time.sleep(3)
 
-# 1. Confirm the master now sees it as down.
+# Wait until the minion PROCESS is actually gone, so the manage.status capture
+# below is unambiguous (supervisorctl stop returns before the process exits).
+print(">>> waiting for salt-minion process to exit ...")
+for _ in range(30):
+    n = subprocess.run(
+        ["docker", "exec", "papurika-salt", "sh", "-c",
+         "ps -ef | grep -c '[s]alt-minion'"],
+        capture_output=True, text=True,
+    ).stdout.strip()
+    print(f"  salt-minion processes: {n}")
+    if n == "0":
+        break
+    time.sleep(1)
+
+# 1. With the minion confirmed dead, see what manage.status reports. (Spoiler:
+#    it still says 'up' -- it's cache/key-derived, not a live ping.)
 ls = [{"client": "runner", "fun": "manage.status"}]
 c.record("09a_manage_status_down", ls, c.post(token, ls, timeout=60))
 
