@@ -1,0 +1,24 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "runner",
+        "fun": "jobs.active",
+        "arg": []
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Server": "TornadoServer/6.5.7",
+    "Content-Type": "application/json",
+    "Date": "Sat, 27 Jun 2026 02:25:47 GMT",
+    "Content-Length": "16"
+  },
+  "response_body": {
+    "return": [
+      {}
+    ]
+  }
+}

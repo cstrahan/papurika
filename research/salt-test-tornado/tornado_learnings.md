@@ -37,6 +37,7 @@ served:
 | no minions matched | `{}` (empty) | `"No minions matched the target…"` (string) |
 | **sync `cmd.run 'sleep 300'`** | **blocks for the whole command** (held our 120s client timeout; job keeps running) | **returns empty `{}` at ~10s** (gather timeout; job keeps running) |
 | `cmd.run` self-kill (minion suicide) | "Minion did not return…" string @~15s | empty `{}` @~10s |
+| `GET /jobs/<jid>` missing jid | `{info: [{…Error…}], return: [{}]}` | `{return: [{…Error…}]}` |
 | extra endpoints | `/keys`, `/logout`, `/stats`, `/ws` | none of those; has `/all_events`, `/formatted_events` (websockets, untested) |
 
 **What's identical:** login/token shape & perms, sync `local` result shapes
@@ -175,6 +176,22 @@ the big divergence**.
 200 after ~10s (not an error, not the result), with the job still running. Use
 `cmd.run_bg` or `local_async` + `/jobs`/`/events`; never infer success/failure
 from a sync long-command response.
+
+---
+
+## jid lifecycle — `out/12*.json`
+
+Mostly netapi-agnostic — see the full writeup in `cherrypy_learnings.md`
+("jid lifecycle: find, cancel, retention"). Verified identical on tornado:
+`jobs.lookup_jid` (bare per-minion return; `{}` for both missing *and* pending),
+`jobs.print_job` (metadata+Result; explicit `Error` for missing),
+`saltutil.kill_job` (`"Signal 9 sent to job <jid> at pid <pid>"`; `""` for
+missing), and job-cache retention (`keep_jobs_seconds`, disk-backed local_cache,
+survives master restart).
+
+The only difference is the `GET /jobs/<jid>` envelope (as everywhere): tornado
+returns `{return: [{…metadata…, Result}]}` (and `{return: [{…Error…}]}` for a
+missing jid), with no top-level `info`.
 
 ---
 

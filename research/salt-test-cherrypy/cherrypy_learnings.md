@@ -406,6 +406,63 @@ connection (and a cherrypy worker thread) hostage for minutes.
 
 ---
 
+## jid lifecycle: find, cancel, retention — `out/12*.json`
+
+(All netapi-agnostic except `GET /jobs/<jid>`'s envelope — see the note.)
+
+### Finding a jid (success) — `out/12a–c`
+- **`jobs.lookup_jid <jid>`** (runner) → just the per-minion return value:
+  `{"return": [{"builtin.minion": true}]}`. ⚠️ **A missing jid and a
+  not-yet-returned jid both return `{}`** — lookup_jid can't tell them apart.
+- **`jobs.print_job <jid>`** (runner) → full metadata + result keyed by jid:
+  `{<jid>: {Function, Arguments, Target, Target-type, User, Minions, StartTime,
+  Result: {minion: {return, retcode, success}}}}`.
+- **`GET /jobs/<jid>`** (endpoint) → cherrypy: `{info: [<that metadata+Result>],
+  return: [{minion: retval}]}`. (tornado: metadata+Result in `return[0]`, no
+  `info` — see `tornado_learnings.md`.)
+
+### Cancelling a running jid — `out/12d–f`
+There's no "cancel a jid" API per se; you SIGKILL the running job on the minion:
+- **`saltutil.kill_job <jid>`** (local exec, targeted at the minions) →
+  `{"return": [{"builtin.minion": "Signal 9 sent to job <jid> at pid <pid>"}]}`.
+  `jobs.active` shows it before (`Running: [{minion: pid}]`, `Returned: []`) and
+  empty after. Variants: `saltutil.term_job` (SIGTERM), `saltutil.signal_job
+  <jid> <sig>`. It's a *minion* call (finds the running job by jid, signals the
+  pid) — so it needs the minions reachable, not just the master.
+
+### Non-existent jid — `out/12g–j`
+- **`lookup_jid`** → `{}` (empty — indistinguishable from a pending job; not an
+  error).
+- **`print_job`** → `{<jid>: {"Error": "Cannot contact returner or no job with
+  this jid", "StartTime": …, "Result": {}}}` — explicit Error.
+- **`GET /jobs/<bogus>`** → cherrypy `{info: [{…"Error"…}], return: [{}]}`;
+  tornado `{return: [{…"Error"…}]}`. **This `Error` field is the reliable way to
+  detect a missing jid** (lookup_jid alone is ambiguous).
+- **`saltutil.kill_job <bogus>`** → `{"builtin.minion": ""}` (empty string — no
+  matching job, no error; success and "nothing to kill" are weakly
+  distinguished only by the message text).
+
+### Retention & persistence (source: `salt/config`, `salt/master.py`, `salt/returners/local_cache.py`)
+- Default job cache is **`master_job_cache: local_cache`** — **disk-backed**
+  under `<cachedir>/master/jobs/` (hashed jid dirs); `job_cache: True` default.
+- **Max age: `keep_jobs_seconds` (default `86400` = 24h).** The master
+  Maintenance loop (~`loop_interval`/`maintenance_interval`, ~60s) runs
+  `clean_old_jobs`, removing job dirs whose `jid` file ctime is older than
+  `keep_jobs_seconds`. **`keep_jobs_seconds: 0` = never prune** (keep forever).
+  Legacy `keep_jobs` (hours) still maps to it.
+- **Persistence across master restart/crash: YES** with local_cache — jobs live
+  on disk, so a `salt-master` restart/crash keeps them; a handed-back jid stays
+  resolvable until it ages out. (In our container the cachedir isn't mounted, so
+  jobs survive `supervisorctl restart salt-master` but not `docker rm`/recreate.)
+- **A handed-back jid becomes unresolvable when:** (a) it's older than
+  `keep_jobs_seconds`; (b) the job cache / cachedir was cleared; (c)
+  `job_cache: False`; (d) you query a *different* master without a shared job
+  cache (HA/cluster without a shared `cachedir` or a shared external
+  `master_job_cache` returner). Distinct from "unresolvable": the job exists but
+  has no return yet (lookup_jid `{}`), or the minion never returned.
+
+---
+
 ## Errors & status codes observed
 
 - `POST /minions` → **202 Accepted** (everything else → 200).

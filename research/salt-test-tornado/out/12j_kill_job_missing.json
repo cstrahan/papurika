@@ -1,0 +1,29 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "local",
+        "tgt": "*",
+        "fun": "saltutil.kill_job",
+        "arg": [
+          "20200101000000000000"
+        ]
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Server": "TornadoServer/6.5.7",
+    "Content-Type": "application/json",
+    "Date": "Sat, 27 Jun 2026 02:25:48 GMT",
+    "Content-Length": "36"
+  },
+  "response_body": {
+    "return": [
+      {
+        "builtin.minion": ""
+      }
+    ]
+  }
+}

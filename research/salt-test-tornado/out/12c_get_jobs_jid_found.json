@@ -1,0 +1,37 @@
+{
+  "request": {
+    "path": "/jobs/20260627022539274643",
+    "body": null
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Server": "TornadoServer/6.5.7",
+    "Content-Type": "application/json",
+    "Date": "Sat, 27 Jun 2026 02:25:42 GMT",
+    "Etag": "\"923c06e5dd338ea30d0385b1affc4f18e75972b8\"",
+    "Content-Length": "299"
+  },
+  "response_body": {
+    "return": [
+      {
+        "jid": "20260627022539274643",
+        "Function": "test.ping",
+        "Arguments": [],
+        "Target": "*",
+        "Target-type": "glob",
+        "User": "saltdev",
+        "Minions": [
+          "builtin.minion"
+        ],
+        "StartTime": "2026, Jun 27 02:25:39.274643",
+        "Result": {
+          "builtin.minion": {
+            "return": true,
+            "retcode": 0,
+            "success": true
+          }
+        }
+      }
+    ]
+  }
+}

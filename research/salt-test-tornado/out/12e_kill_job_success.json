@@ -1,0 +1,29 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "local",
+        "tgt": "*",
+        "fun": "saltutil.kill_job",
+        "arg": [
+          "20260627022543054763"
+        ]
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Server": "TornadoServer/6.5.7",
+    "Content-Type": "application/json",
+    "Date": "Sat, 27 Jun 2026 02:25:45 GMT",
+    "Content-Length": "89"
+  },
+  "response_body": {
+    "return": [
+      {
+        "builtin.minion": "Signal 9 sent to job 20260627022543054763 at pid 1479"
+      }
+    ]
+  }
+}
