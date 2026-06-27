@@ -1,0 +1,20 @@
+{
+  "pre_restart_event_tags": [
+    "salt/job/20260627052557881268/new",
+    "salt/job/20260627052557881268/publish",
+    "salt/job/20260627052557881268/ret/builtin.minion2",
+    "salt/job/20260627052557881268/ret/builtin.minion"
+  ],
+  "stream_error_on_restart": "ChunkedEncodingError: Response ended prematurely",
+  "reconnected_login_ok": true,
+  "jid_after_restart": "20260627052616999581",
+  "events_resumed_after_reconnect": true,
+  "s3_tags": [
+    "salt/job/20260627052616999581/new",
+    "salt/job/20260627052616999581/publish",
+    "salt/auth",
+    "salt/auth",
+    "salt/job/20260627052616999581/ret/builtin.minion",
+    "salt/job/20260627052616999581/ret/builtin.minion2"
+  ]
+}

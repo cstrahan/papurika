@@ -516,6 +516,33 @@ You must parse the body. Captured matrix (cherrypy | tornado):
 
 ---
 
+## /events SSE robustness — `out/16*.json`
+
+Three properties an event-driven client must handle (identical on both modules):
+
+1. **Reconnect gap — no replay.** Events fired while you're disconnected are
+   **not** replayed when you reconnect (`missed_replayed_after_reconnect:
+   false`; the post-reconnect job *is* seen). So a client that relies on
+   `/events` must **backfill the disconnected window via `/jobs`** (or accept
+   the gap). There is no Last-Event-ID/resume.
+2. **No idle heartbeat.** On an idle stream the server sends only the initial
+   `retry: 400` line, then nothing (`raw_line_count: 1` over ~30s). There's no
+   keepalive/comment frame, so a client can't distinguish "healthy but quiet"
+   from "silently dead" via the stream alone — use a connect timeout + periodic
+   liveness check, and be ready to reconnect.
+3. **Stream dies on master restart.** Restarting `salt-master` drops the SSE
+   connection (`ChunkedEncodingError: "Response ended prematurely"`). After the
+   master is back, **reconnect succeeds and events resume** (you'll also see the
+   minions' `salt/auth` re-auth events on the bus). So: expect the stream to
+   break on master bounces; detect the error, reconnect, and backfill.
+
+Net client design: treat `/events` as best-effort and **lossy across any
+disconnect** (idle-death, master restart, network blip). Pair it with `/jobs`
+polling for authoritative completion/backfill rather than trusting the stream to
+be gap-free.
+
+---
+
 ## Multiple lowstates in one POST — `out/15*.json`
 
 A `/` POST body can be an array of several commands; the `return` is a

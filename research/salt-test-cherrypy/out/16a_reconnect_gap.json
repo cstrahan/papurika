@@ -1,0 +1,12 @@
+{
+  "jid_missed": "20260627052350998080",
+  "jid_seen": "20260627052355057834",
+  "s2_tags": [
+    "salt/job/20260627052355057834/new",
+    "salt/job/20260627052355057834/publish",
+    "salt/job/20260627052355057834/ret/builtin.minion2",
+    "salt/job/20260627052355057834/ret/builtin.minion"
+  ],
+  "missed_replayed_after_reconnect": false,
+  "seen_after_reconnect": true
+}

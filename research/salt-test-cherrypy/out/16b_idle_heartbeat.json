@@ -1,0 +1,12 @@
+{
+  "idle_seconds": 58.8,
+  "raw_lines": [
+    [
+      1782537895.49,
+      "retry: 400"
+    ]
+  ],
+  "raw_line_count": 1,
+  "events_during_idle": [],
+  "stream_error": "ConnectionError: HTTPConnectionPool(host='localhost', port=8000): Read timed out."
+}

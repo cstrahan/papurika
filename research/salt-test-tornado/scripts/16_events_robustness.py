@@ -127,9 +127,15 @@ subprocess.run(["docker", "exec", CONTAINER, "supervisorctl", "restart", "salt-m
 time.sleep(8)                    # master down→up
 stream_error_on_restart = s.err
 s.close()
-# reconnect after restart
-time.sleep(3)
-tok2 = c.login()
+# reconnect after restart — salt-api may be briefly bounced by the watchdog, so
+# retry login until it comes back.
+tok2 = None
+for _ in range(30):
+    try:
+        tok2 = c.login()
+        break
+    except Exception:
+        time.sleep(2)
 s3 = Streamer(tok2).start()
 time.sleep(0.5)
 jid_after = fire(tok2)

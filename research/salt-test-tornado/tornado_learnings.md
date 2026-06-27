@@ -183,6 +183,17 @@ from a sync long-command response.
 
 ---
 
+## /events SSE robustness — `out/16*.json`
+
+Identical to cherrypy (see its write-up): (1) **no replay** of events fired
+while disconnected (`missed_replayed=false`) — backfill via `/jobs`; (2) **no
+idle heartbeat** (only the initial `retry: 400`, then silence); (3) the stream
+**dies on master restart** (`ChunkedEncodingError`), but reconnect + resume
+works. Plus the tornado-only quirk from earlier: **omit `Accept:
+text/event-stream`** (tornado 406s it) and subscribe *before* firing.
+
+---
+
 ## Multiple lowstates in one POST — `out/15*.json`
 
 Identical to cherrypy: a POST array returns a parallel ordered `return` array
