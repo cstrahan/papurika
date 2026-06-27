@@ -1,0 +1,30 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "runner",
+        "fun": "jobs.active"
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Content-Type": "application/json",
+    "Server": "CherryPy/18.10.0",
+    "Date": "Sat, 27 Jun 2026 02:35:58 GMT",
+    "Allow": "GET, HEAD, POST",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "GET, POST",
+    "Access-Control-Allow-Credentials": "true",
+    "Cache-Control": "private",
+    "Vary": "Accept-Encoding",
+    "Content-Length": "16",
+    "Set-Cookie": "session_id=8e7f7862802776afb0558b59c7e018f956e1e4a1; expires=Sat, 27 Jun 2026 12:35:58 GMT; Max-Age=36000; Path=/"
+  },
+  "response_body": {
+    "return": [
+      {}
+    ]
+  }
+}

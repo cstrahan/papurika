@@ -429,6 +429,10 @@ There's no "cancel a jid" API per se; you SIGKILL the running job on the minion:
   empty after. Variants: `saltutil.term_job` (SIGTERM), `saltutil.signal_job
   <jid> <sig>`. It's a *minion* call (finds the running job by jid, signals the
   pid) — so it needs the minions reachable, not just the master.
+- **Idempotent:** killing the same jid again after it's dead (`out/13*.json`)
+  returns `{"builtin.minion": ""}` — the same empty string as killing a
+  never-existed jid (the minion finds no running job with that jid in its proc
+  cache). No error, no 5xx; the first kill is the only one that does anything.
 
 ### Non-existent jid — `out/12g–j`
 - **`lookup_jid`** → `{}` (empty — indistinguishable from a pending job; not an

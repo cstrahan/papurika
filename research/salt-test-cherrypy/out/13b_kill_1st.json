@@ -1,0 +1,36 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "local",
+        "tgt": "*",
+        "fun": "saltutil.kill_job",
+        "arg": [
+          "20260627023554263974"
+        ]
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Content-Type": "application/json",
+    "Server": "CherryPy/18.10.0",
+    "Date": "Sat, 27 Jun 2026 02:35:56 GMT",
+    "Allow": "GET, HEAD, POST",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "GET, POST",
+    "Access-Control-Allow-Credentials": "true",
+    "Cache-Control": "private",
+    "Vary": "Accept-Encoding",
+    "Content-Length": "89",
+    "Set-Cookie": "session_id=8e7f7862802776afb0558b59c7e018f956e1e4a1; expires=Sat, 27 Jun 2026 12:35:56 GMT; Max-Age=36000; Path=/"
+  },
+  "response_body": {
+    "return": [
+      {
+        "builtin.minion": "Signal 9 sent to job 20260627023554263974 at pid 1373"
+      }
+    ]
+  }
+}
