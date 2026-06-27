@@ -1,0 +1,26 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "runner_async",
+        "fun": "manage.status"
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Server": "TornadoServer/6.5.7",
+    "Content-Type": "application/json",
+    "Date": "Sat, 27 Jun 2026 00:57:39 GMT",
+    "Content-Length": "85"
+  },
+  "response_body": {
+    "return": [
+      {
+        "tag": "salt/run/20260627005739587629",
+        "jid": "20260627005739587629"
+      }
+    ]
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "wheel",
+        "fun": "key.list_all",
+        "tgt": "*"
+      }
+    ]
+  },
+  "status_code": 400,
+  "response_headers": {
+    "Server": "TornadoServer/6.5.7",
+    "Content-Type": "text/html; charset=UTF-8",
+    "Date": "Sat, 27 Jun 2026 00:56:31 GMT",
+    "Content-Length": "52"
+  },
+  "response_body": "400 Invalid Client: Client not found in salt clients"
+}

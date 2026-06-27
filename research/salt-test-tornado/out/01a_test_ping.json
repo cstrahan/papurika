@@ -1,0 +1,26 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "local",
+        "tgt": "*",
+        "fun": "test.ping"
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Server": "TornadoServer/6.5.7",
+    "Content-Type": "application/json",
+    "Date": "Sat, 27 Jun 2026 00:56:07 GMT",
+    "Content-Length": "38"
+  },
+  "response_body": {
+    "return": [
+      {
+        "builtin.minion": true
+      }
+    ]
+  }
+}

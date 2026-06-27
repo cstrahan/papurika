@@ -1,0 +1,29 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "local",
+        "tgt": "*",
+        "fun": "cmd.run",
+        "arg": [
+          "echo blocking-cmd; sleep 1; echo done"
+        ]
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Server": "TornadoServer/6.5.7",
+    "Content-Type": "application/json",
+    "Date": "Sat, 27 Jun 2026 00:56:07 GMT",
+    "Content-Length": "54"
+  },
+  "response_body": {
+    "return": [
+      {
+        "builtin.minion": "blocking-cmd\ndone"
+      }
+    ]
+  }
+}

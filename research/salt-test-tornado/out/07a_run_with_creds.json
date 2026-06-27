@@ -1,0 +1,29 @@
+{
+  "request": {
+    "path": "/run",
+    "body": [
+      {
+        "client": "local",
+        "tgt": "*",
+        "fun": "test.ping",
+        "username": "saltdev",
+        "password": "saltdev",
+        "eauth": "pam"
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Server": "TornadoServer/6.5.7",
+    "Content-Type": "application/json",
+    "Date": "Sat, 27 Jun 2026 00:57:40 GMT",
+    "Content-Length": "38"
+  },
+  "response_body": {
+    "return": [
+      {
+        "builtin.minion": true
+      }
+    ]
+  }
+}

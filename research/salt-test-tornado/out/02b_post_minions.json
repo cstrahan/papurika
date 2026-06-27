@@ -1,0 +1,31 @@
+{
+  "request": {
+    "path": "/minions",
+    "body": [
+      {
+        "tgt": "*",
+        "fun": "test.sleep",
+        "arg": [
+          2
+        ]
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Server": "TornadoServer/6.5.7",
+    "Content-Type": "application/json",
+    "Date": "Sat, 27 Jun 2026 00:57:19 GMT",
+    "Content-Length": "76"
+  },
+  "response_body": {
+    "return": [
+      {
+        "jid": "20260627005719210633",
+        "minions": [
+          "builtin.minion"
+        ]
+      }
+    ]
+  }
+}

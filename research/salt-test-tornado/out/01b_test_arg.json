@@ -1,0 +1,61 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "local",
+        "tgt": "*",
+        "fun": "test.arg",
+        "arg": [
+          "one",
+          "two"
+        ],
+        "kwarg": {
+          "name": "papurika",
+          "flag": true
+        }
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Server": "TornadoServer/6.5.7",
+    "Content-Type": "application/json",
+    "Date": "Sat, 27 Jun 2026 00:56:07 GMT",
+    "Content-Length": "435"
+  },
+  "response_body": {
+    "return": [
+      {
+        "builtin.minion": {
+          "args": [
+            "one",
+            "two"
+          ],
+          "kwargs": {
+            "name": "papurika",
+            "flag": true,
+            "__pub_fun": "test.arg",
+            "__pub_arg": [
+              "one",
+              "two",
+              {
+                "__kwarg__": true,
+                "name": "papurika",
+                "flag": true
+              }
+            ],
+            "__pub_tgt": "*",
+            "__pub_jid": "20260627005607530719",
+            "__pub_ret": "",
+            "__pub_tgt_type": "glob",
+            "__pub_user": "saltdev",
+            "__pub_resource_targets": [],
+            "__pub_pure_resource_target": false,
+            "__pub_minion_is_target": true
+          }
+        }
+      }
+    ]
+  }
+}

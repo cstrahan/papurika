@@ -1,0 +1,28 @@
+{
+  "request": {
+    "path": "/run",
+    "body": [
+      {
+        "client": "runner",
+        "fun": "manage.up",
+        "username": "saltdev",
+        "password": "saltdev",
+        "eauth": "pam"
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Server": "TornadoServer/6.5.7",
+    "Content-Type": "application/json",
+    "Date": "Sat, 27 Jun 2026 00:57:41 GMT",
+    "Content-Length": "32"
+  },
+  "response_body": {
+    "return": [
+      [
+        "builtin.minion"
+      ]
+    ]
+  }
+}

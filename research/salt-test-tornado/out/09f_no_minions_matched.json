@@ -1,0 +1,26 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "local",
+        "tgt": "ghost-minion",
+        "fun": "test.ping",
+        "tgt_type": "glob",
+        "timeout": 4
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Server": "TornadoServer/6.5.7",
+    "Content-Type": "application/json",
+    "Date": "Sat, 27 Jun 2026 01:05:09 GMT",
+    "Content-Length": "88"
+  },
+  "response_body": {
+    "return": [
+      "No minions matched the target. No command was sent, no jid was assigned."
+    ]
+  }
+}

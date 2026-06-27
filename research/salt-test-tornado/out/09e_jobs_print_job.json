@@ -1,0 +1,39 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "runner",
+        "fun": "jobs.print_job",
+        "arg": [
+          "20260627010502469633"
+        ]
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Server": "TornadoServer/6.5.7",
+    "Content-Type": "application/json",
+    "Date": "Sat, 27 Jun 2026 01:05:09 GMT",
+    "Content-Length": "229"
+  },
+  "response_body": {
+    "return": [
+      {
+        "20260627010502469633": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "Minions": [
+            "builtin.minion"
+          ],
+          "StartTime": "2026, Jun 27 01:05:02.469633",
+          "Result": {}
+        }
+      }
+    ]
+  }
+}

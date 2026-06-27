@@ -1,0 +1,23 @@
+{
+  "request": {
+    "path": "/",
+    "body": null
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Server": "TornadoServer/6.5.7",
+    "Content-Type": "application/json",
+    "Date": "Sat, 27 Jun 2026 00:56:31 GMT",
+    "Etag": "\"5567ff3a1e7658402068967f12529a6064228be6\"",
+    "Content-Length": "84"
+  },
+  "response_body": {
+    "clients": [
+      "local",
+      "local_async",
+      "runner",
+      "runner_async"
+    ],
+    "return": "Welcome"
+  }
+}

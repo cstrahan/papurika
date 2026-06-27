@@ -1,0 +1,30 @@
+{
+  "request": {
+    "path": "/run",
+    "body": [
+      {
+        "client": "local",
+        "tgt": "*",
+        "fun": "cmd.run",
+        "arg": [
+          "echo via-run"
+        ],
+        "token": "e53619daea051ce45dd1f7975538a4b5b6af4881511e8ea4cef1bd394bf61e24"
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Server": "TornadoServer/6.5.7",
+    "Content-Type": "application/json",
+    "Date": "Sat, 27 Jun 2026 00:57:41 GMT",
+    "Content-Length": "43"
+  },
+  "response_body": {
+    "return": [
+      {
+        "builtin.minion": "via-run"
+      }
+    ]
+  }
+}

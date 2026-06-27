@@ -1,0 +1,29 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "local_async",
+        "tgt": "*",
+        "fun": "test.ping"
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Server": "TornadoServer/6.5.7",
+    "Content-Type": "application/json",
+    "Date": "Sat, 27 Jun 2026 01:05:02 GMT",
+    "Content-Length": "76"
+  },
+  "response_body": {
+    "return": [
+      {
+        "jid": "20260627010502469633",
+        "minions": [
+          "builtin.minion"
+        ]
+      }
+    ]
+  }
+}

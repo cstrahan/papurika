@@ -1,0 +1,31 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "local",
+        "tgt": "*",
+        "fun": "cmd.run_bg",
+        "arg": [
+          "sleep 10 && echo bg-finished > /tmp/papurika-direct-bg.txt"
+        ]
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Server": "TornadoServer/6.5.7",
+    "Content-Type": "application/json",
+    "Date": "Sat, 27 Jun 2026 00:56:08 GMT",
+    "Content-Length": "47"
+  },
+  "response_body": {
+    "return": [
+      {
+        "builtin.minion": {
+          "pid": 1183
+        }
+      }
+    ]
+  }
+}
