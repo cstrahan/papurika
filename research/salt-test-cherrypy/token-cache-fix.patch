@@ -1,4 +1,4 @@
-commit 70178c96712cdfe104c672fc442f133f5025bc4e
+commit 063aceb387643991d30d5959465b5c49a47a1c9f
 Author: Charles Strahan <charles.strahan@saucelabs.com>
 Date:   Fri Jun 26 07:58:54 2026 -0500
 
@@ -31,6 +31,17 @@ Date:   Fri Jun 26 07:58:54 2026 -0500
     Also fix LoadAuth.mk_token passing the absolute expiry timestamp where
     Cache.store expects a duration (seconds); it placed _expires ~2x now in the
     future so token entries were never cleaned even once the above is fixed.
+    
+    Both defects were introduced together in 3008.0 by commit 78685e5c44
+    ("Provide token storage using the salt.cache interface"), which moved
+    eauth token storage off the localfs token driver and onto the generic
+    salt.cache interface. That commit added the clean_expired() fallback (with
+    the mtime bug) and the mk_token cache.store(..., expires=...) call (with the
+    duration bug) in one go. Token eviction is therefore a regression: 3006.x
+    and 3007.x are unaffected (they stored tokens via the localfs token driver,
+    which never hit this path).
+    
+    Introduced-by: 78685e5c44 ("Provide token storage using the salt.cache interface")
     
     Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
 

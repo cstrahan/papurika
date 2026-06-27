@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Apply the production token/cache fix (saltstack commit 70178c9671) to the
+# Apply the production token/cache fix (saltstack commit 063aceb387) to the
 # running container's bundled salt, to match prod and avoid the eauth-token
 # eviction bug (tokens swept within ~60s despite token_expire). The container
 # has no `patch` binary, and the two touched files match the v3008.1 baseline

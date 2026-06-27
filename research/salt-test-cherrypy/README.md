@@ -17,7 +17,7 @@ scripts/NN_*.py           probe scripts, runnable with `uv run`
 out/*.json                captured responses
 up.sh                     launch the container
 apply-salt-patch.sh       apply the prod token/cache fix to the running container
-token-cache-fix.patch     the fix (saltstack 70178c9671), for reference
+token-cache-fix.patch     the fix (saltstack 063aceb387), for reference
 ```
 
 ## Run

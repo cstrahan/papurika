@@ -29,7 +29,7 @@ result model. Details in [Response shapes](#response-shapes-the-important-part).
 - **Config we had to supply** (image sets neither): `netapi_enable_clients`
   (Salt 3006+ denies all clients without it — post CVE-2024-22231) and
   `external_auth` (perms for the pam user). See `config/zz-papurika.conf`.
-- **Patch applied:** the prod token/cache fix (saltstack `70178c9671`) — see
+- **Patch applied:** the prod token/cache fix (saltstack `063aceb387`) — see
   [Token eviction bug](#token-eviction-bug-confirmed-and-fixed). Reproduce with
   `up.sh` + `apply-salt-patch.sh`.
 
@@ -343,7 +343,7 @@ Token '...' could not be loaded (TokenExpiredError('')); removing it from the st
 Authentication failure of type "token" occurred.
 ```
 
-This is exactly the prod bug fixed by saltstack `70178c9671` (the generic
+This is exactly the prod bug fixed by saltstack `063aceb387` (the generic
 `Cache.clean_expired` fallback used file mtime as the expiry and swept all
 tokens every maintenance pass). We applied the fix to the container's bundled
 salt (`apply-salt-patch.sh`) and restarted the master. Confirmed fixed: a
