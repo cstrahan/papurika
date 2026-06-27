@@ -1,0 +1,33 @@
+{
+  "request": {
+    "path": "/run",
+    "body": [
+      {
+        "client": "local",
+        "tgt": "*",
+        "fun": "test.ping",
+        "token": "191cb2df924c531d46f089c44b208a9d1ad06db59387e3440a78a3b5d0c8334f"
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Content-Type": "application/json",
+    "Server": "CherryPy/18.10.0",
+    "Date": "Sat, 27 Jun 2026 05:41:31 GMT",
+    "Allow": "GET, HEAD, POST",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "GET, POST",
+    "Access-Control-Allow-Credentials": "true",
+    "Vary": "Accept-Encoding",
+    "Content-Length": "322"
+  },
+  "response_body": {
+    "return": [
+      {
+        "builtin.minion": true,
+        "builtin.minion2": "Minion did not return. [No response]\nThe minions may not have all finished running and any remaining minions will return upon completion. To look up the return data for this job later, run the following command:\n\nsalt-run jobs.lookup_jid 20260627054131997361"
+      }
+    ]
+  }
+}

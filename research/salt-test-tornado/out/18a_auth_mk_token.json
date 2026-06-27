@@ -1,0 +1,38 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "runner",
+        "fun": "auth.mk_token",
+        "kwarg": {
+          "username": "saltdev",
+          "password": "saltdev",
+          "eauth": "pam"
+        }
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Server": "TornadoServer/6.5.7",
+    "Content-Type": "application/json",
+    "Date": "Sat, 27 Jun 2026 05:41:48 GMT",
+    "Content-Length": "217"
+  },
+  "response_body": {
+    "return": [
+      {
+        "start": 1782538908.4164374,
+        "expire": 1782582108.4164379,
+        "name": "saltdev",
+        "eauth": "pam",
+        "groups": [
+          "saltdev",
+          "users"
+        ],
+        "token": "bac381740025ce6e039a740ae717035b6a956866081b1317b0d18e2cb2f77c9d"
+      }
+    ]
+  }
+}

@@ -183,6 +183,17 @@ from a sync long-command response.
 
 ---
 
+## `/run` credentials — `out/18*.json`
+
+Completes the `/run` token story (see `cherrypy_learnings.md`):
+- A **raw eauth token** from the `auth.mk_token` runner works on `/run` on
+  **both** modules (the portable credential).
+- The **`/login` session token** on `/run`: **tornado accepts it (200)**,
+  cherrypy 401s. So the session-token-on-`/run` behavior is the one real
+  divergence; use the eauth trio or an `auth.mk_token` token for portability.
+
+---
+
 ## Multiple minions / fleet behavior — `out/17*.json`
 
 (Full write-up in `cherrypy_learnings.md`.) On tornado:

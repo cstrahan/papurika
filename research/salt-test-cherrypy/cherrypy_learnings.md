@@ -516,6 +516,26 @@ You must parse the body. Captured matrix (cherrypy | tornado):
 
 ---
 
+## `/run` credentials — eauth token vs session token — `out/18*.json`
+
+Resolves the earlier `/run` loose end (the `/login` session token 401'd on
+cherrypy's `/run` but worked on tornado's).
+
+- **Mint a raw eauth token** via the `auth.mk_token` runner (`{username,
+  password, eauth}`) → 200, returns `{token, start, expire, name, eauth,
+  groups}`. (Note: shape differs from `/login` — has `groups`/`name`, **no
+  `perms`**.)
+- **That eauth token on `/run`** (`token` kwarg) → **works on BOTH modules**.
+  This is the portable `/run` credential.
+- **The `/login` session token on `/run`** → cherrypy **401** (HTML); tornado
+  **200**. So the session token is *not* a portable `/run` credential.
+
+**Client guidance:** for `/run` (stateless/CI), use either the eauth trio
+(`username`/`password`/`eauth`) or a raw eauth token from `auth.mk_token` — both
+portable. Never use the `/login` session token on `/run` (cherrypy rejects it).
+
+---
+
 ## Multiple minions / fleet behavior — `out/17*.json`
 
 With two minions (`builtin.minion` + `builtin.minion2`; see `add-second-minion.sh`):
