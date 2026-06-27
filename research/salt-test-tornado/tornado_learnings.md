@@ -183,6 +183,18 @@ from a sync long-command response.
 
 ---
 
+## Multiple minions / fleet behavior — `out/17*.json`
+
+(Full write-up in `cherrypy_learnings.md`.) On tornado:
+- **Aggregation** `'*' test.ping` → single dict with both minions (same as cherrypy).
+- **`local_batch` → HTTP 400** (unsupported client; no server-side batching —
+  the client must batch itself).
+- **Partial return** (one minion down) → the down minion is **omitted**
+  (`{"builtin.minion": true}`), where cherrypy includes a "Minion did not
+  return" string. Either way: detect non-responders by targeted-vs-returned.
+
+---
+
 ## /events SSE robustness — `out/16*.json`
 
 Identical to cherrypy (see its write-up): (1) **no replay** of events fired

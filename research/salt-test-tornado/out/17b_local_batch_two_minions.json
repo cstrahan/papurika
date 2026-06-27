@@ -1,0 +1,24 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "local_batch",
+        "tgt": "*",
+        "fun": "cmd.run",
+        "arg": [
+          "echo $(hostname) batched"
+        ],
+        "batch": "1"
+      }
+    ]
+  },
+  "status_code": 400,
+  "response_headers": {
+    "Server": "TornadoServer/6.5.7",
+    "Content-Type": "text/html; charset=UTF-8",
+    "Date": "Sat, 27 Jun 2026 05:38:24 GMT",
+    "Content-Length": "52"
+  },
+  "response_body": "400 Invalid Client: Client not found in salt clients"
+}

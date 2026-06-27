@@ -516,6 +516,31 @@ You must parse the body. Captured matrix (cherrypy | tornado):
 
 ---
 
+## Multiple minions / fleet behavior — `out/17*.json`
+
+With two minions (`builtin.minion` + `builtin.minion2`; see `add-second-minion.sh`):
+
+- **Aggregation** (`'*' test.ping`): a single dict with every responder —
+  `{"builtin.minion": true, "builtin.minion2": true}`. Same on both modules.
+- **Batch shape divergence** (`local_batch batch=1`): the `return` is a **list
+  of one dict per batch**, not a single combined dict:
+  `[{"builtin.minion2": "…"}, {"builtin.minion": "…"}]`. This is the
+  batch-vs-non-batch nesting the pepper skill warned about — invisible with a
+  single minion, real with ≥2. A client must **flatten/merge the per-batch
+  dicts** back into one `{minion: result}` map. (tornado: `local_batch` → **400**,
+  unsupported — no batching at all.)
+- **Partial return** (kill `minion2`, then `'*' test.ping`): the responder comes
+  back `true`; the down minion is handled differently by module —
+  - cherrypy: included with a `"Minion did not return. [No response]…"` string;
+  - tornado: **omitted entirely** (`{"builtin.minion": true}`).
+
+  So neither module gives a clean structured "minion X failed." **Detect
+  non-responders by diffing the targeted set against the returned set** (the
+  `minions` list from an async submit, or the accepted-key list) — don't scan
+  for the English string, and don't assume every targeted minion is a key.
+
+---
+
 ## /events SSE robustness — `out/16*.json`
 
 Three properties an event-driven client must handle (identical on both modules):
