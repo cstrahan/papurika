@@ -66,6 +66,12 @@ structurally identical. Only four real deltas:
    3006 reports a dead minion in `down` (correct); 3008 reports it in `up`
    (`down` empty). Confirmed here (19a/b/c) and bisected in
    [`../minion-status-and-liveness.md`](../minion-status-and-liveness.md) §5.
+5. **Token-eviction regression** (separate, the one prod patches): `08` token
+   longevity run on both (`out/` and `out-3006/`) — a single token reused across
+   ~120s of maintenance sweeps survived on **3006** (`survived_all: true`) and on
+   **patched 3008**. 3008 *unpatched* evicts within ~60s (the bug fixed by the
+   prod `clean_expired`/`mk_token` patch). So token retention is another 3006→
+   3008 regression — already fixed in our 3008 by the patch, and absent in 3006.
 
 **Debunked / not-changes:**
 - The **`sleep 300` "hang"** seen mid-run on 3006 was a *harness artifact*, not a

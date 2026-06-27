@@ -1,0 +1,29 @@
+{
+  "token_len": 40,
+  "samples": [
+    {
+      "t": 0,
+      "status": 200,
+      "ok": true
+    },
+    {
+      "t": 40,
+      "status": 200,
+      "ok": true,
+      "body": "{\"return\": [{\"builtin.minion\": true, \"builtin.minion2\": \"Minion did not return. [No response]\\nThe minions may not have all finished running and any remaining minions will return upon completion. To l"
+    },
+    {
+      "t": 80,
+      "status": 200,
+      "ok": true,
+      "body": "{\"return\": [{\"builtin.minion\": true, \"builtin.minion2\": \"Minion did not return. [No response]\\nThe minions may not have all finished running and any remaining minions will return upon completion. To l"
+    },
+    {
+      "t": 120,
+      "status": 200,
+      "ok": true,
+      "body": "{\"return\": [{\"builtin.minion\": true, \"builtin.minion2\": \"Minion did not return. [No response]\\nThe minions may not have all finished running and any remaining minions will return upon completion. To l"
+    }
+  ],
+  "survived_all": true
+}

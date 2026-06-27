@@ -1,0 +1,29 @@
+{
+  "token_len": 40,
+  "samples": [
+    {
+      "t": 0,
+      "status": 200,
+      "ok": true
+    },
+    {
+      "t": 40,
+      "status": 200,
+      "ok": true,
+      "body": "{\"return\": [{\"builtin.minion2\": false}]}"
+    },
+    {
+      "t": 80,
+      "status": 200,
+      "ok": true,
+      "body": "{\"return\": [{\"builtin.minion2\": false}]}"
+    },
+    {
+      "t": 120,
+      "status": 200,
+      "ok": true,
+      "body": "{\"return\": [{\"builtin.minion2\": false}]}"
+    }
+  ],
+  "survived_all": true
+}
