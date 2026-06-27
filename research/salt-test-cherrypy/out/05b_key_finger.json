@@ -1,0 +1,46 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "wheel",
+        "fun": "key.finger",
+        "match": "*"
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Content-Type": "application/json",
+    "Server": "CherryPy/18.10.0",
+    "Date": "Fri, 26 Jun 2026 23:43:02 GMT",
+    "Allow": "GET, HEAD, POST",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "GET, POST",
+    "Access-Control-Allow-Credentials": "true",
+    "Cache-Control": "private",
+    "Vary": "Accept-Encoding",
+    "Content-Length": "451",
+    "Set-Cookie": "session_id=15350404171021117726c506a55ab03c53c3bc75; expires=Sat, 27 Jun 2026 09:43:02 GMT; Max-Age=36000; Path=/"
+  },
+  "response_body": {
+    "return": [
+      {
+        "tag": "salt/wheel/20260626234302978314",
+        "data": {
+          "fun": "wheel.key.finger",
+          "jid": "20260626234302978314",
+          "tag": "salt/wheel/20260626234302978314",
+          "user": "saltdev",
+          "return": {
+            "local": {
+              "master.pem": "da:95:5c:8a:3b:4e:41:ba:4f:61:cb:71:12:e1:82:86:20:43:05:b9:50:2a:0d:f3:fe:84:11:0a:70:56:02:57",
+              "master.pub": "c5:a6:4c:78:e4:c0:14:d0:5b:4c:9e:cc:a1:2d:e5:ca:54:45:f2:14:c9:ce:5a:19:80:7a:d2:ca:09:9f:34:e4"
+            }
+          },
+          "success": true
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,132 @@
+{
+  "request": {
+    "path": "/jobs",
+    "body": null
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Content-Type": "application/json",
+    "Server": "CherryPy/18.10.0",
+    "Date": "Fri, 26 Jun 2026 23:36:21 GMT",
+    "Allow": "GET, HEAD, POST",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "GET, POST",
+    "Access-Control-Allow-Credentials": "true",
+    "Cache-Control": "private",
+    "Vary": "Accept-Encoding",
+    "Content-Length": "2160",
+    "Set-Cookie": "session_id=4592c0afc7ecf31b393aee7f1df6e56cc2dae940; expires=Sat, 27 Jun 2026 09:36:21 GMT; Max-Age=36000; Path=/"
+  },
+  "response_body": {
+    "return": [
+      {
+        "20260626233548349944": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 26 23:35:48.349944"
+        },
+        "20260626233548549640": {
+          "Function": "test.arg",
+          "Arguments": [
+            "one",
+            "two",
+            {
+              "__kwarg__": true,
+              "name": "papurika",
+              "flag": true
+            }
+          ],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 26 23:35:48.549640"
+        },
+        "20260626233548648585": {
+          "Function": "cmd.run",
+          "Arguments": [
+            "echo blocking-cmd; sleep 1; echo done"
+          ],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 26 23:35:48.648585"
+        },
+        "20260626233549810736": {
+          "Function": "cmd.run_bg",
+          "Arguments": [
+            "sleep 10 && echo bg-finished > /tmp/papurika-direct-bg.txt"
+          ],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 26 23:35:49.810736"
+        },
+        "20260626233549931400": {
+          "Function": "state.apply",
+          "Arguments": [
+            "demo"
+          ],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 26 23:35:49.931400"
+        },
+        "20260626233617769051": {
+          "Function": "cmd.run",
+          "Arguments": [
+            "echo async-1; sleep 3; echo async-done"
+          ],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 26 23:36:17.769051"
+        },
+        "20260626233617809433": {
+          "Function": "test.sleep",
+          "Arguments": [
+            2
+          ],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 26 23:36:17.809433"
+        },
+        "20260626233617841606": {
+          "Function": "runner.jobs.list_job",
+          "Arguments": [],
+          "Target": "master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 26 23:36:17.841606"
+        },
+        "20260626233619022344": {
+          "Function": "runner.jobs.list_job",
+          "Arguments": [],
+          "Target": "master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 26 23:36:19.022344"
+        },
+        "20260626233620218909": {
+          "Function": "runner.jobs.list_job",
+          "Arguments": [],
+          "Target": "master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 26 23:36:20.218909"
+        },
+        "20260626233621413724": {
+          "Function": "runner.jobs.list_job",
+          "Arguments": [],
+          "Target": "master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 26 23:36:21.413724"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "request": {
+    "path": "/run",
+    "body": [
+      {
+        "client": "local",
+        "tgt": "*",
+        "fun": "cmd.run",
+        "arg": [
+          "echo via-run"
+        ],
+        "token": "72cdc28f36e400fd7d933f2ffc7e2a8a9b9abfd7"
+      }
+    ]
+  },
+  "status_code": 401,
+  "response_headers": {
+    "Content-Type": "text/html;charset=utf-8",
+    "Server": "CherryPy/18.10.0",
+    "Date": "Fri, 26 Jun 2026 23:45:15 GMT",
+    "Allow": "GET, HEAD, POST",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "GET, POST",
+    "Access-Control-Allow-Credentials": "true",
+    "Vary": "Accept-Encoding",
+    "Content-Encoding": "gzip",
+    "Content-Length": "437"
+  },
+  "response_body": "<!DOCTYPE html PUBLIC\n\"-//W3C//DTD XHTML 1.0 Transitional//EN\"\n\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n<html>\n<head>\n    <meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\"></meta>\n    <title>401 Unauthorized</title>\n    <style type=\"text/css\">\n    #powered_by {\n        margin-top: 20px;\n        border-top: 2px solid black;\n        font-style: italic;\n    }\n\n    #traceback {\n        color: red;\n    }\n    </style>\n</head>\n    <body>\n        <h2>401 Unauthorized</h2>\n        <p>Authentication error occurred.</p>\n        <pre id=\"traceback\"></pre>\n    <div id=\"powered_by\">\n      <span>\n        Powered by <a href=\"http://www.cherrypy.dev\">CherryPy 18.10.0</a>\n      </span>\n    </div>\n    </body>\n</html>\n"
+}

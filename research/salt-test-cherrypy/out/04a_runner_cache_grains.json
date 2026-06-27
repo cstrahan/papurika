@@ -1,0 +1,259 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "runner",
+        "fun": "cache.grains",
+        "kwarg": {
+          "tgt": "*"
+        }
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Content-Type": "application/json",
+    "Server": "CherryPy/18.10.0",
+    "Date": "Fri, 26 Jun 2026 23:37:44 GMT",
+    "Allow": "GET, HEAD, POST",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "GET, POST",
+    "Access-Control-Allow-Credentials": "true",
+    "Cache-Control": "private",
+    "Vary": "Accept-Encoding",
+    "Content-Length": "3572",
+    "Set-Cookie": "session_id=e857122cce9e6eacb5a5b8e60858f839eed89018; expires=Sat, 27 Jun 2026 09:37:44 GMT; Max-Age=36000; Path=/"
+  },
+  "response_body": {
+    "return": [
+      {
+        "builtin.minion": {
+          "cwd": "/tmp",
+          "dns": {
+            "nameservers": [
+              "0.250.250.200"
+            ],
+            "ip4_nameservers": [
+              "0.250.250.200"
+            ],
+            "ip6_nameservers": [],
+            "sortlist": [],
+            "domain": "",
+            "search": [],
+            "options": []
+          },
+          "fibre_channel_host": false,
+          "fqdns": [],
+          "machine_id": "003b5659de6840b5988dba03db238595",
+          "master": "localhost",
+          "server_id": 1285352189,
+          "localhost": "b56e4053f28e",
+          "fqdn": "b56e4053f28e",
+          "host": "b56e4053f28e",
+          "domain": "",
+          "hwaddr_interfaces": {},
+          "id": "builtin.minion",
+          "ip4_interfaces": {},
+          "ip6_interfaces": {},
+          "ipv4": [],
+          "ipv6": [],
+          "fqdn_ip4": [],
+          "fqdn_ip6": [],
+          "ip_interfaces": {},
+          "kernelparams": [
+            [
+              "init",
+              "/opt/orb/vinit"
+            ],
+            [
+              "workqueue.power_efficient",
+              "1"
+            ],
+            [
+              "cgroup.memory",
+              "nokmem,nosocket"
+            ],
+            [
+              "swiotlb",
+              "noforce"
+            ],
+            [
+              "slab_min_order",
+              "2"
+            ],
+            [
+              "cgroup_v1_proc",
+              "1"
+            ],
+            [
+              "nbd.nbds_max",
+              "4"
+            ],
+            [
+              "can.stats_timer",
+              "0"
+            ],
+            [
+              "id_aa64mmfr0.ecv",
+              "1"
+            ],
+            [
+              "root",
+              "/dev/vda"
+            ],
+            [
+              "rootfstype",
+              "erofs"
+            ],
+            [
+              "ro",
+              null
+            ],
+            [
+              "console",
+              "hvc0"
+            ],
+            [
+              "quiet",
+              null
+            ],
+            [
+              "ORB_S",
+              "APCiMw8AAAAAsA15FAAAAAAAABAAAAAAGgAGAAAAAAAAADI1RTI1Mw0AAAAAAAAAL2Rldi92cG9ydDJwMgEA"
+            ],
+            [
+              "earlycon",
+              "pl011,mmio32,0x40001000"
+            ]
+          ],
+          "locale_info": {
+            "defaultlanguage": "C",
+            "defaultencoding": "UTF-8",
+            "detectedencoding": "utf-8",
+            "timezone": "UTC"
+          },
+          "num_gpus": 0,
+          "gpus": [],
+          "kernel": "Linux",
+          "nodename": "b56e4053f28e",
+          "kernelrelease": "7.0.11-orbstack-00360-gc9bc4d96ac70",
+          "kernelversion": "#1 SMP PREEMPT Thu Jun  4 16:40:25 UTC 2026",
+          "cpuarch": "aarch64",
+          "systemd": {
+            "version": "259",
+            "features": "+PAM +AUDIT +SELINUX +APPARMOR +IMA +IPE +SMACK +SECCOMP +GCRYPT -GNUTLS +OPENSSL +ACL +BLKID +CURL +ELFUTILS +FIDO2 +IDN2 -IDN +KMOD +LIBCRYPTSETUP +LIBCRYPTSETUP_PLUGINS +LIBFDISK +PCRE2 +PWQUALITY +P11KIT +QRENCODE +TPM2 +BZIP2 +LZ4 +XZ +ZLIB +ZSTD +BPF_FRAMEWORK +BTF -XKBCOMMON -UTMP +SYSVINIT +LIBARCHIVE"
+          },
+          "init": "supervisord",
+          "lsb_distrib_id": "Ubuntu",
+          "lsb_distrib_release": "26.04",
+          "lsb_distrib_codename": "resolute",
+          "lsb_distrib_description": "Ubuntu Resolute Raccoon",
+          "os": "Ubuntu",
+          "os_family": "Debian",
+          "oscodename": "resolute",
+          "osfullname": "Ubuntu",
+          "osrelease": "26.04",
+          "num_cpus": 12,
+          "cpu_flags": [
+            "fp",
+            "asimd",
+            "evtstrm",
+            "aes",
+            "pmull",
+            "sha1",
+            "sha2",
+            "crc32",
+            "atomics",
+            "fphp",
+            "asimdhp",
+            "cpuid",
+            "asimdrdm",
+            "jscvt",
+            "fcma",
+            "lrcpc",
+            "dcpop",
+            "sha3",
+            "asimddp",
+            "sha512",
+            "asimdfhm",
+            "dit",
+            "uscat",
+            "ilrcpc",
+            "flagm",
+            "sb",
+            "dcpodp",
+            "flagm2",
+            "frint",
+            "i8mm",
+            "bf16",
+            "ecv",
+            "afp"
+          ],
+          "cpu_model": "Unknown",
+          "osarch": "arm64",
+          "mem_total": 16040,
+          "swap_total": 17064,
+          "virtual": "container",
+          "virtual_subtype": "Docker",
+          "ps": "ps -efHww",
+          "osrelease_info": [
+            26,
+            4
+          ],
+          "osmajorrelease": 26,
+          "osfinger": "Ubuntu-26.04",
+          "path": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+          "systempath": [
+            "/usr/local/sbin",
+            "/usr/local/bin",
+            "/usr/sbin",
+            "/usr/bin",
+            "/sbin",
+            "/bin"
+          ],
+          "pythonexecutable": "/opt/saltstack/salt/bin/python3.14",
+          "pythonpath": [
+            "/opt/saltstack/salt",
+            "/opt/saltstack/salt/extras-3.14",
+            "/opt/saltstack/salt/lib/python314.zip",
+            "/opt/saltstack/salt/lib/python3.14",
+            "/opt/saltstack/salt/lib/python3.14/lib-dynload",
+            "/opt/saltstack/salt/lib/python3.14/site-packages"
+          ],
+          "pythonversion": [
+            3,
+            14,
+            6,
+            "final",
+            0
+          ],
+          "saltpath": "/opt/saltstack/salt/lib/python3.14/site-packages/salt",
+          "saltversion": "3008.1",
+          "saltversioninfo": [
+            3008,
+            1
+          ],
+          "zmqversion": "4.3.5",
+          "disks": [
+            "vdb",
+            "vdc",
+            "vda"
+          ],
+          "ssds": [],
+          "shell": "/bin/sh",
+          "transactional": false,
+          "efi": false,
+          "efi-secure-boot": false,
+          "username": "root",
+          "groupname": "root",
+          "pid": 224,
+          "gid": 0,
+          "uid": 0,
+          "package": "onedir",
+          "ca_truststore": "certifi"
+        }
+      }
+    ]
+  }
+}

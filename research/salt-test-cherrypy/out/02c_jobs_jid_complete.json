@@ -1,0 +1,50 @@
+{
+  "request": {
+    "path": "/jobs/20260626233617769051",
+    "body": null
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Content-Type": "application/json",
+    "Server": "CherryPy/18.10.0",
+    "Date": "Fri, 26 Jun 2026 23:36:21 GMT",
+    "Allow": "GET, HEAD, POST",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "GET, POST",
+    "Access-Control-Allow-Credentials": "true",
+    "Cache-Control": "private",
+    "Vary": "Accept-Encoding",
+    "Content-Length": "407",
+    "Set-Cookie": "session_id=4592c0afc7ecf31b393aee7f1df6e56cc2dae940; expires=Sat, 27 Jun 2026 09:36:21 GMT; Max-Age=36000; Path=/"
+  },
+  "response_body": {
+    "info": [
+      {
+        "jid": "20260626233617769051",
+        "Function": "cmd.run",
+        "Arguments": [
+          "echo async-1; sleep 3; echo async-done"
+        ],
+        "Target": "*",
+        "Target-type": "glob",
+        "User": "saltdev",
+        "Minions": [
+          "builtin.minion"
+        ],
+        "StartTime": "2026, Jun 26 23:36:17.769051",
+        "Result": {
+          "builtin.minion": {
+            "return": "async-1\nasync-done",
+            "retcode": 0,
+            "success": true
+          }
+        }
+      }
+    ],
+    "return": [
+      {
+        "builtin.minion": "async-1\nasync-done"
+      }
+    ]
+  }
+}

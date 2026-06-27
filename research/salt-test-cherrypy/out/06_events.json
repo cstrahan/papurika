@@ -1,0 +1,122 @@
+[
+  {
+    "t": 1782517505.563,
+    "tag": "salt/job/20260626234505554766/new",
+    "data": {
+      "data": {
+        "jid": "20260626234505554766",
+        "tgt_type": "glob",
+        "tgt": "*",
+        "user": "saltdev",
+        "fun": "cmd.run",
+        "arg": [
+          "echo via-event-bus; sleep 2; echo done"
+        ],
+        "minions": [
+          "builtin.minion"
+        ],
+        "missing": [],
+        "_stamp": "2026-06-26T23:45:05.555917+00:00"
+      },
+      "tag": "salt/job/20260626234505554766/new"
+    }
+  },
+  {
+    "t": 1782517505.576,
+    "tag": "salt/job/20260626234505554766/publish",
+    "data": {
+      "data": {
+        "fun": "cmd.run",
+        "arg": [
+          "echo via-event-bus; sleep 2; echo done"
+        ],
+        "tgt": "*",
+        "jid": "20260626234505554766",
+        "ret": "",
+        "tgt_type": "glob",
+        "user": "saltdev",
+        "_stamp": "2026-06-26T23:45:05.565292+00:00"
+      },
+      "tag": "salt/job/20260626234505554766/publish"
+    }
+  },
+  {
+    "t": 1782517505.612,
+    "tag": "salt/job/20260626234505606553/new",
+    "data": {
+      "data": {
+        "jid": "20260626234505606553",
+        "tgt_type": "glob",
+        "tgt": "*",
+        "user": "saltdev",
+        "fun": "test.ping",
+        "arg": [],
+        "minions": [
+          "builtin.minion"
+        ],
+        "missing": [],
+        "_stamp": "2026-06-26T23:45:05.607610+00:00"
+      },
+      "tag": "salt/job/20260626234505606553/new"
+    }
+  },
+  {
+    "t": 1782517505.621,
+    "tag": "salt/job/20260626234505606553/publish",
+    "data": {
+      "data": {
+        "fun": "test.ping",
+        "arg": [],
+        "tgt": "*",
+        "jid": "20260626234505606553",
+        "ret": "",
+        "tgt_type": "glob",
+        "user": "saltdev",
+        "_stamp": "2026-06-26T23:45:05.611830+00:00"
+      },
+      "tag": "salt/job/20260626234505606553/publish"
+    }
+  },
+  {
+    "t": 1782517505.682,
+    "tag": "salt/job/20260626234505606553/ret/builtin.minion",
+    "data": {
+      "data": {
+        "cmd": "_return",
+        "id": "builtin.minion",
+        "success": true,
+        "return": true,
+        "retcode": 0,
+        "jid": "20260626234505606553",
+        "fun": "test.ping",
+        "fun_args": [],
+        "user": "saltdev",
+        "_stamp": "2026-06-26T23:45:05.678937+00:00",
+        "ts": 1782517505
+      },
+      "tag": "salt/job/20260626234505606553/ret/builtin.minion"
+    }
+  },
+  {
+    "t": 1782517507.709,
+    "tag": "salt/job/20260626234505554766/ret/builtin.minion",
+    "data": {
+      "data": {
+        "cmd": "_return",
+        "id": "builtin.minion",
+        "success": true,
+        "return": "via-event-bus\ndone",
+        "retcode": 0,
+        "jid": "20260626234505554766",
+        "fun": "cmd.run",
+        "fun_args": [
+          "echo via-event-bus; sleep 2; echo done"
+        ],
+        "user": "saltdev",
+        "_stamp": "2026-06-26T23:45:07.704698+00:00",
+        "ts": 1782517507
+      },
+      "tag": "salt/job/20260626234505554766/ret/builtin.minion"
+    }
+  }
+]

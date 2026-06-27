@@ -1,0 +1,46 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "runner",
+        "fun": "jobs.print_job",
+        "arg": [
+          "20260626235626179670"
+        ]
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Content-Type": "application/json",
+    "Server": "CherryPy/18.10.0",
+    "Date": "Fri, 26 Jun 2026 23:56:32 GMT",
+    "Allow": "GET, HEAD, POST",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "GET, POST",
+    "Access-Control-Allow-Credentials": "true",
+    "Cache-Control": "private",
+    "Vary": "Accept-Encoding",
+    "Content-Length": "229",
+    "Set-Cookie": "session_id=33b9942ea5532bd15265fcb7e0e70b5640f0c631; expires=Sat, 27 Jun 2026 09:56:32 GMT; Max-Age=36000; Path=/"
+  },
+  "response_body": {
+    "return": [
+      {
+        "20260626235626179670": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "Minions": [
+            "builtin.minion"
+          ],
+          "StartTime": "2026, Jun 26 23:56:26.179670",
+          "Result": {}
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "wheel",
+        "fun": "key.delete",
+        "match": "builtin.minion"
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Content-Type": "application/json",
+    "Server": "CherryPy/18.10.0",
+    "Date": "Fri, 26 Jun 2026 23:43:03 GMT",
+    "Allow": "GET, HEAD, POST",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "GET, POST",
+    "Access-Control-Allow-Credentials": "true",
+    "Cache-Control": "private",
+    "Vary": "Accept-Encoding",
+    "Content-Length": "216",
+    "Set-Cookie": "session_id=15350404171021117726c506a55ab03c53c3bc75; expires=Sat, 27 Jun 2026 09:43:03 GMT; Max-Age=36000; Path=/"
+  },
+  "response_body": {
+    "return": [
+      {
+        "tag": "salt/wheel/20260626234303089971",
+        "data": {
+          "fun": "wheel.key.delete",
+          "jid": "20260626234303089971",
+          "tag": "salt/wheel/20260626234303089971",
+          "user": "saltdev",
+          "return": {},
+          "success": true
+        }
+      }
+    ]
+  }
+}

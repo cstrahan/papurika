@@ -1,0 +1,12 @@
+{
+  "minions_pre": [
+    "builtin.minion"
+  ],
+  "minions_rejected": [],
+  "minions": [],
+  "minions_denied": [],
+  "local": [
+    "master.pem",
+    "master.pub"
+  ]
+}
