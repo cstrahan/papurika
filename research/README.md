@@ -9,6 +9,7 @@ request/response captures they produced, and a write-up of what we learned.
 |-----|------|
 | [`salt-test-cherrypy/`](salt-test-cherrypy/) | Hands-on exploration of the `rest_cherrypy` netapi (the module prod runs). See its `cherrypy_learnings.md`. |
 | [`salt-test-tornado/`](salt-test-tornado/) | Same treatment for `rest_tornado`, framed as a diff against cherrypy. See its `tornado_learnings.md`. |
+| [`salt-test-gpg-pillar/`](salt-test-gpg-pillar/) | Cross-cutting unhappy-path: cold GPG-encrypted-pillar decryption (both modules, one master). See its `gpg_pillar_learnings.md`. |
 
 Headline cross-cutting finding: the two netapi modules are **not
 interchangeable**. `rest_tornado` implements only `local`/`local_async`/

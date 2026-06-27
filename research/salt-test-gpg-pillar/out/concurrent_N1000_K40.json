@@ -1,0 +1,666 @@
+{
+  "n": 1000,
+  "k": 40,
+  "modules": {
+    "cherrypy": {
+      "wall": 120.04,
+      "ok": 0,
+      "bad": 40,
+      "breakdown": {
+        "ReadTimeout: HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=120)": 40
+      },
+      "results": [
+        {
+          "i": 0,
+          "status": null,
+          "elapsed": 120.01,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 1,
+          "status": null,
+          "elapsed": 120.02,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 2,
+          "status": null,
+          "elapsed": 120.02,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 3,
+          "status": null,
+          "elapsed": 120.01,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 4,
+          "status": null,
+          "elapsed": 120.01,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 5,
+          "status": null,
+          "elapsed": 120.02,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 6,
+          "status": null,
+          "elapsed": 120.01,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 7,
+          "status": null,
+          "elapsed": 120.02,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 8,
+          "status": null,
+          "elapsed": 120.01,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 9,
+          "status": null,
+          "elapsed": 120.01,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 10,
+          "status": null,
+          "elapsed": 120.01,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 11,
+          "status": null,
+          "elapsed": 120.01,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 12,
+          "status": null,
+          "elapsed": 120.01,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 13,
+          "status": null,
+          "elapsed": 120.01,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 14,
+          "status": null,
+          "elapsed": 120.01,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 15,
+          "status": null,
+          "elapsed": 120.01,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 16,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 17,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 18,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 19,
+          "status": null,
+          "elapsed": 120.01,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 20,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 21,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 22,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 23,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 24,
+          "status": null,
+          "elapsed": 120.01,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 25,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 26,
+          "status": null,
+          "elapsed": 120.01,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 27,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 28,
+          "status": null,
+          "elapsed": 120.01,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 29,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 30,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 31,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 32,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 33,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 34,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 35,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 36,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 37,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 38,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 39,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=120)"
+        }
+      ]
+    },
+    "tornado": {
+      "wall": 120.03,
+      "ok": 0,
+      "bad": 40,
+      "breakdown": {
+        "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=120)": 40
+      },
+      "results": [
+        {
+          "i": 0,
+          "status": null,
+          "elapsed": 120.01,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 1,
+          "status": null,
+          "elapsed": 120.01,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 2,
+          "status": null,
+          "elapsed": 120.01,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 3,
+          "status": null,
+          "elapsed": 120.01,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 4,
+          "status": null,
+          "elapsed": 120.01,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 5,
+          "status": null,
+          "elapsed": 120.01,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 6,
+          "status": null,
+          "elapsed": 120.01,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 7,
+          "status": null,
+          "elapsed": 120.01,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 8,
+          "status": null,
+          "elapsed": 120.01,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 9,
+          "status": null,
+          "elapsed": 120.01,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 10,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 11,
+          "status": null,
+          "elapsed": 120.01,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 12,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 13,
+          "status": null,
+          "elapsed": 120.01,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 14,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 15,
+          "status": null,
+          "elapsed": 120.01,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 16,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 17,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 18,
+          "status": null,
+          "elapsed": 120.01,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 19,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 20,
+          "status": null,
+          "elapsed": 120.01,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 21,
+          "status": null,
+          "elapsed": 120.01,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 22,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 23,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 24,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 25,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 26,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 27,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 28,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 29,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 30,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 31,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 32,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 33,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 34,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 35,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 36,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 37,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 38,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=120)"
+        },
+        {
+          "i": 39,
+          "status": null,
+          "elapsed": 120.0,
+          "ok": false,
+          "json": null,
+          "error": "ReadTimeout: HTTPConnectionPool(host='localhost', port=8001): Read timed out. (read timeout=120)"
+        }
+      ]
+    }
+  }
+}

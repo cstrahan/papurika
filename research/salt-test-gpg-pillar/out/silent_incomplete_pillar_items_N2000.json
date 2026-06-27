@@ -1,0 +1,20 @@
+[
+  {
+    "module": "cherrypy",
+    "status": 200,
+    "elapsed_s": 17.0,
+    "return_empty": false,
+    "secrets_returned": 2000,
+    "interpretation": "complete (2000 secrets)",
+    "raw_return": "<full pillar omitted>"
+  },
+  {
+    "module": "tornado",
+    "status": 200,
+    "elapsed_s": 10.0,
+    "return_empty": true,
+    "secrets_returned": 0,
+    "interpretation": "SILENT INCOMPLETE (200 OK, empty body)",
+    "raw_return": {}
+  }
+]
