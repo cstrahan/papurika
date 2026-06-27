@@ -1,0 +1,33 @@
+{
+  "request": {
+    "path": "/run",
+    "body": [
+      {
+        "client": "local",
+        "tgt": "*",
+        "fun": "test.ping",
+        "token": "6add80cfc896dfc2a0f351719ea23f05a4f0d501ae6cfcea3784e69fd1fd0f0c"
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Content-Type": "application/json",
+    "Server": "CherryPy/18.6.1",
+    "Date": "Sat, 27 Jun 2026 22:28:44 GMT",
+    "Allow": "GET, HEAD, POST",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "GET, POST",
+    "Access-Control-Allow-Credentials": "true",
+    "Vary": "Accept-Encoding",
+    "Content-Length": "63"
+  },
+  "response_body": {
+    "return": [
+      {
+        "builtin.minion2": true,
+        "builtin.minion": true
+      }
+    ]
+  }
+}

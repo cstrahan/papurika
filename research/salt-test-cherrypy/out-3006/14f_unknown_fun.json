@@ -1,0 +1,34 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "local",
+        "tgt": "*",
+        "fun": "does.not.exist"
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Content-Type": "application/json",
+    "Server": "CherryPy/18.6.1",
+    "Date": "Sat, 27 Jun 2026 22:28:38 GMT",
+    "Allow": "GET, HEAD, POST",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "GET, POST",
+    "Access-Control-Allow-Credentials": "true",
+    "Cache-Control": "private",
+    "Vary": "Accept-Encoding",
+    "Content-Length": "127",
+    "Set-Cookie": "session_id=5bebdc08de84fac990391c972e006a925d4e5f32; expires=Sun, 28 Jun 2026 08:28:38 GMT; Max-Age=36000; Path=/"
+  },
+  "response_body": {
+    "return": [
+      {
+        "builtin.minion": "'does.not.exist' is not available.",
+        "builtin.minion2": "'does.not.exist' is not available."
+      }
+    ]
+  }
+}

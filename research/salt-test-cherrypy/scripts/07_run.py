@@ -20,6 +20,7 @@ def run(name, lowstate):
         headers={"Accept": "application/json", "Content-Type": "application/json"},
         json=lowstate,
         timeout=60,
+        verify=c.VERIFY,
     )
     c.record(name, lowstate, r)
     return r

@@ -21,7 +21,7 @@ import requests
 
 import _common as c
 
-CONTAINER = "papurika-salt"
+CONTAINER = c.CONTAINER
 token = c.login()
 
 
@@ -50,7 +50,7 @@ class Streamer:
         try:
             self._resp = requests.get(f"{c.BASE}/events",
                                       headers={"X-Auth-Token": self.tok},
-                                      stream=True, timeout=60)
+                                      stream=True, timeout=60, verify=c.VERIFY)
             cur = {}
             for raw in self._resp.iter_lines(decode_unicode=True):
                 if self._stop:

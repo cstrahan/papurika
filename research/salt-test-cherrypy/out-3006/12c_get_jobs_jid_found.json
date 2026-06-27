@@ -1,0 +1,55 @@
+{
+  "request": {
+    "path": "/jobs/20260627222812844880",
+    "body": null
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Content-Type": "application/json",
+    "Server": "CherryPy/18.6.1",
+    "Date": "Sat, 27 Jun 2026 22:28:17 GMT",
+    "Allow": "GET, HEAD, POST",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "GET, POST",
+    "Access-Control-Allow-Credentials": "true",
+    "Cache-Control": "private",
+    "Vary": "Accept-Encoding",
+    "Content-Length": "447",
+    "Set-Cookie": "session_id=2b1c237c68115809ec1d9a3f3b2638742d9139e1; expires=Sun, 28 Jun 2026 08:28:17 GMT; Max-Age=36000; Path=/"
+  },
+  "response_body": {
+    "info": [
+      {
+        "jid": "20260627222812844880",
+        "Function": "test.ping",
+        "Arguments": [],
+        "Target": "*",
+        "Target-type": "glob",
+        "User": "saltdev",
+        "Minions": [
+          "builtin.minion",
+          "builtin.minion2"
+        ],
+        "StartTime": "2026, Jun 27 22:28:12.844880",
+        "Result": {
+          "builtin.minion2": {
+            "return": true,
+            "retcode": 0,
+            "success": true
+          },
+          "builtin.minion": {
+            "return": true,
+            "retcode": 0,
+            "success": true
+          }
+        }
+      }
+    ],
+    "return": [
+      {
+        "builtin.minion2": true,
+        "builtin.minion": true
+      }
+    ]
+  }
+}

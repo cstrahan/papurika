@@ -27,7 +27,7 @@ print("minted eauth token:", eauth_token)
 def run(name, lowstate):
     r = requests.post(f"{c.BASE}/run",
                       headers={"Accept": "application/json", "Content-Type": "application/json"},
-                      json=lowstate, timeout=60)
+                      json=lowstate, timeout=60, verify=c.VERIFY)
     c.record(name, lowstate, r)
 
 

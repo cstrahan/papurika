@@ -25,7 +25,7 @@ def login_as(user, password, eauth="pam"):
         f"{c.BASE}/login",
         headers={"Accept": "application/json", "Content-Type": "application/json"},
         json={"username": user, "password": password, "eauth": eauth},
-        timeout=30,
+        timeout=30, verify=c.VERIFY
     )
 
 
@@ -36,7 +36,7 @@ def raw_post(name, body_text, hdr_token=token):
         headers={"Accept": "application/json", "Content-Type": "application/json",
                  "X-Auth-Token": hdr_token},
         data=body_text,
-        timeout=30,
+        timeout=30, verify=c.VERIFY
     )
     c.record(name, {"raw_body": body_text}, r)
 

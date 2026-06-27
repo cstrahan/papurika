@@ -1,0 +1,158 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "local_batch",
+        "tgt": "*",
+        "fun": "state.apply",
+        "arg": [
+          "demo"
+        ],
+        "batch": "50%"
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Content-Type": "application/json",
+    "Server": "CherryPy/18.6.1",
+    "Date": "Sat, 27 Jun 2026 22:27:55 GMT",
+    "Allow": "GET, HEAD, POST",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "GET, POST",
+    "Access-Control-Allow-Credentials": "true",
+    "Cache-Control": "private",
+    "Vary": "Accept-Encoding",
+    "Content-Length": "3140",
+    "Set-Cookie": "session_id=c3ee48367141b2ac20a608fbd43619afe2a1f341; expires=Sun, 28 Jun 2026 08:27:55 GMT; Max-Age=36000; Path=/"
+  },
+  "response_body": {
+    "return": [
+      {
+        "builtin.minion2": {
+          "cmd_|-demo_echo_|-echo \"hello from demo state, run at $(date -u +%FT%TZ)\"_|-run": {
+            "name": "echo \"hello from demo state, run at $(date -u +%FT%TZ)\"",
+            "changes": {
+              "pid": 19374,
+              "retcode": 0,
+              "stdout": "hello from demo state, run at 2026-06-27T22:27:55Z",
+              "stderr": ""
+            },
+            "result": true,
+            "comment": "Command \"echo \"hello from demo state, run at $(date -u +%FT%TZ)\"\" run",
+            "__sls__": "demo",
+            "__run_num__": 0,
+            "start_time": "22:27:55.717578",
+            "duration": 7.323,
+            "__id__": "demo_echo"
+          },
+          "file_|-demo_managed_file_|-/tmp/papurika-demo.txt_|-managed": {
+            "changes": {},
+            "comment": "File /tmp/papurika-demo.txt is in the correct state",
+            "name": "/tmp/papurika-demo.txt",
+            "result": true,
+            "__sls__": "demo",
+            "__run_num__": 1,
+            "start_time": "22:27:55.727062",
+            "duration": 10.103,
+            "__id__": "demo_managed_file"
+          },
+          "cmd_|-demo_pillar_echo_|-echo \"pillar greeting=hello-from-pillar\"_|-run": {
+            "name": "echo \"pillar greeting=hello-from-pillar\"",
+            "changes": {
+              "pid": 19376,
+              "retcode": 0,
+              "stdout": "pillar greeting=hello-from-pillar",
+              "stderr": ""
+            },
+            "result": true,
+            "comment": "Command \"echo \"pillar greeting=hello-from-pillar\"\" run",
+            "__sls__": "demo",
+            "__run_num__": 2,
+            "start_time": "22:27:55.737304",
+            "duration": 4.862,
+            "__id__": "demo_pillar_echo"
+          },
+          "module_|-demo_background_|-cmd.run_bg_|-run": {
+            "name": "cmd.run_bg",
+            "changes": {
+              "ret": {
+                "pid": 19377
+              }
+            },
+            "comment": "Module function cmd.run_bg executed",
+            "result": true,
+            "__sls__": "demo",
+            "__run_num__": 3,
+            "start_time": "22:27:55.742957",
+            "duration": 3.722,
+            "__id__": "demo_background"
+          }
+        }
+      },
+      {
+        "builtin.minion": {
+          "cmd_|-demo_echo_|-echo \"hello from demo state, run at $(date -u +%FT%TZ)\"_|-run": {
+            "name": "echo \"hello from demo state, run at $(date -u +%FT%TZ)\"",
+            "changes": {
+              "pid": 19403,
+              "retcode": 0,
+              "stdout": "hello from demo state, run at 2026-06-27T22:27:56Z",
+              "stderr": ""
+            },
+            "result": true,
+            "comment": "Command \"echo \"hello from demo state, run at $(date -u +%FT%TZ)\"\" run",
+            "__sls__": "demo",
+            "__run_num__": 0,
+            "start_time": "22:27:56.047795",
+            "duration": 11.796,
+            "__id__": "demo_echo"
+          },
+          "file_|-demo_managed_file_|-/tmp/papurika-demo.txt_|-managed": {
+            "changes": {},
+            "comment": "File /tmp/papurika-demo.txt is in the correct state",
+            "name": "/tmp/papurika-demo.txt",
+            "result": true,
+            "__sls__": "demo",
+            "__run_num__": 1,
+            "start_time": "22:27:56.060931",
+            "duration": 6.12,
+            "__id__": "demo_managed_file"
+          },
+          "cmd_|-demo_pillar_echo_|-echo \"pillar greeting=hello-from-pillar\"_|-run": {
+            "name": "echo \"pillar greeting=hello-from-pillar\"",
+            "changes": {
+              "pid": 19405,
+              "retcode": 0,
+              "stdout": "pillar greeting=hello-from-pillar",
+              "stderr": ""
+            },
+            "result": true,
+            "comment": "Command \"echo \"pillar greeting=hello-from-pillar\"\" run",
+            "__sls__": "demo",
+            "__run_num__": 2,
+            "start_time": "22:27:56.067196",
+            "duration": 4.235,
+            "__id__": "demo_pillar_echo"
+          },
+          "module_|-demo_background_|-cmd.run_bg_|-run": {
+            "name": "cmd.run_bg",
+            "changes": {
+              "ret": {
+                "pid": 19406
+              }
+            },
+            "comment": "Module function cmd.run_bg executed",
+            "result": true,
+            "__sls__": "demo",
+            "__run_num__": 3,
+            "start_time": "22:27:56.071865",
+            "duration": 2.139,
+            "__id__": "demo_background"
+          }
+        }
+      }
+    ]
+  }
+}

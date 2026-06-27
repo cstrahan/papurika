@@ -24,7 +24,7 @@ token = c.login()
 
 
 def dexec(*args):
-    subprocess.run(["docker", "exec", "papurika-salt", *args], check=True)
+    subprocess.run(["docker", "exec", c.CONTAINER, *args], check=True)
 
 
 # Precondition: minion up & accepted.
@@ -36,7 +36,7 @@ dexec("supervisorctl", "stop", "salt-minion")
 print(">>> waiting for salt-minion process to exit ...")
 for _ in range(30):
     n = subprocess.run(
-        ["docker", "exec", "papurika-salt", "sh", "-c",
+        ["docker", "exec", c.CONTAINER, "sh", "-c",
          "ps -ef | grep -c '[s]alt-minion'"],
         capture_output=True, text=True,
     ).stdout.strip()

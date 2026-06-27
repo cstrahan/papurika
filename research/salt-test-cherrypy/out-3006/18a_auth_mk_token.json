@@ -1,0 +1,45 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "runner",
+        "fun": "auth.mk_token",
+        "kwarg": {
+          "username": "saltdev",
+          "password": "saltdev",
+          "eauth": "pam"
+        }
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Content-Type": "application/json",
+    "Server": "CherryPy/18.6.1",
+    "Date": "Sat, 27 Jun 2026 22:28:44 GMT",
+    "Allow": "GET, HEAD, POST",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "GET, POST",
+    "Access-Control-Allow-Credentials": "true",
+    "Cache-Control": "private",
+    "Vary": "Accept-Encoding",
+    "Content-Length": "217",
+    "Set-Cookie": "session_id=ac1a46b406ddb3d1004476234a7b4fc932464e2e; expires=Sun, 28 Jun 2026 08:28:44 GMT; Max-Age=36000; Path=/"
+  },
+  "response_body": {
+    "return": [
+      {
+        "start": 1782599324.7960992,
+        "expire": 1782642524.7960994,
+        "name": "saltdev",
+        "eauth": "pam",
+        "groups": [
+          "saltdev",
+          "users"
+        ],
+        "token": "6add80cfc896dfc2a0f351719ea23f05a4f0d501ae6cfcea3784e69fd1fd0f0c"
+      }
+    ]
+  }
+}

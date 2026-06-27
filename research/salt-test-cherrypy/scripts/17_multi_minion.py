@@ -16,7 +16,7 @@ import time
 
 import _common as c
 
-CONTAINER = "papurika-salt"
+CONTAINER = c.CONTAINER
 token = c.login()
 
 # (a) aggregation

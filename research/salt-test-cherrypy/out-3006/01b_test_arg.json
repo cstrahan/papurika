@@ -1,0 +1,66 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "local",
+        "tgt": "*",
+        "fun": "test.arg",
+        "arg": [
+          "one",
+          "two"
+        ],
+        "kwarg": {
+          "name": "papurika",
+          "flag": true
+        }
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Content-Type": "application/json",
+    "Server": "CherryPy/18.6.1",
+    "Date": "Sat, 27 Jun 2026 22:27:31 GMT",
+    "Allow": "GET, HEAD, POST",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "GET, POST",
+    "Access-Control-Allow-Credentials": "true",
+    "Cache-Control": "private",
+    "Vary": "Accept-Encoding",
+    "Content-Length": "362",
+    "Set-Cookie": "session_id=08eeab99b56bc45fdd10cec91abe91e0cadbdce0; expires=Sun, 28 Jun 2026 08:27:31 GMT; Max-Age=36000; Path=/"
+  },
+  "response_body": {
+    "return": [
+      {
+        "builtin.minion2": {
+          "args": [
+            "one",
+            "two"
+          ],
+          "kwargs": {
+            "name": "papurika",
+            "flag": true,
+            "__pub_fun": "test.arg",
+            "__pub_arg": [
+              "one",
+              "two",
+              {
+                "__kwarg__": true,
+                "name": "papurika",
+                "flag": true
+              }
+            ],
+            "__pub_tgt": "*",
+            "__pub_jid": "20260627222731338473",
+            "__pub_ret": "",
+            "__pub_tgt_type": "glob",
+            "__pub_user": "saltdev"
+          }
+        },
+        "builtin.minion": false
+      }
+    ]
+  }
+}

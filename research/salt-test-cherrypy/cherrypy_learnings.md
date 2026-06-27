@@ -38,6 +38,62 @@ then `uv run scripts/NN_*.py`.
 
 ---
 
+## 3006 → 3008 changes (cherrypy; 3006 as baseline)
+
+We ran the full harness against a **3006.9** container in parallel (`out-3006/`)
+and structurally diffed it against the 3008 `out/` (`compare_out_dirs.py`).
+**Reassuring headline: the core API response schemas are unchanged 3006→3008** —
+`GET /` client list and the sync-local / async / batch / runner / wheel / jobs /
+failure-taxonomy / multi-command / `/run` / `mk_token` shapes are all
+structurally identical. Only four real deltas:
+
+1. **New `__pub_*` resource-targeting kwargs (3008-only, additive).** Every local
+   execution's injected kwargs gain `__pub_resource_targets` (list),
+   `__pub_pure_resource_target` (bool), `__pub_minion_is_target` (bool) — visible
+   e.g. in `test.arg`'s returned `kwargs` and in published job data.
+   Source-confirmed 3008-only (the new `salt/utils/resources.py` "resource
+   registry"; **0** refs in 3006, present in 3008). A tolerant client just
+   ignores unknown `__pub_*` keys.
+2. **Grain additions.** 3008 adds version/packaging grains absent in 3006 —
+   `ca_truststore` (source-confirmed 3008-only), `package` (e.g. `"onedir"`),
+   `virtual_subtype`, `fibre_channel_host`. (`zfs_*` and similar that appear only
+   in 3006 here are host-detection grains, not version-significant.) Matters only
+   if you key on the grains schema.
+3. **Wheel / `full_return` envelope dropped `_stamp`.** 3006 wheel responses
+   include `data._stamp`; 3008 omits it (`data` = `fun/jid/tag/user/return/
+   success`). Cosmetic — don't depend on `_stamp`.
+4. **`manage.status`/`up`/`down` regression** (the significant behavioural one):
+   3006 reports a dead minion in `down` (correct); 3008 reports it in `up`
+   (`down` empty). Confirmed here (19a/b/c) and bisected in
+   [`../minion-status-and-liveness.md`](../minion-status-and-liveness.md) §5.
+
+**Debunked / not-changes:**
+- The **`sleep 300` "hang"** seen mid-run on 3006 was a *harness artifact*, not a
+  version difference: script 05 left `builtin.minion` **unaccepted** on 3006, so
+  script 11's sync `sleep 300` targeted a half-broken minion and the gather
+  stalled. With a healthy minion, 3006 sync-local behaves **identically** to 3008
+  (blocks for the command's duration; the `requests` client read-timeout fires
+  normally, including over HTTPS).
+- The 09 / 17 / 18 capture diffs are **minion-liveness state differences** between
+  the two runs (the 3006 minion was responding where the 3008 capture had it
+  down), not schema changes — same shapes.
+
+**Caveats:** the 3006 test minion was unstable in the throwaway container
+(frequent drops — most likely key-churn from re-running the destructive scripts,
+not necessarily a salt-version trait), so a few `out-3006/` captures are degraded;
+the four deltas above are confirmed via source and the clean captures. The 3006
+image has no `disable_ssl` knob, so its API is **HTTPS** — `_common` gained
+`PAPURIKA_VERIFY_SSL=0` (and prod is HTTPS too, so this is reusable).
+
+**Bottom line for the client:** schema-wise, **3006 and 3008 are
+interchangeable** — the deltas are additive (`__pub_*`, grains) or cosmetic
+(`_stamp`), plus the known `manage.status` regression. Build the client to
+ignore unknown keys, not depend on `_stamp`, and not trust `manage.status` for
+liveness, and it works on either version. The 3006-vs-3008 decision can be made
+on observability/stability grounds, not API-compatibility fear.
+
+---
+
 ## Auth (`/login`)
 
 `POST /login` with `{username, password, eauth}` returns a **session token**:

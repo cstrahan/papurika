@@ -1,0 +1,40 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "local_batch",
+        "tgt": "*",
+        "fun": "cmd.run",
+        "arg": [
+          "echo $(hostname) batched"
+        ],
+        "batch": "1"
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Content-Type": "application/json",
+    "Server": "CherryPy/18.6.1",
+    "Date": "Sat, 27 Jun 2026 22:28:45 GMT",
+    "Allow": "GET, HEAD, POST",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "GET, POST",
+    "Access-Control-Allow-Credentials": "true",
+    "Cache-Control": "private",
+    "Vary": "Accept-Encoding",
+    "Content-Length": "101",
+    "Set-Cookie": "session_id=2c8540d4da01b804949dd306fff060cac656fc90; expires=Sun, 28 Jun 2026 08:28:45 GMT; Max-Age=36000; Path=/"
+  },
+  "response_body": {
+    "return": [
+      {
+        "builtin.minion2": "9b3588ef07fc batched"
+      },
+      {
+        "builtin.minion": "9b3588ef07fc batched"
+      }
+    ]
+  }
+}

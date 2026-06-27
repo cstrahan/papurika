@@ -1,0 +1,10 @@
+{
+  "jid_missed": "20260627221430005353",
+  "jid_seen": "20260627221434128701",
+  "s2_tags": [
+    "20260627221434128701",
+    "salt/job/20260627221434128701/new"
+  ],
+  "missed_replayed_after_reconnect": false,
+  "seen_after_reconnect": true
+}

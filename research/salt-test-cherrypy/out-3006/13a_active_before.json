@@ -1,0 +1,50 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "runner",
+        "fun": "jobs.active"
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Content-Type": "application/json",
+    "Server": "CherryPy/18.6.1",
+    "Date": "Sat, 27 Jun 2026 22:28:28 GMT",
+    "Allow": "GET, HEAD, POST",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "GET, POST",
+    "Access-Control-Allow-Credentials": "true",
+    "Cache-Control": "private",
+    "Vary": "Accept-Encoding",
+    "Content-Length": "277",
+    "Set-Cookie": "session_id=4fe294bf7b4f40fbdbdf892275f5a2bbe1398a38; expires=Sun, 28 Jun 2026 08:28:28 GMT; Max-Age=36000; Path=/"
+  },
+  "response_body": {
+    "return": [
+      {
+        "20260627222826470991": {
+          "Function": "cmd.run",
+          "Arguments": [
+            "sleep 120"
+          ],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:28:26.470991",
+          "Running": [
+            {
+              "builtin.minion": 20060
+            },
+            {
+              "builtin.minion2": 20061
+            }
+          ],
+          "Returned": []
+        }
+      }
+    ]
+  }
+}

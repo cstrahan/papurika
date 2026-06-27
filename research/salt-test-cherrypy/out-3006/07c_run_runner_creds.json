@@ -1,0 +1,34 @@
+{
+  "request": {
+    "path": "/run",
+    "body": [
+      {
+        "client": "runner",
+        "fun": "manage.up",
+        "username": "saltdev",
+        "password": "saltdev",
+        "eauth": "pam"
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Content-Type": "application/json",
+    "Server": "CherryPy/18.6.1",
+    "Date": "Sat, 27 Jun 2026 22:28:11 GMT",
+    "Allow": "GET, HEAD, POST",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "GET, POST",
+    "Access-Control-Allow-Credentials": "true",
+    "Vary": "Accept-Encoding",
+    "Content-Length": "51"
+  },
+  "response_body": {
+    "return": [
+      [
+        "builtin.minion",
+        "builtin.minion2"
+      ]
+    ]
+  }
+}

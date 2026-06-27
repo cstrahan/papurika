@@ -1,0 +1,14 @@
+{
+  "pre_restart_event_tags": [
+    "20260627221522263822",
+    "salt/job/20260627221522263822/new"
+  ],
+  "stream_error_on_restart": null,
+  "reconnected_login_ok": true,
+  "jid_after_restart": "20260627221542664458",
+  "events_resumed_after_reconnect": true,
+  "s3_tags": [
+    "20260627221542664458",
+    "salt/job/20260627221542664458/new"
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "request": {
+    "path": "/login",
+    "body": {
+      "username": "saltguest"
+    }
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Content-Type": "application/json",
+    "Server": "CherryPy/18.6.1",
+    "Date": "Sat, 27 Jun 2026 22:28:37 GMT",
+    "Allow": "GET, HEAD, POST",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "GET, POST",
+    "Access-Control-Allow-Credentials": "true",
+    "X-Auth-Token": "60cb6572060dee8e58973c3ad7f3ca615994f1e7",
+    "Vary": "Accept-Encoding",
+    "Content-Length": "198",
+    "Set-Cookie": "session_id=60cb6572060dee8e58973c3ad7f3ca615994f1e7; expires=Sun, 28 Jun 2026 08:28:37 GMT; Max-Age=36000; Path=/"
+  },
+  "response_body": {
+    "return": [
+      {
+        "token": "60cb6572060dee8e58973c3ad7f3ca615994f1e7",
+        "expire": 1782642517.989051,
+        "start": 1782599317.9890506,
+        "user": "saltguest",
+        "eauth": "pam",
+        "perms": [
+          "grains.*",
+          "test.ping"
+        ]
+      }
+    ]
+  }
+}

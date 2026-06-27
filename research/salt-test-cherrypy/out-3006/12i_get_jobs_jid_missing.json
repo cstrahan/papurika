@@ -1,0 +1,33 @@
+{
+  "request": {
+    "path": "/jobs/20200101000000000000",
+    "body": null
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Content-Type": "application/json",
+    "Server": "CherryPy/18.6.1",
+    "Date": "Sat, 27 Jun 2026 22:28:25 GMT",
+    "Allow": "GET, HEAD, POST",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "GET, POST",
+    "Access-Control-Allow-Credentials": "true",
+    "Cache-Control": "private",
+    "Vary": "Accept-Encoding",
+    "Content-Length": "178",
+    "Set-Cookie": "session_id=2b1c237c68115809ec1d9a3f3b2638742d9139e1; expires=Sun, 28 Jun 2026 08:28:25 GMT; Max-Age=36000; Path=/"
+  },
+  "response_body": {
+    "info": [
+      {
+        "jid": "20200101000000000000",
+        "Error": "Cannot contact returner or no job with this jid",
+        "StartTime": "2020, Jan 01 00:00:00.000000",
+        "Result": {}
+      }
+    ],
+    "return": [
+      {}
+    ]
+  }
+}

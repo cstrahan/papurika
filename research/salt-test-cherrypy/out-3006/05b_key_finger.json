@@ -1,0 +1,51 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "wheel",
+        "fun": "key.finger",
+        "match": "*"
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Content-Type": "application/json",
+    "Server": "CherryPy/18.6.1",
+    "Date": "Sat, 27 Jun 2026 22:29:07 GMT",
+    "Allow": "GET, HEAD, POST",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "GET, POST",
+    "Access-Control-Allow-Credentials": "true",
+    "Cache-Control": "private",
+    "Vary": "Accept-Encoding",
+    "Content-Length": "739",
+    "Set-Cookie": "session_id=d0c5ff62b621b865ba955004d2872cbe4bb13f95; expires=Sun, 28 Jun 2026 08:29:07 GMT; Max-Age=36000; Path=/"
+  },
+  "response_body": {
+    "return": [
+      {
+        "tag": "salt/wheel/20260627222907949062",
+        "data": {
+          "fun": "wheel.key.finger",
+          "jid": "20260627222907949062",
+          "tag": "salt/wheel/20260627222907949062",
+          "user": "saltdev",
+          "_stamp": "2026-06-27T22:29:08.118377",
+          "return": {
+            "minions": {
+              "builtin.minion": "73:53:78:ee:a5:48:26:6c:a2:9a:72:59:ff:38:10:94:41:00:39:2a:ce:aa:d0:ac:e4:dd:6b:5c:1e:62:8f:34",
+              "builtin.minion2": "d5:0f:01:c3:31:c3:f9:2d:6a:07:71:53:e5:4b:80:a4:15:fd:1b:bc:1f:1e:c5:06:36:e0:e5:6d:3d:de:50:89"
+            },
+            "local": {
+              "master.pem": "70:72:a1:a6:87:4b:e0:29:e1:f6:0f:f0:f9:95:eb:69:19:5f:06:06:25:13:27:c5:ea:a5:45:72:65:27:a8:fb",
+              "master.pub": "16:91:21:6d:57:2b:b2:7f:02:ab:c2:08:7a:4a:d7:70:71:cf:32:64:3f:ec:7e:3a:71:b2:31:28:6f:ee:ec:e7"
+            }
+          },
+          "success": true
+        }
+      }
+    ]
+  }
+}

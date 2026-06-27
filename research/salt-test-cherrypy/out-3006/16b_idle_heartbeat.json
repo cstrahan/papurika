@@ -1,0 +1,52 @@
+{
+  "idle_seconds": 38.7,
+  "raw_lines": [
+    [
+      1782598480.0,
+      "retry: 400"
+    ],
+    [
+      1782598489.71,
+      "tag: salt/auth"
+    ],
+    [
+      1782598489.71,
+      "data: {\"data\": {\"result\": true, \"act\": \"pend\", \"id\": \"builtin.minion\", \"pub\": \"-----BEGIN PUBLIC KEY-----\\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAq9Assco65s5QsFZz+I8i\\nK+0sc1LMQo/lYIHUgEKDlizZ2c/B2X45+R5oLbVOWPg2fU1a8Ua/UirvpUyEfv6F\\n735r9j8nm92Ghj7uU0m4fPzO+T6nePuoDnVbVbMQq08NejuR1i3pQz+ozaUdmahN\\nQpAYUy7PnFD+aAckWAo2eHQAuuEruaVKMZ16iBvblOahhehHzqCaasUd0Sf7F1wO\\nCs53mS7fUf9/6uVrs60/8ktHY6Mpcw4q9KLrc0JsTSARiERPPmWwQN8pvVPjWNie\\n5OqsFYdRvWNue92e/XSdfE7LYewkxjap44H8J1oaciuGA9npayB0j1pXXvcccg2S\\nTwIDAQAB\\n-----END PUBLIC KEY-----\", \"_stamp\": \"2026-06-27T22:14:49.696784\"}, \"tag\": \"salt/auth\"}"
+    ],
+    [
+      1782598489.71,
+      ""
+    ],
+    [
+      1782598499.73,
+      "tag: salt/auth"
+    ],
+    [
+      1782598499.75,
+      "data: {\"data\": {\"result\": true, \"act\": \"pend\", \"id\": \"builtin.minion\", \"pub\": \"-----BEGIN PUBLIC KEY-----\\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAq9Assco65s5QsFZz+I8i\\nK+0sc1LMQo/lYIHUgEKDlizZ2c/B2X45+R5oLbVOWPg2fU1a8Ua/UirvpUyEfv6F\\n735r9j8nm92Ghj7uU0m4fPzO+T6nePuoDnVbVbMQq08NejuR1i3pQz+ozaUdmahN\\nQpAYUy7PnFD+aAckWAo2eHQAuuEruaVKMZ16iBvblOahhehHzqCaasUd0Sf7F1wO\\nCs53mS7fUf9/6uVrs60/8ktHY6Mpcw4q9KLrc0JsTSARiERPPmWwQN8pvVPjWNie\\n5OqsFYdRvWNue92e/XSdfE7LYewkxjap44H8J1oaciuGA9npayB0j1pXXvcccg2S\\nTwIDAQAB\\n-----END PUBLIC KEY-----\", \"_stamp\": \"2026-06-27T22:14:59.727106\"}, \"tag\": \"salt/auth\"}"
+    ],
+    [
+      1782598499.75,
+      ""
+    ],
+    [
+      1782598509.78,
+      "tag: salt/auth"
+    ],
+    [
+      1782598509.78,
+      "data: {\"data\": {\"result\": true, \"act\": \"pend\", \"id\": \"builtin.minion\", \"pub\": \"-----BEGIN PUBLIC KEY-----\\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAq9Assco65s5QsFZz+I8i\\nK+0sc1LMQo/lYIHUgEKDlizZ2c/B2X45+R5oLbVOWPg2fU1a8Ua/UirvpUyEfv6F\\n735r9j8nm92Ghj7uU0m4fPzO+T6nePuoDnVbVbMQq08NejuR1i3pQz+ozaUdmahN\\nQpAYUy7PnFD+aAckWAo2eHQAuuEruaVKMZ16iBvblOahhehHzqCaasUd0Sf7F1wO\\nCs53mS7fUf9/6uVrs60/8ktHY6Mpcw4q9KLrc0JsTSARiERPPmWwQN8pvVPjWNie\\n5OqsFYdRvWNue92e/XSdfE7LYewkxjap44H8J1oaciuGA9npayB0j1pXXvcccg2S\\nTwIDAQAB\\n-----END PUBLIC KEY-----\", \"_stamp\": \"2026-06-27T22:15:09.768752\"}, \"tag\": \"salt/auth\"}"
+    ],
+    [
+      1782598509.78,
+      ""
+    ]
+  ],
+  "raw_line_count": 10,
+  "events_during_idle": [
+    "salt/auth",
+    "salt/auth",
+    "salt/auth"
+  ],
+  "stream_error": "AttributeError: 'NoneType' object has no attribute 'read'"
+}

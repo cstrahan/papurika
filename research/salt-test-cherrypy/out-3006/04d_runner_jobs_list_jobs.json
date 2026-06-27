@@ -1,0 +1,3686 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "runner",
+        "fun": "jobs.list_jobs"
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Content-Type": "application/json",
+    "Server": "CherryPy/18.6.1",
+    "Date": "Sat, 27 Jun 2026 22:27:58 GMT",
+    "Allow": "GET, HEAD, POST",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "GET, POST",
+    "Access-Control-Allow-Credentials": "true",
+    "Cache-Control": "private",
+    "Vary": "Accept-Encoding",
+    "Content-Length": "75686",
+    "Set-Cookie": "session_id=d665966f6c7b8fabec83af663959e0c9d3d27124; expires=Sun, 28 Jun 2026 08:27:58 GMT; Max-Age=36000; Path=/"
+  },
+  "response_body": {
+    "return": [
+      {
+        "20260627214817599744": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:48:17.599744"
+        },
+        "20260627220528847979": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:05:28.847979"
+        },
+        "20260627220851620547": {
+          "Function": "cmd.run",
+          "Arguments": [
+            "sleep 120"
+          ],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:08:51.620547"
+        },
+        "20260627214859725522": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:48:59.725522"
+        },
+        "20260627214900185903": {
+          "Function": "test.arg",
+          "Arguments": [
+            "one",
+            "two",
+            {
+              "__kwarg__": true,
+              "name": "papurika",
+              "flag": true
+            }
+          ],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:49:00.185903"
+        },
+        "20260627214911448604": {
+          "Function": "runner.cache.grains",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:49:11.448604"
+        },
+        "20260627215337235867": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:53:37.235867"
+        },
+        "20260627220824754537": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627220819622017"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:08:24.754537"
+        },
+        "20260627214900705070": {
+          "Function": "cmd.run",
+          "Arguments": [
+            "echo blocking-cmd; sleep 1; echo done"
+          ],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:49:00.705070"
+        },
+        "20260627214909028946": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:49:09.028946"
+        },
+        "20260627215638404680": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:56:38.404680"
+        },
+        "20260627222756922387": {
+          "Function": "runner.manage.status",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:27:56.922387"
+        },
+        "20260627214902055872": {
+          "Function": "cmd.run_bg",
+          "Arguments": [
+            "sleep 10 && echo bg-finished > /tmp/papurika-direct-bg.txt"
+          ],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:49:02.055872"
+        },
+        "20260627214930610186": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:49:30.610186"
+        },
+        "20260627214902306353": {
+          "Function": "state.apply",
+          "Arguments": [
+            "demo"
+          ],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:49:02.306353"
+        },
+        "20260627221712740665": {
+          "Function": "runner.manage.down",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:17:12.740665"
+        },
+        "20260627214903846434": {
+          "Function": "cmd.run",
+          "Arguments": [
+            "echo async-1; sleep 3; echo async-done"
+          ],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:49:03.846434"
+        },
+        "20260627214903901740": {
+          "Function": "test.sleep",
+          "Arguments": [
+            2
+          ],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:49:03.901740"
+        },
+        "20260627215730913865": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:57:30.913865"
+        },
+        "20260627221333016070": {
+          "Function": "does.not.exist",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:13:33.016070"
+        },
+        "20260627214903997002": {
+          "Function": "runner.jobs.list_job",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:49:03.997002"
+        },
+        "20260627215049713726": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:50:49.713726"
+        },
+        "20260627220203958491": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:02:03.958491"
+        },
+        "20260627214905662797": {
+          "Function": "runner.jobs.list_job",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:49:05.662797"
+        },
+        "20260627220226341612": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627220221146934"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:02:26.341612"
+        },
+        "20260627220944357316": {
+          "Function": "runner.jobs.print_job",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:09:44.357316"
+        },
+        "20260627214907362560": {
+          "Function": "runner.jobs.list_job",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:49:07.362560"
+        },
+        "20260627220728291225": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:07:28.291225"
+        },
+        "20260627214907749790": {
+          "Function": "runner.jobs.list_jobs",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:49:07.749790"
+        },
+        "20260627220849331223": {
+          "Function": "runner.jobs.lookup_jid",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:08:49.331223"
+        },
+        "20260627214909209867": {
+          "Function": "cmd.run",
+          "Arguments": [
+            "echo batched"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:49:09.209867"
+        },
+        "20260627220026621503": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627220021532628"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:00:26.621503"
+        },
+        "20260627214909398990": {
+          "Function": "cmd.run",
+          "Arguments": [
+            "echo batched"
+          ],
+          "Target": [
+            "builtin.minion"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:49:09.398990"
+        },
+        "20260627215031222795": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:50:31.222795"
+        },
+        "20260627221348407767": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:13:48.407767"
+        },
+        "20260627214909651321": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:49:09.651321"
+        },
+        "20260627214909848179": {
+          "Function": "state.apply",
+          "Arguments": [
+            "demo"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:49:09.848179"
+        },
+        "20260627214910191823": {
+          "Function": "state.apply",
+          "Arguments": [
+            "demo"
+          ],
+          "Target": [
+            "builtin.minion"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:49:10.191823"
+        },
+        "20260627220129869739": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:01:29.869739"
+        },
+        "20260627214911918278": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "salt",
+          "StartTime": "2026, Jun 27 21:49:11.918278"
+        },
+        "20260627215146640290": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:51:46.640290"
+        },
+        "20260627214911709831": {
+          "Function": "runner.manage.status",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:49:11.709831"
+        },
+        "20260627215256810762": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:52:56.810762"
+        },
+        "20260627215541021923": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:55:41.021923"
+        },
+        "20260627221434128701": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:14:34.128701"
+        },
+        "20260627214912365170": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "salt",
+          "StartTime": "2026, Jun 27 21:49:12.365170"
+        },
+        "20260627221542664458": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:15:42.664458"
+        },
+        "20260627214912137097": {
+          "Function": "runner.manage.up",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:49:12.137097"
+        },
+        "20260627214912588527": {
+          "Function": "runner.jobs.list_jobs",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:49:12.588527"
+        },
+        "20260627215458855886": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:54:58.855886"
+        },
+        "20260627215617780804": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:56:17.780804"
+        },
+        "20260627220425595336": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627220420543104"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:04:25.595336"
+        },
+        "20260627221430005353": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:14:30.005353"
+        },
+        "20260627214913181329": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "salt",
+          "StartTime": "2026, Jun 27 21:49:13.181329"
+        },
+        "20260627215646335628": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627215641235178"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:56:46.335628"
+        },
+        "20260627214912932230": {
+          "Function": "runner.manage.status",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:49:12.932230"
+        },
+        "20260627221143458640": {
+          "Function": "does.not.exist",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:11:43.458640"
+        },
+        "20260627214913922006": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:49:13.922006"
+        },
+        "20260627215805083005": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:58:05.083005"
+        },
+        "20260627214914071310": {
+          "Function": "wheel.key.finger",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:49:14.071310"
+        },
+        "20260627215620041925": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:56:20.041925"
+        },
+        "20260627214914182168": {
+          "Function": "wheel.key.delete",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:49:14.182168"
+        },
+        "20260627215508252994": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:55:08.252994"
+        },
+        "20260627221729141891": {
+          "Function": "runner.manage.alived",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:17:29.141891"
+        },
+        "20260627222419978159": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627222413871037"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:24:19.978159"
+        },
+        "20260627214926124944": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:49:26.124944"
+        },
+        "20260627215054336810": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:50:54.336810"
+        },
+        "20260627215133084257": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:51:33.084257"
+        },
+        "20260627220403464543": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:04:03.464543"
+        },
+        "20260627214927308330": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:49:27.308330"
+        },
+        "20260627215459090493": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:54:59.090493"
+        },
+        "20260627215629122216": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:56:29.122216"
+        },
+        "20260627214928382204": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:49:28.382204"
+        },
+        "20260627215006319660": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:50:06.319660"
+        },
+        "20260627215151173884": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:51:51.173884"
+        },
+        "20260627214929535321": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:49:29.535321"
+        },
+        "20260627215021383377": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:50:21.383377"
+        },
+        "20260627220300262529": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627220255177054"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:03:00.262529"
+        },
+        "20260627221640963880": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "salt",
+          "StartTime": "2026, Jun 27 22:16:40.963880"
+        },
+        "20260627214931690484": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:49:31.690484"
+        },
+        "20260627215058811612": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:50:58.811612"
+        },
+        "20260627221657273159": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "salt",
+          "StartTime": "2026, Jun 27 22:16:57.273159"
+        },
+        "20260627214932760653": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:49:32.760653"
+        },
+        "20260627221624421525": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:16:24.421525"
+        },
+        "20260627214933836995": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:49:33.836995"
+        },
+        "20260627214934901979": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:49:34.901979"
+        },
+        "20260627214935978284": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:49:35.978284"
+        },
+        "20260627221338102596": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627221333016070"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:13:38.102596"
+        },
+        "20260627214937074692": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:49:37.074692"
+        },
+        "20260627214938150119": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:49:38.150119"
+        },
+        "20260627221317585456": {
+          "Function": "grains.get",
+          "Arguments": [
+            "id"
+          ],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:13:17.585456"
+        },
+        "20260627214939223783": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:49:39.223783"
+        },
+        "20260627214940316584": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:49:40.316584"
+        },
+        "20260627215030017614": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:50:30.017614"
+        },
+        "20260627215045188587": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:50:45.188587"
+        },
+        "20260627222748443579": {
+          "Function": "cmd.run_bg",
+          "Arguments": [
+            "sleep 10 && echo bg-finished > /tmp/papurika-direct-bg.txt"
+          ],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:27:48.443579"
+        },
+        "20260627214941392417": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:49:41.392417"
+        },
+        "20260627221251064862": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627221245984031"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:12:51.064862"
+        },
+        "20260627214942461410": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:49:42.461410"
+        },
+        "20260627215856348334": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:58:56.348334"
+        },
+        "20260627221729571261": {
+          "Function": "runner.manage.list_state",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:17:29.571261"
+        },
+        "20260627214943561996": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:49:43.561996"
+        },
+        "20260627222550820917": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:25:50.820917"
+        },
+        "20260627214944661465": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:49:44.661465"
+        },
+        "20260627214945755927": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:49:45.755927"
+        },
+        "20260627220043696924": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627220038574435"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:00:43.696924"
+        },
+        "20260627214946826196": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:49:46.826196"
+        },
+        "20260627221640602930": {
+          "Function": "runner.manage.status",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:16:40.602930"
+        },
+        "20260627214947894064": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:49:47.894064"
+        },
+        "20260627215035932942": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:50:35.932942"
+        },
+        "20260627214948954050": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:49:48.954050"
+        },
+        "20260627214950010423": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:49:50.010423"
+        },
+        "20260627215002056756": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:50:02.056756"
+        },
+        "20260627215024648228": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:50:24.648228"
+        },
+        "20260627214951067225": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:49:51.067225"
+        },
+        "20260627215117125960": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:51:17.125960"
+        },
+        "20260627214952142817": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:49:52.142817"
+        },
+        "20260627214953342764": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:49:53.342764"
+        },
+        "20260627215124025662": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:51:24.025662"
+        },
+        "20260627215930372898": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:59:30.372898"
+        },
+        "20260627220750377525": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627220745335011"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:07:50.377525"
+        },
+        "20260627214954478682": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:49:54.478682"
+        },
+        "20260627214955568996": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:49:55.568996"
+        },
+        "20260627215526717143": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:55:26.717143"
+        },
+        "20260627214956674794": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:49:56.674794"
+        },
+        "20260627221159069205": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:11:59.069205"
+        },
+        "20260627222329872314": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627222233897042"
+          ],
+          "Target": [
+            "builtin.minion"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:23:29.872314"
+        },
+        "20260627214957749733": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:49:57.749733"
+        },
+        "20260627215206022399": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:52:06.022399"
+        },
+        "20260627214958865824": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:49:58.865824"
+        },
+        "20260627214959934597": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:49:59.934597"
+        },
+        "20260627215027877074": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:50:27.877074"
+        },
+        "20260627220909619801": {
+          "Function": "saltutil.kill_job",
+          "Arguments": [
+            "20260627220851620547"
+          ],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:09:09.619801"
+        },
+        "20260627215000997851": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:50:00.997851"
+        },
+        "20260627215543404263": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:55:43.404263"
+        },
+        "20260627215003128572": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:50:03.128572"
+        },
+        "20260627215040570051": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:50:40.570051"
+        },
+        "20260627215512895588": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:55:12.895588"
+        },
+        "20260627221128043550": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltguest",
+          "StartTime": "2026, Jun 27 22:11:28.043550"
+        },
+        "20260627215004194983": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:50:04.194983"
+        },
+        "20260627220021532628": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:00:21.532628"
+        },
+        "20260627220945316540": {
+          "Function": "saltutil.kill_job",
+          "Arguments": [
+            "20200101000000000000"
+          ],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:09:45.316540"
+        },
+        "20260627222754885848": {
+          "Function": "cmd.run",
+          "Arguments": [
+            "echo batched"
+          ],
+          "Target": [
+            "builtin.minion"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:27:54.885848"
+        },
+        "20260627215005263380": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:50:05.263380"
+        },
+        "20260627215007384764": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:50:07.384764"
+        },
+        "20260627215008465297": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:50:08.465297"
+        },
+        "20260627215528999886": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:55:28.999886"
+        },
+        "20260627220625208694": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627220620080854"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:06:25.208694"
+        },
+        "20260627221003394766": {
+          "Function": "runner.jobs.active",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:10:03.394766"
+        },
+        "20260627221204183524": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627221159069205"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:12:04.183524"
+        },
+        "20260627222749962787": {
+          "Function": "runner.jobs.list_job",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:27:49.962787"
+        },
+        "20260627222754486727": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:27:54.486727"
+        },
+        "20260627215009544218": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:50:09.544218"
+        },
+        "20260627222410242867": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627222233897042"
+          ],
+          "Target": [
+            "builtin.minion"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:24:10.242867"
+        },
+        "20260627215010614058": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:50:10.614058"
+        },
+        "20260627215148902600": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:51:48.902600"
+        },
+        "20260627215011691186": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:50:11.691186"
+        },
+        "20260627215012771528": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:50:12.771528"
+        },
+        "20260627220850941437": {
+          "Function": "runner.jobs.list_job",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:08:50.941437"
+        },
+        "20260627215013860857": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:50:13.860857"
+        },
+        "20260627220853700915": {
+          "Function": "runner.jobs.active",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:08:53.700915"
+        },
+        "20260627215014939826": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:50:14.939826"
+        },
+        "20260627220437725810": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:04:37.725810"
+        },
+        "20260627221113571361": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627221108485236"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:11:13.571361"
+        },
+        "20260627215016009578": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:50:16.009578"
+        },
+        "20260627215017087015": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:50:17.087015"
+        },
+        "20260627215626846119": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:56:26.846119"
+        },
+        "20260627220117899099": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627220112834496"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:01:17.899099"
+        },
+        "20260627220134933214": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627220129869739"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:01:34.933214"
+        },
+        "20260627215018140706": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:50:18.140706"
+        },
+        "20260627221307158708": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627221302038200"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "salt",
+          "StartTime": "2026, Jun 27 22:13:07.158708"
+        },
+        "20260627215019194706": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:50:19.194706"
+        },
+        "20260627215103417780": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:51:03.417780"
+        },
+        "20260627215020297971": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:50:20.297971"
+        },
+        "20260627215554883425": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:55:54.883425"
+        },
+        "20260627215022438830": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:50:22.438830"
+        },
+        "20260627215023536629": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:50:23.536629"
+        },
+        "20260627222753528823": {
+          "Function": "runner.jobs.list_jobs",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:27:53.528823"
+        },
+        "20260627215025728281": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:50:25.728281"
+        },
+        "20260627221608798992": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:16:08.798992"
+        },
+        "20260627215026797753": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:50:26.797753"
+        },
+        "20260627221003822694": {
+          "Function": "saltutil.running",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "salt",
+          "StartTime": "2026, Jun 27 22:10:03.822694"
+        },
+        "20260627215028939120": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:50:28.939120"
+        },
+        "20260627215031104681": {
+          "Function": "wheel.key.accept",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:50:31.104681"
+        },
+        "20260627221601731690": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:16:01.731690"
+        },
+        "20260627215031158098": {
+          "Function": "wheel.key.list_all",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "UNKNOWN",
+          "StartTime": "2026, Jun 27 21:50:31.158098"
+        },
+        "20260627220152041619": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627220146934865"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:01:52.041619"
+        },
+        "20260627215033604372": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:50:33.604372"
+        },
+        "20260627221403721025": {
+          "Function": "cmd.run",
+          "Arguments": [
+            "exit 7"
+          ],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:14:03.721025"
+        },
+        "20260627215038214829": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:50:38.214829"
+        },
+        "20260627215042883198": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:50:42.883198"
+        },
+        "20260627215615501941": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:56:15.501941"
+        },
+        "20260627222450911106": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627222233897042"
+          ],
+          "Target": [
+            "builtin.minion"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:24:50.911106"
+        },
+        "20260627215047464447": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:50:47.464447"
+        },
+        "20260627215417693225": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:54:17.693225"
+        },
+        "20260627215918386848": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627215913329298"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:59:18.386848"
+        },
+        "20260627220312233144": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:03:12.233144"
+        },
+        "20260627222755140397": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:27:55.140397"
+        },
+        "20260627215052080630": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:50:52.080630"
+        },
+        "20260627215624549865": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:56:24.549865"
+        },
+        "20260627215056581628": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:50:56.581628"
+        },
+        "20260627220459950435": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627220454812366"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:04:59.950435"
+        },
+        "20260627220819622017": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:08:19.622017"
+        },
+        "20260627215101084287": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:51:01.084287"
+        },
+        "20260627215105708633": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:51:05.708633"
+        },
+        "20260627215533660489": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:55:33.660489"
+        },
+        "20260627215108018614": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:51:08.018614"
+        },
+        "20260627220238124086": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:02:38.124086"
+        },
+        "20260627220346351963": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:03:46.351963"
+        },
+        "20260627222748819514": {
+          "Function": "state.apply",
+          "Arguments": [
+            "demo"
+          ],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:27:48.819514"
+        },
+        "20260627222758176891": {
+          "Function": "runner.manage.up",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:27:58.176891"
+        },
+        "20260627215110303456": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:51:10.303456"
+        },
+        "20260627215112576490": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:51:12.576490"
+        },
+        "20260627215114842421": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:51:14.842421"
+        },
+        "20260627221024447231": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627221019332697"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:10:24.447231"
+        },
+        "20260627215119381267": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:51:19.381267"
+        },
+        "20260627215121706726": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:51:21.706726"
+        },
+        "20260627215126335969": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:51:26.335969"
+        },
+        "20260627220533930876": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627220528847979"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:05:33.930876"
+        },
+        "20260627221612886541": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627221608798992"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:16:12.886541"
+        },
+        "20260627215128574391": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:51:28.574391"
+        },
+        "20260627215952544340": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627215947452424"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:59:52.544340"
+        },
+        "20260627222501168244": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627222233897042"
+          ],
+          "Target": [
+            "builtin.minion"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:25:01.168244"
+        },
+        "20260627215130819329": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:51:30.819329"
+        },
+        "20260627215839189761": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:58:39.189761"
+        },
+        "20260627215135337582": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:51:35.337582"
+        },
+        "20260627215137588639": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:51:37.588639"
+        },
+        "20260627221301416882": {
+          "Function": "runner.manage.status",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:13:01.416882"
+        },
+        "20260627215139828340": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:51:39.828340"
+        },
+        "20260627222228616152": {
+          "Function": "cmd.run",
+          "Arguments": [
+            "sleep 5; echo done"
+          ],
+          "Target": "builtin.minion",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:22:28.616152"
+        },
+        "20260627215142119066": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:51:42.119066"
+        },
+        "20260627215144380344": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:51:44.380344"
+        },
+        "20260627215901524202": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627215856348334"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:59:01.524202"
+        },
+        "20260627220659303714": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627220654204405"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:06:59.303714"
+        },
+        "20260627222233735851": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627222228616152"
+          ],
+          "Target": [
+            "builtin.minion"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:22:33.735851"
+        },
+        "20260627222233897042": {
+          "Function": "cmd.run",
+          "Arguments": [
+            "sleep 300"
+          ],
+          "Target": "builtin.minion",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:22:33.897042"
+        },
+        "20260627215153466365": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:51:53.466365"
+        },
+        "20260627215517448504": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:55:17.448504"
+        },
+        "20260627220546023109": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:05:46.023109"
+        },
+        "20260627215155830005": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:51:55.830005"
+        },
+        "20260627215656829006": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:56:56.829006"
+        },
+        "20260627220927699639": {
+          "Function": "saltutil.running",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "salt",
+          "StartTime": "2026, Jun 27 22:09:27.699639"
+        },
+        "20260627215158147085": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:51:58.147085"
+        },
+        "20260627215810171903": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627215805083005"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:58:10.171903"
+        },
+        "20260627220854001332": {
+          "Function": "saltutil.running",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "salt",
+          "StartTime": "2026, Jun 27 22:08:54.001332"
+        },
+        "20260627221602395777": {
+          "Function": "cmd.run",
+          "Arguments": [
+            "echo $(hostname) batched"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:16:02.395777"
+        },
+        "20260627215200407142": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:52:00.407142"
+        },
+        "20260627215524388948": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:55:24.388948"
+        },
+        "20260627220004500506": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:00:04.500506"
+        },
+        "20260627220745335011": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:07:45.335011"
+        },
+        "20260627222239014190": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627222233897042"
+          ],
+          "Target": [
+            "builtin.minion"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:22:39.014190"
+        },
+        "20260627215205949315": {
+          "Function": "cmd.run",
+          "Arguments": [
+            "echo via-event-bus; sleep 2; echo done"
+          ],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:52:05.949315"
+        },
+        "20260627215216375984": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:52:16.375984"
+        },
+        "20260627215458450627": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "salt",
+          "StartTime": "2026, Jun 27 21:54:58.450627"
+        },
+        "20260627215606326238": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:56:06.326238"
+        },
+        "20260627222249185672": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627222233897042"
+          ],
+          "Target": [
+            "builtin.minion"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:22:49.185672"
+        },
+        "20260627215457735074": {
+          "Function": "runner.manage.status",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:54:57.735074"
+        },
+        "20260627220950377206": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627220945316540"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:09:50.377206"
+        },
+        "20260627215505149965": {
+          "Function": "runner.jobs.list_job",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:55:05.149965"
+        },
+        "20260627215633843651": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:56:33.843651"
+        },
+        "20260627220221146934": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:02:21.146934"
+        },
+        "20260627220711273144": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:07:11.273144"
+        },
+        "20260627220926918800": {
+          "Function": "runner.jobs.active",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:09:26.918800"
+        },
+        "20260627215505672112": {
+          "Function": "runner.jobs.print_job",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:55:05.672112"
+        },
+        "20260627215608741671": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:56:08.741671"
+        },
+        "20260627215510637143": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:55:10.637143"
+        },
+        "20260627215515190747": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:55:15.190747"
+        },
+        "20260627215519709754": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:55:19.709754"
+        },
+        "20260627220511819341": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:05:11.819341"
+        },
+        "20260627215522006288": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:55:22.006288"
+        },
+        "20260627215531309532": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:55:31.309532"
+        },
+        "20260627220420543104": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:04:20.543104"
+        },
+        "20260627215536300427": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:55:36.300427"
+        },
+        "20260627220334420737": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627220329286899"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:03:34.420737"
+        },
+        "20260627215538656432": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:55:38.656432"
+        },
+        "20260627215545681525": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:55:45.681525"
+        },
+        "20260627220454812366": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:04:54.812366"
+        },
+        "20260627215547924656": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:55:47.924656"
+        },
+        "20260627215550267455": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:55:50.267455"
+        },
+        "20260627220329286899": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:03:29.286899"
+        },
+        "20260627215552581301": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:55:52.581301"
+        },
+        "20260627221053094489": {
+          "Function": "saltutil.kill_job",
+          "Arguments": [
+            "20260627221001327099"
+          ],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:10:53.094489"
+        },
+        "20260627215557280015": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:55:57.280015"
+        },
+        "20260627215559498440": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:55:59.498440"
+        },
+        "20260627220351495940": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627220346351963"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:03:51.495940"
+        },
+        "20260627215601758794": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:56:01.758794"
+        },
+        "20260627215604046556": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:56:04.046556"
+        },
+        "20260627215631433094": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:56:31.433094"
+        },
+        "20260627222340014836": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627222233897042"
+          ],
+          "Target": [
+            "builtin.minion"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:23:40.014836"
+        },
+        "20260627215610979383": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:56:10.979383"
+        },
+        "20260627215827346660": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627215822162772"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:58:27.346660"
+        },
+        "20260627221702406915": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627221657273159"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "salt",
+          "StartTime": "2026, Jun 27 22:17:02.406915"
+        },
+        "20260627222757795226": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "salt",
+          "StartTime": "2026, Jun 27 22:27:57.795226"
+        },
+        "20260627215613226561": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:56:13.226561"
+        },
+        "20260627215622294030": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:56:22.294030"
+        },
+        "20260627215636137899": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:56:36.137899"
+        },
+        "20260627215641235178": {
+          "Function": "cmd.run",
+          "Arguments": [
+            "pkill -9 -f salt-minion"
+          ],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:56:41.235178"
+        },
+        "20260627215701964637": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627215656829006"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:57:01.964637"
+        },
+        "20260627215713875660": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:57:13.875660"
+        },
+        "20260627215718952420": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627215713875660"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:57:18.952420"
+        },
+        "20260627222749920242": {
+          "Function": "test.sleep",
+          "Arguments": [
+            2
+          ],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:27:49.920242"
+        },
+        "20260627215735986112": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627215730913865"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:57:35.986112"
+        },
+        "20260627221036820483": {
+          "Function": "runner.jobs.active",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:10:36.820483"
+        },
+        "20260627221728774084": {
+          "Function": "runner.manage.present",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:17:28.774084"
+        },
+        "20260627215748038916": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:57:48.038916"
+        },
+        "20260627220802507670": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:08:02.507670"
+        },
+        "20260627222756598698": {
+          "Function": "runner.cache.grains",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:27:56.598698"
+        },
+        "20260627215753183783": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627215748038916"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:57:53.183783"
+        },
+        "20260627215822162772": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:58:22.162772"
+        },
+        "20260627222319634260": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627222233897042"
+          ],
+          "Target": [
+            "builtin.minion"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:23:19.634260"
+        },
+        "20260627222511476584": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627222233897042"
+          ],
+          "Target": [
+            "builtin.minion"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:25:11.476584"
+        },
+        "20260627215844325182": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627215839189761"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:58:44.325182"
+        },
+        "20260627220442807806": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627220437725810"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:04:42.807806"
+        },
+        "20260627215913329298": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:59:13.329298"
+        },
+        "20260627215935459233": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627215930372898"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:59:35.459233"
+        },
+        "20260627215947452424": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 21:59:47.452424"
+        },
+        "20260627222420321494": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627222233897042"
+          ],
+          "Target": [
+            "builtin.minion"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:24:20.321494"
+        },
+        "20260627220009662117": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627220004500506"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:00:09.662117"
+        },
+        "20260627220038574435": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:00:38.574435"
+        },
+        "20260627222558906277": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627222550820917"
+          ],
+          "Target": [
+            "builtin.minion"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:25:58.906277"
+        },
+        "20260627220055682303": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:00:55.682303"
+        },
+        "20260627222749869220": {
+          "Function": "cmd.run",
+          "Arguments": [
+            "echo async-1; sleep 3; echo async-done"
+          ],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:27:49.869220"
+        },
+        "20260627220100796027": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627220055682303"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:01:00.796027"
+        },
+        "20260627221019332697": {
+          "Function": "saltutil.kill_job",
+          "Arguments": [
+            "20260627221001327099"
+          ],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:10:19.332697"
+        },
+        "20260627220112834496": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:01:12.834496"
+        },
+        "20260627220146934865": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:01:46.934865"
+        },
+        "20260627220850471518": {
+          "Function": "runner.jobs.print_job",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:08:50.471518"
+        },
+        "20260627220209082381": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627220203958491"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:02:09.082381"
+        },
+        "20260627220243274148": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627220238124086"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:02:43.274148"
+        },
+        "20260627220608061843": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627220603021010"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:06:08.061843"
+        },
+        "20260627220255177054": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:02:55.177054"
+        },
+        "20260627220317373615": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627220312233144"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:03:17.373615"
+        },
+        "20260627220408605149": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627220403464543"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:04:08.605149"
+        },
+        "20260627220516882544": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627220511819341"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:05:16.882544"
+        },
+        "20260627220551215436": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627220546023109"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:05:51.215436"
+        },
+        "20260627221602085250": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:16:02.085250"
+        },
+        "20260627222751445050": {
+          "Function": "runner.jobs.list_job",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:27:51.445050"
+        },
+        "20260627220603021010": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:06:03.021010"
+        },
+        "20260627220620080854": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:06:20.080854"
+        },
+        "20260627220637133792": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:06:37.133792"
+        },
+        "20260627222754697694": {
+          "Function": "cmd.run",
+          "Arguments": [
+            "echo batched"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:27:54.697694"
+        },
+        "20260627220642212237": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627220637133792"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:06:42.212237"
+        },
+        "20260627221735097809": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627221730002495"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:17:35.097809"
+        },
+        "20260627220654204405": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:06:54.204405"
+        },
+        "20260627220841808999": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627220836678355"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:08:41.808999"
+        },
+        "20260627221656583765": {
+          "Function": "runner.manage.up",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:16:56.583765"
+        },
+        "20260627222218314039": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627222212172012"
+          ],
+          "Target": [
+            "builtin.minion",
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:22:18.314039"
+        },
+        "20260627220716376144": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627220711273144"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:07:16.376144"
+        },
+        "20260627220733413524": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627220728291225"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:07:33.413524"
+        },
+        "20260627220807638088": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627220802507670"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:08:07.638088"
+        },
+        "20260627220836678355": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:08:36.678355"
+        },
+        "20260627220846192173": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:08:46.192173"
+        },
+        "20260627221148597420": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627221143458640"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:11:48.597420"
+        },
+        "20260627220859129883": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627220854001332"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "salt",
+          "StartTime": "2026, Jun 27 22:08:59.129883"
+        },
+        "20260627220914705040": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627220909619801"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:09:14.705040"
+        },
+        "20260627220932829289": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627220927699639"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "salt",
+          "StartTime": "2026, Jun 27 22:09:32.829289"
+        },
+        "20260627220943479314": {
+          "Function": "runner.jobs.lookup_jid",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:09:43.479314"
+        },
+        "20260627220944858324": {
+          "Function": "runner.jobs.list_job",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:09:44.858324"
+        },
+        "20260627221623677348": {
+          "Function": "runner.auth.mk_token",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:16:23.677348"
+        },
+        "20260627221001327099": {
+          "Function": "cmd.run",
+          "Arguments": [
+            "sleep 120"
+          ],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:10:01.327099"
+        },
+        "20260627221008853194": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627221003822694"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "salt",
+          "StartTime": "2026, Jun 27 22:10:08.853194"
+        },
+        "20260627221037253298": {
+          "Function": "saltutil.running",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "salt",
+          "StartTime": "2026, Jun 27 22:10:37.253298"
+        },
+        "20260627221042380879": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627221037253298"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "salt",
+          "StartTime": "2026, Jun 27 22:10:42.380879"
+        },
+        "20260627222309404489": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627222233897042"
+          ],
+          "Target": [
+            "builtin.minion"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:23:09.404489"
+        },
+        "20260627221058234226": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627221053094489"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:10:58.234226"
+        },
+        "20260627222752918395": {
+          "Function": "runner.jobs.list_job",
+          "Arguments": [],
+          "Target": "9b3588ef07fc_master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:27:52.918395"
+        },
+        "20260627221108485236": {
+          "Function": "saltutil.kill_job",
+          "Arguments": [
+            "20260627221001327099"
+          ],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:11:08.485236"
+        },
+        "20260627221245984031": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:12:45.984031"
+        },
+        "20260627221133086156": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627221128043550"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltguest",
+          "StartTime": "2026, Jun 27 22:11:33.086156"
+        },
+        "20260627221214525265": {
+          "Function": "cmd.run",
+          "Arguments": [
+            "exit 3"
+          ],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:12:14.525265"
+        },
+        "20260627221219605617": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627221214525265"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:12:19.605617"
+        },
+        "20260627221522263822": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:15:22.263822"
+        },
+        "20260627221229903013": {
+          "Function": "state.single",
+          "Arguments": [
+            "test.fail_without_changes",
+            {
+              "__kwarg__": true,
+              "name": "demo-fail"
+            }
+          ],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:12:29.903013"
+        },
+        "20260627221234947471": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627221229903013"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:12:34.947471"
+        },
+        "20260627221629472001": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627221624421525"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:16:29.472001"
+        },
+        "20260627221302038200": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "salt",
+          "StartTime": "2026, Jun 27 22:13:02.038200"
+        },
+        "20260627221322660613": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627221317585456"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:13:22.660613"
+        },
+        "20260627221353465919": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627221348407767"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:13:53.465919"
+        },
+        "20260627221408839456": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627221403721025"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:14:08.839456"
+        },
+        "20260627221646085729": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627221640963880"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "salt",
+          "StartTime": "2026, Jun 27 22:16:46.085729"
+        },
+        "20260627221713181742": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "salt",
+          "StartTime": "2026, Jun 27 22:17:13.181742"
+        },
+        "20260627221718308649": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627221713181742"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "salt",
+          "StartTime": "2026, Jun 27 22:17:18.308649"
+        },
+        "20260627221730002495": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:17:30.002495"
+        },
+        "20260627222212172012": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:22:12.172012"
+        },
+        "20260627222259283982": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627222233897042"
+          ],
+          "Target": [
+            "builtin.minion"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:22:59.283982"
+        },
+        "20260627222350092212": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627222233897042"
+          ],
+          "Target": [
+            "builtin.minion"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:23:50.092212"
+        },
+        "20260627222400122893": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627222233897042"
+          ],
+          "Target": [
+            "builtin.minion"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:24:00.122893"
+        },
+        "20260627222413871037": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:24:13.871037"
+        },
+        "20260627222430495540": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627222233897042"
+          ],
+          "Target": [
+            "builtin.minion"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:24:30.495540"
+        },
+        "20260627222440671896": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627222233897042"
+          ],
+          "Target": [
+            "builtin.minion"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:24:40.671896"
+        },
+        "20260627222731338473": {
+          "Function": "test.arg",
+          "Arguments": [
+            "one",
+            "two",
+            {
+              "__kwarg__": true,
+              "name": "papurika",
+              "flag": true
+            }
+          ],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:27:31.338473"
+        },
+        "20260627222716081305": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:27:16.081305"
+        },
+        "20260627222721202768": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627222716081305"
+          ],
+          "Target": [
+            "builtin.minion"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:27:21.202768"
+        },
+        "20260627222736466398": {
+          "Function": "saltutil.find_job",
+          "Arguments": [
+            "20260627222731338473"
+          ],
+          "Target": [
+            "builtin.minion"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:27:36.466398"
+        },
+        "20260627222755434566": {
+          "Function": "state.apply",
+          "Arguments": [
+            "demo"
+          ],
+          "Target": [
+            "builtin.minion2"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:27:55.434566"
+        },
+        "20260627222746688681": {
+          "Function": "cmd.run",
+          "Arguments": [
+            "echo blocking-cmd; sleep 1; echo done"
+          ],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:27:46.688681"
+        },
+        "20260627222755864844": {
+          "Function": "state.apply",
+          "Arguments": [
+            "demo"
+          ],
+          "Target": [
+            "builtin.minion"
+          ],
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 22:27:55.864844"
+        },
+        "20260627222758460749": {
+          "Function": "test.ping",
+          "Arguments": [],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "salt",
+          "StartTime": "2026, Jun 27 22:27:58.460749"
+        }
+      }
+    ]
+  }
+}

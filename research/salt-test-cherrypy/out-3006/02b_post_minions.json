@@ -1,0 +1,46 @@
+{
+  "request": {
+    "path": "/minions",
+    "body": [
+      {
+        "tgt": "*",
+        "fun": "test.sleep",
+        "arg": [
+          2
+        ]
+      }
+    ]
+  },
+  "status_code": 202,
+  "response_headers": {
+    "Content-Type": "application/json",
+    "Server": "CherryPy/18.6.1",
+    "Date": "Sat, 27 Jun 2026 22:27:49 GMT",
+    "Allow": "GET, HEAD, POST",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "GET, POST",
+    "Access-Control-Allow-Credentials": "true",
+    "Cache-Control": "private",
+    "Vary": "Accept-Encoding",
+    "Content-Length": "157",
+    "Set-Cookie": "session_id=e9107ed0e0268ba7411bba352cd87a424c7e9202; expires=Sun, 28 Jun 2026 08:27:49 GMT; Max-Age=36000; Path=/"
+  },
+  "response_body": {
+    "return": [
+      {
+        "jid": "20260627222749920242",
+        "minions": [
+          "builtin.minion",
+          "builtin.minion2"
+        ]
+      }
+    ],
+    "_links": {
+      "jobs": [
+        {
+          "href": "/jobs/20260627222749920242"
+        }
+      ]
+    }
+  }
+}
