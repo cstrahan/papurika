@@ -178,3 +178,27 @@ for fn_ret in client.get_cli_event_returns(
 Alternative (if the placeholders are wanted for logging): skip them when
 counting — `if isinstance(data, dict) and data.get("out") == "no_return": continue`.
 Either restores 3006/3007 behavior: dead minions correctly report in `down`.
+
+### 5a. Fix implemented + verified (2026-06-27)
+
+The surgical fix (pass `expect_minions=False` from `_ping`) is implemented in
+`~/src/saltstack` on branch `cstrahan/fix-manage-status-expect-minions`
+(branched off `v3008.1`), commit `bf0d873f5c` — `salt/runners/manage.py`, +8
+lines (the kwarg plus an explanatory comment). `get_cli_event_returns` pops
+`expect_minions` from `**kwargs` with a default of `True`
+(`salt/client/__init__.py:1860`), and since `_ping` passes neither `verbose` nor
+`show_timeout`, `False` propagates through cleanly — no other call site touched.
+
+Verified live against `papurika-salt` (3008.1, fixed `manage.py` copied in over
+the byte-identical v3008.1 baseline + master restart), with `builtin.minion` up
+and `builtin.minion2` key-accepted:
+
+| scenario (authoritative `test.ping`) | `manage.status` before fix | `manage.status` after fix |
+|---|---|---|
+| minion2 **dead** | `up: [minion, minion2]`, `down: []` ❌ | `up: [minion]`, `down: [minion2]` ✅ |
+| minion2 **alive** | `up: [minion, minion2]` | `up: [minion, minion2]`, `down: []` ✅ |
+
+`manage.up`/`manage.down` (thin wrappers over `status()`) inherit the fix —
+confirmed `up → [minion]`, `down → [minion2]` in the dead case. The reverse case
+confirms we restored correct behavior rather than merely inverting the bug.
+(Patched container only; re-copy after recreating it, like the token/cache fix.)
