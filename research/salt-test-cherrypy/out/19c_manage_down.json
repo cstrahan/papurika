@@ -1,0 +1,30 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "runner",
+        "fun": "manage.down"
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Content-Type": "application/json",
+    "Server": "CherryPy/18.10.0",
+    "Date": "Sat, 27 Jun 2026 21:08:54 GMT",
+    "Allow": "GET, HEAD, POST",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "GET, POST",
+    "Access-Control-Allow-Credentials": "true",
+    "Cache-Control": "private",
+    "Vary": "Accept-Encoding",
+    "Content-Length": "16",
+    "Set-Cookie": "session_id=e41a8040f43c91ea19ef798710294b1e502aace4; expires=Sun, 28 Jun 2026 07:08:54 GMT; Max-Age=36000; Path=/"
+  },
+  "response_body": {
+    "return": [
+      []
+    ]
+  }
+}
