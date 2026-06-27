@@ -1,0 +1,64 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "local",
+        "tgt": "*",
+        "fun": "does.not.exist"
+      },
+      {
+        "client": "local",
+        "tgt": "*",
+        "fun": "test.ping"
+      },
+      {
+        "client": "local",
+        "tgt": "*",
+        "fun": "cmd.run",
+        "arg": [
+          "exit 7"
+        ],
+        "full_return": true
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Content-Type": "application/json",
+    "Server": "CherryPy/18.10.0",
+    "Date": "Sat, 27 Jun 2026 05:18:44 GMT",
+    "Allow": "GET, HEAD, POST",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "GET, POST",
+    "Access-Control-Allow-Credentials": "true",
+    "Cache-Control": "private",
+    "Vary": "Accept-Encoding",
+    "Content-Length": "333",
+    "Set-Cookie": "session_id=e35760cf08acec8f5f2a6d32b222d94ed34f056c; expires=Sat, 27 Jun 2026 15:18:44 GMT; Max-Age=36000; Path=/"
+  },
+  "response_body": {
+    "return": [
+      {
+        "builtin.minion2": "'does.not.exist' is not available.",
+        "builtin.minion": "'does.not.exist' is not available."
+      },
+      {
+        "builtin.minion2": true,
+        "builtin.minion": true
+      },
+      {
+        "builtin.minion2": {
+          "ret": "",
+          "retcode": 7,
+          "jid": "20260627051844490593"
+        },
+        "builtin.minion": {
+          "ret": "",
+          "retcode": 7,
+          "jid": "20260627051844490593"
+        }
+      }
+    ]
+  }
+}

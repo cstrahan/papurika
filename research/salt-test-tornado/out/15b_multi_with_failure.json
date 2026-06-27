@@ -1,0 +1,49 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "local",
+        "tgt": "*",
+        "fun": "does.not.exist"
+      },
+      {
+        "client": "local",
+        "tgt": "*",
+        "fun": "test.ping"
+      },
+      {
+        "client": "local",
+        "tgt": "*",
+        "fun": "cmd.run",
+        "arg": [
+          "exit 7"
+        ],
+        "full_return": true
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Server": "TornadoServer/6.5.7",
+    "Content-Type": "application/json",
+    "Date": "Sat, 27 Jun 2026 05:18:45 GMT",
+    "Content-Length": "225"
+  },
+  "response_body": {
+    "return": [
+      {
+        "builtin.minion2": "'does.not.exist' is not available.",
+        "builtin.minion": "'does.not.exist' is not available."
+      },
+      {
+        "builtin.minion": true,
+        "builtin.minion2": true
+      },
+      {
+        "builtin.minion": "",
+        "builtin.minion2": ""
+      }
+    ]
+  }
+}

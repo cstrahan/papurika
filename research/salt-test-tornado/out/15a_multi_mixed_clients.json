@@ -1,0 +1,50 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "local",
+        "tgt": "*",
+        "fun": "test.ping"
+      },
+      {
+        "client": "runner",
+        "fun": "manage.status"
+      },
+      {
+        "client": "local",
+        "tgt": "*",
+        "fun": "grains.get",
+        "arg": [
+          "id"
+        ]
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Server": "TornadoServer/6.5.7",
+    "Content-Type": "application/json",
+    "Date": "Sat, 27 Jun 2026 05:18:45 GMT",
+    "Content-Length": "198"
+  },
+  "response_body": {
+    "return": [
+      {
+        "builtin.minion2": true,
+        "builtin.minion": true
+      },
+      {
+        "up": [
+          "builtin.minion",
+          "builtin.minion2"
+        ],
+        "down": []
+      },
+      {
+        "builtin.minion2": "builtin.minion2",
+        "builtin.minion": "builtin.minion"
+      }
+    ]
+  }
+}

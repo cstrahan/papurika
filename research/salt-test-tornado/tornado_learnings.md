@@ -183,6 +183,16 @@ from a sync long-command response.
 
 ---
 
+## Multiple lowstates in one POST — `out/15*.json`
+
+Identical to cherrypy: a POST array returns a parallel ordered `return` array
+(one entry per command, client types mixable), and a failing/unavailable
+command does **not** abort the rest (no stop-on-failure). Only divergence is the
+`full_return` one (`cmd.run 'exit 7'` → tornado `""` vs cherrypy `{retcode:7}`).
+See `cherrypy_learnings.md`.
+
+---
+
 ## Failure / outcome taxonomy — `out/14*.json`
 
 Full matrix + client guidance in `cherrypy_learnings.md` ("Failure / outcome

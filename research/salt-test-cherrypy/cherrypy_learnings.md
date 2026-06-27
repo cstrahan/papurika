@@ -516,6 +516,25 @@ You must parse the body. Captured matrix (cherrypy | tornado):
 
 ---
 
+## Multiple lowstates in one POST — `out/15*.json`
+
+A `/` POST body can be an array of several commands; the `return` is a
+**parallel array in request order**, one entry per command, client types freely
+mixed. Confirmed on both modules (identical):
+- `[local test.ping, runner manage.status, local grains.get id]` →
+  `[{m: true, …}, {"up":[…],"down":[]}, {m: "<id>", …}]` (order preserved).
+- **No stop-on-failure:** `[local does.not.exist, local test.ping, local
+  cmd.run 'exit 7']` → the unavailable first command (`"… is not available."`)
+  does **not** abort the rest — `test.ping` still returns `true`, and the third
+  runs (cherrypy: `{ret:"", retcode:7, jid}`; tornado: `{m: ""}` — same
+  `full_return` divergence as the taxonomy section).
+
+Client implication: when batching commands in one request, map results
+positionally and classify each entry independently — one failing command is
+silent w.r.t. the others (and shares the request's single `200`).
+
+---
+
 ## Errors & status codes observed
 
 - `POST /minions` → **202 Accepted** (everything else → 200).
