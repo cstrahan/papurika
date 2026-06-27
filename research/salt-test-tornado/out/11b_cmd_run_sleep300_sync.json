@@ -1,0 +1,27 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "local",
+        "tgt": "*",
+        "fun": "cmd.run",
+        "arg": [
+          "sleep 300"
+        ]
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Server": "TornadoServer/6.5.7",
+    "Content-Type": "application/json",
+    "Date": "Sat, 27 Jun 2026 02:12:10 GMT",
+    "Content-Length": "16"
+  },
+  "response_body": {
+    "return": [
+      {}
+    ]
+  }
+}

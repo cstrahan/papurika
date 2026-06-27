@@ -1,0 +1,40 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "runner",
+        "fun": "jobs.active"
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Server": "TornadoServer/6.5.7",
+    "Content-Type": "application/json",
+    "Date": "Sat, 27 Jun 2026 02:12:20 GMT",
+    "Content-Length": "248"
+  },
+  "response_body": {
+    "return": [
+      {
+        "20260627021210911211": {
+          "Function": "cmd.run",
+          "Arguments": [
+            "sleep 300"
+          ],
+          "Target": "*",
+          "Target-type": "glob",
+          "User": "saltdev",
+          "StartTime": "2026, Jun 27 02:12:10.911211",
+          "Running": [
+            {
+              "builtin.minion": 1215
+            }
+          ],
+          "Returned": []
+        }
+      }
+    ]
+  }
+}

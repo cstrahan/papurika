@@ -368,6 +368,44 @@ events (targeted set known from the `/new` event or the async response).
 
 ---
 
+## Self-killing & pathologically-long commands — `out/11*.json`
+
+Three sync `local` cases (script `11_long_and_suicidal_cmds.py`):
+
+### 1. `cmd.run` that kills its own minion (`pkill -9 -f salt-minion`)
+The minion dies mid-job and never returns. After the gather window (~15s) the
+API returns the same no-response string as a down minion:
+`{"builtin.minion": "Minion did not return. [No response]… jobs.lookup_jid
+<jid>"}`. supervisor (`autorestart`) brings the minion back within a few
+seconds, but **the job's return is lost** (the process that would have sent it
+is gone). Detect via targeted-vs-returned, not by waiting.
+
+### 2. `cmd.run 'sleep 300'` SYNC — the connection is held for the *whole* command
+**cherrypy does NOT return at a short gather timeout for a live long-running
+job.** salt's `find_job` sees the job still running and keeps waiting, so the
+sync HTTP call blocks for essentially the command's entire lifetime. Our client
+hit its **120s** read timeout while the job kept running; `jobs.active` confirmed
+it (`Running: {builtin.minion: <pid>}`, `Returned: []`). On the thread-pooled
+cherrypy server this means **one long sync command pins a worker thread for the
+whole duration** — a real scalability/timeout hazard. (tornado differs sharply:
+it bails at ~10s with an empty body — see `tornado_learnings.md`.)
+
+> Note the contrast with case 1: a *dead* minion returns at the gather timeout
+> (~15s, find_job gets no answer); a *live but busy* minion makes the sync call
+> wait indefinitely (find_job says "still running").
+
+### 3. `cmd.run_bg 'sleep 300'` — fire-and-forget, instant
+Returns in ~0.1s with `{"builtin.minion": {"pid": <pid>}}` regardless of the
+5-minute command. This is the correct way to launch long commands: you get a
+PID immediately and never hold the connection (but you forfeit the output —
+track it via the job cache / event bus if you need it).
+
+**Takeaway:** never run long commands synchronously. Use `cmd.run_bg` (or
+`local_async` + `/jobs`/`/events`) so a slow command can't hold an HTTP
+connection (and a cherrypy worker thread) hostage for minutes.
+
+---
+
 ## Errors & status codes observed
 
 - `POST /minions` → **202 Accepted** (everything else → 200).

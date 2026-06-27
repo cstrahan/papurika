@@ -35,6 +35,8 @@ served:
 | `/events` + `Accept: text/event-stream` | tolerated | **406** — omit the Accept header |
 | sync local, no response | `{minion: "Minion did not return…"}` (string) | `{}` (non-responder omitted) |
 | no minions matched | `{}` (empty) | `"No minions matched the target…"` (string) |
+| **sync `cmd.run 'sleep 300'`** | **blocks for the whole command** (held our 120s client timeout; job keeps running) | **returns empty `{}` at ~10s** (gather timeout; job keeps running) |
+| `cmd.run` self-kill (minion suicide) | "Minion did not return…" string @~15s | empty `{}` @~10s |
 | extra endpoints | `/keys`, `/logout`, `/stats`, `/ws` | none of those; has `/all_events`, `/formatted_events` (websockets, untested) |
 
 **What's identical:** login/token shape & perms, sync `local` result shapes
@@ -145,6 +147,34 @@ Same harness as cherrypy (stop the minion, key stays accepted). Differences:
 - `manage.status` is **stale** (reports `up` while the minion is dead) — same
   unreliability as cherrypy. Async `/jobs/<jid>` keeps the down minion out of
   `Result` (consistent with the tornado job shape above).
+
+---
+
+## Self-killing & long-running commands — `out/11*.json`
+
+Same three sync `local` cases as the cherrypy harness; the **sleep-300 case is
+the big divergence**.
+
+- **`cmd.run` self-kill** (`pkill -9 -f salt-minion`): tornado returns
+  **empty `{}` at ~10s** (cherrypy: the "Minion did not return…" string at
+  ~15s). Minion auto-restarts; the job's return is lost either way.
+- **sync `cmd.run 'sleep 300'`**: tornado returns **empty `{}` at ~10s** — it
+  caps the local gather at ~`gather_job_timeout` and gives up, while the job
+  keeps running on the minion (`jobs.active` shows it). cherrypy instead
+  **blocks for the entire command** (held our 120s client timeout). So:
+  - cherrypy = *slow but truthful* (connection held until the job finishes — a
+    worker-thread hazard);
+  - tornado = *fast but lossy* (a silent empty `{}` at ~10s; the long command is
+    silently orphaned as a running job).
+  This is the same ~10s gather-timeout behavior seen in the GPG-pillar
+  silent-incomplete finding (`../salt-test-gpg-pillar/`).
+- **`cmd.run_bg 'sleep 300'`**: identical to cherrypy — instant return (~0.2s)
+  with `{minion: {pid}}`.
+
+**Takeaway:** on tornado, a sync long/blocking command yields a misleading empty
+200 after ~10s (not an error, not the result), with the job still running. Use
+`cmd.run_bg` or `local_async` + `/jobs`/`/events`; never infer success/failure
+from a sync long-command response.
 
 ---
 
