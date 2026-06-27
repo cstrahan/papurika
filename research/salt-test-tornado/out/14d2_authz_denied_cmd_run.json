@@ -1,0 +1,27 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "local",
+        "tgt": "*",
+        "fun": "cmd.run",
+        "arg": [
+          "id"
+        ]
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Server": "TornadoServer/6.5.7",
+    "Content-Type": "application/json",
+    "Date": "Sat, 27 Jun 2026 05:10:59 GMT",
+    "Content-Length": "38"
+  },
+  "response_body": {
+    "return": [
+      "Failed to authenticate"
+    ]
+  }
+}

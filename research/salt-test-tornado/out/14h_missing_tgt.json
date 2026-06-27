@@ -1,0 +1,23 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "local",
+        "fun": "test.ping"
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Server": "TornadoServer/6.5.7",
+    "Content-Type": "application/json",
+    "Date": "Sat, 27 Jun 2026 05:10:59 GMT",
+    "Content-Length": "66"
+  },
+  "response_body": {
+    "return": [
+      "Unexpected exception while handling request: 'tgt'"
+    ]
+  }
+}

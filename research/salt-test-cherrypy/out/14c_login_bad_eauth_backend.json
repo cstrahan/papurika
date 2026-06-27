@@ -1,0 +1,25 @@
+{
+  "request": {
+    "path": "/login",
+    "body": {
+      "username": "saltdev",
+      "password": "saltdev",
+      "eauth": "nosuchbackend"
+    }
+  },
+  "status_code": 401,
+  "response_headers": {
+    "Content-Type": "text/html;charset=utf-8",
+    "Server": "CherryPy/18.10.0",
+    "Date": "Sat, 27 Jun 2026 05:10:15 GMT",
+    "Allow": "GET, HEAD, POST",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "GET, POST",
+    "Access-Control-Allow-Credentials": "true",
+    "Vary": "Accept-Encoding",
+    "Content-Encoding": "gzip",
+    "Content-Length": "449",
+    "Set-Cookie": "session_id=deb53fcb61b1d039115aceacff03ebc98d7b1f32; expires=Sat, 27 Jun 2026 15:10:15 GMT; Max-Age=36000; Path=/"
+  },
+  "response_body": "<!DOCTYPE html PUBLIC\n\"-//W3C//DTD XHTML 1.0 Transitional//EN\"\n\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n<html>\n<head>\n    <meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\"></meta>\n    <title>401 Unauthorized</title>\n    <style type=\"text/css\">\n    #powered_by {\n        margin-top: 20px;\n        border-top: 2px solid black;\n        font-style: italic;\n    }\n\n    #traceback {\n        color: red;\n    }\n    </style>\n</head>\n    <body>\n        <h2>401 Unauthorized</h2>\n        <p>Could not authenticate using provided credentials</p>\n        <pre id=\"traceback\"></pre>\n    <div id=\"powered_by\">\n      <span>\n        Powered by <a href=\"http://www.cherrypy.dev\">CherryPy 18.10.0</a>\n      </span>\n    </div>\n    </body>\n</html>\n"
+}

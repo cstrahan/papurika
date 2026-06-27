@@ -1,0 +1,24 @@
+{
+  "request": {
+    "path": "/login",
+    "body": [
+      {
+        "client": "local",
+        "tgt": "*",
+        "fun": "test.ping"
+      }
+    ]
+  },
+  "status_code": 401,
+  "response_headers": {
+    "Server": "TornadoServer/6.5.7",
+    "Content-Type": "application/json",
+    "Date": "Sat, 27 Jun 2026 05:10:55 GMT",
+    "Www-Authenticate": "Session",
+    "Content-Length": "57"
+  },
+  "response_body": {
+    "status": "401 Unauthorized",
+    "return": "Please log in"
+  }
+}

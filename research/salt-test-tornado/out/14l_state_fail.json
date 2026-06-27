@@ -1,0 +1,58 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "local",
+        "tgt": "*",
+        "fun": "state.single",
+        "arg": [
+          "test.fail_without_changes"
+        ],
+        "kwarg": {
+          "name": "demo-fail"
+        },
+        "full_return": true
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Server": "TornadoServer/6.5.7",
+    "Content-Type": "application/json",
+    "Date": "Sat, 27 Jun 2026 05:11:00 GMT",
+    "Content-Length": "541"
+  },
+  "response_body": {
+    "return": [
+      {
+        "builtin.minion2": {
+          "test_|-demo-fail_|-demo-fail_|-fail_without_changes": {
+            "name": "demo-fail",
+            "changes": {},
+            "result": false,
+            "comment": "Failure!",
+            "__sls__": null,
+            "__run_num__": 0,
+            "start_time": "05:11:00.344610",
+            "duration": 0.671,
+            "__id__": "demo-fail"
+          }
+        },
+        "builtin.minion": {
+          "test_|-demo-fail_|-demo-fail_|-fail_without_changes": {
+            "name": "demo-fail",
+            "changes": {},
+            "result": false,
+            "comment": "Failure!",
+            "__sls__": null,
+            "__run_num__": 0,
+            "start_time": "05:11:00.345357",
+            "duration": 0.898,
+            "__id__": "demo-fail"
+          }
+        }
+      }
+    ]
+  }
+}

@@ -467,6 +467,55 @@ There's no "cancel a jid" API per se; you SIGKILL the running job on the minion:
 
 ---
 
+## Failure / outcome taxonomy — `out/14*.json`
+
+**The central lesson for the client: HTTP status is NOT the outcome.** A `200`
+routinely carries authz-denials, unknown-function errors, non-zero command
+retcodes, failed states, and (on tornado) even malformed-request exceptions.
+You must parse the body. Captured matrix (cherrypy | tornado):
+
+| case | cherrypy | tornado |
+|------|----------|---------|
+| invalid/garbage `X-Auth-Token` on `/` | **401**, HTML body | **401**, JSON `{"status":"401 Unauthorized","return":"Please log in"}` |
+| `/login` wrong password | 401, HTML | 401 |
+| `/login` unknown eauth backend | 401, HTML | 401 |
+| **authz denied** (valid token, perm missing) | **401**, HTML `"Authorization error occurred."` | **200**, `{"return":["Failed to authenticate"]}` |
+| unknown function (`does.not.exist`) | 200, `{minion: "'…' is not available."}` | same |
+| missing `fun` | **500**, `"An unexpected error occurred"` | **200**, `{"return":["Unexpected exception while handling request: run_job takes at least 2 arguments (1 given)"]}` |
+| missing `tgt` | **500** | **200**, `{"return":["Unexpected exception while handling request: 'tgt'"]}` |
+| body is a dict (not a list) | 200 (accepted) | 200 |
+| invalid JSON body | **400**, HTML | **400** |
+| `cmd.run 'exit 3'` + `full_return` | 200, `{ret:"", retcode:3, …}` | 200, `{minion: ""}` — **retcode lost** |
+| failing state (`test.fail_without_changes`) | 200, `result:false`, `retcode:2` | 200, `result:false` |
+
+### What the client must take from this
+1. **A 200 ≠ success.** Inside a 200, classify by inspecting per-command /
+   per-minion values: `"… is not available."` (bad fun), non-zero `retcode`,
+   state `result:false`, or — on tornado — a `"Failed to authenticate"` /
+   `"Unexpected exception while handling request: …"` string in the `return`
+   array. Never key success off status alone.
+2. **Auth error shapes diverge by module.** authn failures are 401 on both
+   (cherrypy HTML; tornado JSON `"Please log in"`). **Authz denial:** cherrypy
+   = 401 `"Authorization error occurred."`; tornado = **200** with
+   `"Failed to authenticate"` in the array. So on tornado a permissions denial
+   looks like a successful request unless you scan the body. Also note authn vs
+   authz are only weakly distinguishable (cherrypy: both 401, differ by message;
+   `salt/netapi/__init__.py` raises `EauthAuthenticationError` for both).
+3. **Malformed lowstate:** cherrypy **500** (`"An unexpected error occurred"`);
+   tornado **200** with an `"Unexpected exception while handling request: …"`
+   string. Only *unparseable JSON* is a clean **400** (both). Don't rely on a
+   4xx to mean "bad request."
+4. **retcode is not portable via `full_return`.** cherrypy honors `full_return`
+   (wraps `{ret, retcode, jid}`); **tornado ignores it on sync local** (returns
+   the bare value — `cmd.run 'exit 3'` → `""`, retcode gone). To get retcode
+   portably: call the function's structured variant (**`cmd.run_all`** →
+   `{pid, retcode, stdout, stderr}`, works on both) or read the job cache
+   (`jobs.print_job` `Result[minion]` = `{return, retcode, success}` on both).
+5. **Unknown function is a 200**, surfaced per-minion as `"'x' is not
+   available."` — detect by pattern (or pre-check with `sys.doc`).
+
+---
+
 ## Errors & status codes observed
 
 - `POST /minions` → **202 Accepted** (everything else → 200).

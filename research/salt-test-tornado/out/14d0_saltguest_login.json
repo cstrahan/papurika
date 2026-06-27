@@ -1,0 +1,31 @@
+{
+  "request": {
+    "path": "/login",
+    "body": {
+      "username": "saltguest"
+    }
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Server": "TornadoServer/6.5.7",
+    "Content-Type": "application/json",
+    "Date": "Sat, 27 Jun 2026 05:10:59 GMT",
+    "Content-Length": "223",
+    "Set-Cookie": "session_id=5892824e94186e284b82bfff7380e91748106881a5b3041bedb6effedea3f1ad; Path=/"
+  },
+  "response_body": {
+    "return": [
+      {
+        "token": "5892824e94186e284b82bfff7380e91748106881a5b3041bedb6effedea3f1ad",
+        "expire": 1782580259.2180939,
+        "start": 1782537059.2180939,
+        "user": "saltguest",
+        "eauth": "pam",
+        "perms": [
+          "grains.*",
+          "test.ping"
+        ]
+      }
+    ]
+  }
+}

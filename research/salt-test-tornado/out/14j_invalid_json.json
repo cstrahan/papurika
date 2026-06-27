@@ -1,0 +1,16 @@
+{
+  "request": {
+    "path": "/",
+    "body": {
+      "raw_body": "{ this is not valid json ]"
+    }
+  },
+  "status_code": 400,
+  "response_headers": {
+    "Server": "TornadoServer/6.5.7",
+    "Content-Type": "text/html; charset=UTF-8",
+    "Date": "Sat, 27 Jun 2026 05:11:00 GMT",
+    "Content-Length": "73"
+  },
+  "response_body": "<html><title>400: Bad Request</title><body>400: Bad Request</body></html>"
+}

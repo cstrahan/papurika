@@ -38,6 +38,10 @@ served:
 | **sync `cmd.run 'sleep 300'`** | **blocks for the whole command** (held our 120s client timeout; job keeps running) | **returns empty `{}` at ~10s** (gather timeout; job keeps running) |
 | `cmd.run` self-kill (minion suicide) | "Minion did not return…" string @~15s | empty `{}` @~10s |
 | `GET /jobs/<jid>` missing jid | `{info: [{…Error…}], return: [{}]}` | `{return: [{…Error…}]}` |
+| invalid token on `/` | 401, HTML | 401, JSON `{"return":"Please log in"}` |
+| **authz denied** (perm missing) | 401, HTML `"Authorization error occurred."` | **200**, `{"return":["Failed to authenticate"]}` |
+| malformed lowstate (missing `fun`/`tgt`) | **500** `"An unexpected error occurred"` | **200**, `"Unexpected exception while handling request: …"` string |
+| `full_return` (retcode metadata) | honored (`{ret,retcode,jid}`) | **ignored** on sync local (bare value; retcode lost) |
 | extra endpoints | `/keys`, `/logout`, `/stats`, `/ws` | none of those; has `/all_events`, `/formatted_events` (websockets, untested) |
 
 **What's identical:** login/token shape & perms, sync `local` result shapes
@@ -176,6 +180,26 @@ the big divergence**.
 200 after ~10s (not an error, not the result), with the job still running. Use
 `cmd.run_bg` or `local_async` + `/jobs`/`/events`; never infer success/failure
 from a sync long-command response.
+
+---
+
+## Failure / outcome taxonomy — `out/14*.json`
+
+Full matrix + client guidance in `cherrypy_learnings.md` ("Failure / outcome
+taxonomy"). tornado-specific behavior worth calling out:
+- **Invalid token** → 401 with **JSON** `{"status":"401 Unauthorized","return":
+  "Please log in"}` (cherrypy serves HTML).
+- **Authz denial is a `200`** with `{"return":["Failed to authenticate"]}` — a
+  status-only client treats a permissions denial as success. (cherrypy 401s.)
+  Note tornado labels *both* authn and authz failures inside `disbatch` as
+  `"Failed to authenticate"`.
+- **Malformed lowstate** (missing `fun`/`tgt`) → `200` with `"Unexpected
+  exception while handling request: …"` in the `return` array (cherrypy 500s).
+- **`full_return` is ignored** on sync local (the bare minion value comes back;
+  `cmd.run 'exit 3'` → `""`, retcode gone). Use `cmd.run_all` (`{retcode,
+  stdout, stderr}`, works on both) or the job cache for retcode.
+- Unknown function and failed-state shapes match cherrypy (200 + per-minion
+  `"'x' is not available."` / `result:false`).
 
 ---
 

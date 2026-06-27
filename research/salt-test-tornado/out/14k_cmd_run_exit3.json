@@ -1,0 +1,31 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "local",
+        "tgt": "*",
+        "fun": "cmd.run",
+        "arg": [
+          "exit 3"
+        ],
+        "full_return": true
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Server": "TornadoServer/6.5.7",
+    "Content-Type": "application/json",
+    "Date": "Sat, 27 Jun 2026 05:11:00 GMT",
+    "Content-Length": "59"
+  },
+  "response_body": {
+    "return": [
+      {
+        "builtin.minion2": "",
+        "builtin.minion": ""
+      }
+    ]
+  }
+}

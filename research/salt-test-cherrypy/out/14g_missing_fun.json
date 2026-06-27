@@ -1,0 +1,29 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "local",
+        "tgt": "*"
+      }
+    ]
+  },
+  "status_code": 500,
+  "response_headers": {
+    "Content-Type": "application/json",
+    "Server": "CherryPy/18.10.0",
+    "Date": "Sat, 27 Jun 2026 05:10:16 GMT",
+    "Allow": "GET, HEAD, POST",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "GET, POST",
+    "Access-Control-Allow-Credentials": "true",
+    "Cache-Control": "private",
+    "Vary": "Accept-Encoding",
+    "Content-Length": "57",
+    "Set-Cookie": "session_id=7f3a7b9533b67426fa0be2aa25cefc094cf2fee8; expires=Sat, 27 Jun 2026 15:10:16 GMT; Max-Age=36000; Path=/"
+  },
+  "response_body": {
+    "status": 500,
+    "return": "An unexpected error occurred"
+  }
+}
