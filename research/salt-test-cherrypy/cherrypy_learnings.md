@@ -72,6 +72,8 @@ structurally identical. Only four real deltas:
    **patched 3008**. 3008 *unpatched* evicts within ~60s (the bug fixed by the
    prod `clean_expired`/`mk_token` patch). So token retention is another 3006→
    3008 regression — already fixed in our 3008 by the patch, and absent in 3006.
+   Bisected to commit `78685e5c44` (token storage moved onto `salt.cache`),
+   first shipped in 3008.0 — see [Token eviction bug](#token-eviction-bug-confirmed-and-fixed).
 
 **Debunked / not-changes:**
 - The **`sleep 300` "hang"** seen mid-run on 3006 was a *harness artifact*, not a
@@ -347,6 +349,26 @@ tokens every maintenance pass). We applied the fix to the container's bundled
 salt (`apply-salt-patch.sh`) and restarted the master. Confirmed fixed: a
 single token reused across ~120s (multiple maintenance sweeps) kept returning
 HTTP 200 (`08_token_longevity.py`):
+
+**Root cause — introduced in 3008.0 by a single commit.** Both halves of
+`token-cache-fix.patch` trace to saltstack commit
+**`78685e5c44`** *"Provide token storage using the salt.cache interface"*
+(Matt Phillips `<mphillips81@bloomberg.net>`, 2025-05-20), the feature commit
+that re-plumbed eauth token storage onto the generic `salt.cache` interface:
+- it *added* `Cache.clean_expired`'s generic fallback in `salt/cache/__init__.py`
+  — already buggy, using the driver's `updated()` (file mtime, always in the
+  past) as the entry's expiry (`git log -L` shows the method did not exist
+  before this commit); and
+- it *added* the `mk_token` branch in `salt/auth/__init__.py` calling
+  `cache.store("tokens", …, expires=tdata["expire"])` — passing the absolute
+  expiry timestamp where `Cache.store` wants a duration.
+Routing tokens through the cache is what made the master's periodic
+`clean_expired("tokens")` sweep start wiping still-valid tokens. Reachability
+confirms it's a 3008-only regression: absent from v3006.9 / v3007.1 / v3007.14,
+present in v3008.0 / v3008.1 — the same release boundary as the `manage.status`
+regression (commit `4075aeb096`), but an unrelated commit. *Before filing
+upstream, cross-check `78685e5c44` against canonical `saltproject/salt` (this
+tree's history has some unusual metadata) to find the real PR.*
 ```
 t=0    -> {'return': [{'builtin.minion': True}]}
 t=+40s -> HTTP 200 ok=True
