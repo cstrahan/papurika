@@ -11,6 +11,7 @@ request/response captures they produced, and a write-up of what we learned.
 | [`salt-test-tornado/`](salt-test-tornado/) | Same treatment for `rest_tornado`, framed as a diff against cherrypy. See its `tornado_learnings.md`. |
 | [`salt-test-gpg-pillar/`](salt-test-gpg-pillar/) | Cross-cutting unhappy-path: cold GPG-encrypted-pillar decryption (both modules, one master). See its `gpg_pillar_learnings.md`. |
 | [`minion-status-and-liveness.md`](minion-status-and-liveness.md) | How salt's `manage.*` status tools decide liveness (live ping vs cache), the 3008.1 `manage.status` bug, and what the client should use instead. |
+| [`pepper_analysis.md`](pepper_analysis.md) | Design review of the official `pepper` salt-api CLI — what it gets right, what's wrong with an obvious fix, and what's wrong but still uncertain — to inform the papurika client. |
 
 Headline cross-cutting finding: the two netapi modules are **not
 interchangeable**. `rest_tornado` implements only `local`/`local_async`/
