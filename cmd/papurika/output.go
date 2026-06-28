@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/cstrahan/papurika"
+	sigsyaml "sigs.k8s.io/yaml"
 )
 
 // outputMode selects how results are rendered.
@@ -18,6 +19,7 @@ type outputMode string
 const (
 	outputPretty outputMode = "pretty"
 	outputJSON   outputMode = "json"
+	outputYAML   outputMode = "yaml"
 	outputRaw    outputMode = "raw"
 )
 
@@ -164,6 +166,15 @@ func render(w io.Writer, res *papurika.Result, mode outputMode, color bool) erro
 		enc := json.NewEncoder(w)
 		enc.SetIndent("", "  ")
 		return enc.Encode(toView(res, defaultOK))
+	case outputYAML:
+		// sigs.k8s.io/yaml round-trips via JSON, so the json tags (and the v1
+		// schema) carry over verbatim.
+		b, err := sigsyaml.Marshal(toView(res, defaultOK))
+		if err != nil {
+			return err
+		}
+		_, err = w.Write(b)
+		return err
 	case outputRaw:
 		for _, c := range res.Commands {
 			if len(c.Raw()) > 0 {
@@ -230,7 +241,12 @@ func renderExecMinions(w io.Writer, c papurika.CommandResult, g glyphs) {
 			fmt.Fprintf(w, "  %s %s   (pending)\n", g.dim("⋯"), id)
 			nr++
 		case m.OK():
-			fmt.Fprintf(w, "  %s %s   %s\n", g.green("✓"), id, summarize(m))
+			if v, ok2 := structured(m.Value); ok2 {
+				fmt.Fprintf(w, "  %s %s\n", g.green("✓"), id)
+				writeTree(w, v, "      ")
+			} else {
+				fmt.Fprintf(w, "  %s %s   %s\n", g.green("✓"), id, summarize(m))
+			}
 			ok++
 		default:
 			fmt.Fprintf(w, "  %s %s   %s\n", g.red("✗"), id, summarize(m))
@@ -382,12 +398,86 @@ func renderKeyList(w io.Writer, v papurika.RawValue) {
 }
 
 func renderValue(w io.Writer, v papurika.RawValue) {
-	var pretty any
-	if v.Decode(&pretty) == nil {
-		b, _ := json.MarshalIndent(pretty, "  ", "  ")
-		fmt.Fprintf(w, "  %s\n\n", string(b))
-	} else {
+	var any0 any
+	if v.Decode(&any0) != nil {
 		fmt.Fprintf(w, "  %s\n\n", string(v.Raw()))
+		return
+	}
+	writeTree(w, any0, "  ")
+	fmt.Fprintln(w)
+}
+
+// writeTree renders a decoded JSON value as an indented, sorted, YAML-ish tree —
+// readable for grains, runner returns, etc. Scalars render inline; maps and
+// slices nest.
+func writeTree(w io.Writer, v any, indent string) {
+	switch t := v.(type) {
+	case map[string]any:
+		keys := make([]string, 0, len(t))
+		for k := range t {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			if isScalar(t[k]) {
+				fmt.Fprintf(w, "%s%s: %s\n", indent, k, scalarString(t[k]))
+			} else {
+				fmt.Fprintf(w, "%s%s:\n", indent, k)
+				writeTree(w, t[k], indent+"  ")
+			}
+		}
+	case []any:
+		for _, e := range t {
+			if isScalar(e) {
+				fmt.Fprintf(w, "%s- %s\n", indent, scalarString(e))
+			} else {
+				fmt.Fprintf(w, "%s-\n", indent)
+				writeTree(w, e, indent+"  ")
+			}
+		}
+	default:
+		fmt.Fprintf(w, "%s%s\n", indent, scalarString(v))
+	}
+}
+
+// structured decodes a RawValue and reports whether it's a map/slice (worth a
+// tree) rather than a scalar (worth a one-line summary).
+func structured(v papurika.RawValue) (any, bool) {
+	var d any
+	if v.Decode(&d) != nil {
+		return nil, false
+	}
+	return d, !isScalar(d)
+}
+
+func isScalar(v any) bool {
+	switch v.(type) {
+	case map[string]any, []any:
+		return false
+	default:
+		return true
+	}
+}
+
+func scalarString(v any) string {
+	switch t := v.(type) {
+	case nil:
+		return "null"
+	case string:
+		return t
+	case float64:
+		// Render integers without a trailing .0.
+		if t == float64(int64(t)) {
+			return fmt.Sprintf("%d", int64(t))
+		}
+		return fmt.Sprintf("%g", t)
+	case bool:
+		if t {
+			return "true"
+		}
+		return "false"
+	default:
+		return fmt.Sprintf("%v", v)
 	}
 }
 

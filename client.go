@@ -180,6 +180,7 @@ func (c *Client) login(ctx context.Context, force bool) (string, error) {
 	}
 	c.token = tok
 	c.loggedIn = true
+	c.log.Info("authenticated", "url", c.base, "user", c.user, "eauth", c.eauth, "expire", expire)
 	if c.store != nil {
 		_ = c.store.Put(ctx, c.key, tokencache.Token{Token: tok, Expire: expire, Perms: perms})
 	}
@@ -279,6 +280,7 @@ func (c *Client) authedExec(ctx context.Context, p string, body []byte) (*httpRe
 	// Re-auth exactly once on an authn failure (token expired/evicted). Authz
 	// denial is never retried — re-login cannot grant a missing permission.
 	if asAuthFailure(cerr) {
+		c.log.Warn("token rejected; re-authenticating", "path", p)
 		c.mu.Lock()
 		c.token = "" // force fresh login
 		c.mu.Unlock()

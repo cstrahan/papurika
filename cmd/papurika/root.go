@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"time"
 
@@ -42,7 +43,7 @@ func newRootCmd() *cobra.Command {
 	pf.StringVar(&flagURL, "url", "", "salt-api URL (overrides profile)")
 	pf.StringVarP(&flagUser, "user", "u", "", "eauth username (overrides profile)")
 	pf.StringVar(&flagEauth, "eauth", "", "eauth backend (overrides profile)")
-	pf.StringVarP(&flagOutput, "output", "o", "", "output mode: pretty|json|raw (default: pretty on a TTY, json when piped)")
+	pf.StringVarP(&flagOutput, "output", "o", "", "output mode: pretty|json|yaml|raw (default: pretty on a TTY, json when piped)")
 	pf.DurationVar(&flagTimeout, "timeout", 0, "hard client wall-clock deadline (exit 124 if hit; 0 = none)")
 	pf.DurationVar(&flagSaltTO, "salt-timeout", 0, "salt initial gather timeout floor")
 	pf.DurationVar(&flagGatherTO, "gather-timeout", 0, "quiet window after which non-responders are settled (normal completion)")
@@ -106,6 +107,9 @@ func buildClient() (*papurika.Client, error) {
 	if r.CACert != "" {
 		opts = append(opts, papurika.WithCACert(r.CACert))
 	}
+	if lg := buildLogger(); lg != nil {
+		opts = append(opts, papurika.WithLogger(lg))
+	}
 	return papurika.New(r.MasterURL, opts...)
 }
 
@@ -134,7 +138,50 @@ func runOpts() []papurika.RunOption {
 	if flagGatherTO > 0 {
 		o = append(o, papurika.WithGatherTimeout(flagGatherTO))
 	}
+	if fn := progressFunc(); fn != nil {
+		o = append(o, papurika.WithOnUpdate(fn))
+	}
 	return o
+}
+
+// buildLogger maps -v repetition to an slog level on stderr. Returns nil at -v0
+// (the Client then defaults to a discard logger).
+func buildLogger() *slog.Logger {
+	if flagVerbose <= 0 {
+		return nil
+	}
+	lvl := slog.LevelWarn
+	switch {
+	case flagVerbose == 2:
+		lvl = slog.LevelInfo
+	case flagVerbose >= 3:
+		lvl = slog.LevelDebug
+	}
+	return slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: lvl}))
+}
+
+// progressFunc streams per-minion progress to stderr as returns arrive — only
+// when stderr is a TTY (interactive) or verbosity is on, so piped/JSON output
+// stays clean.
+func progressFunc() func(papurika.Update) {
+	if !isTTY(os.Stderr) && flagVerbose == 0 {
+		return nil
+	}
+	return func(u papurika.Update) {
+		m := u.Minion
+		var s string
+		switch {
+		case m.Status == papurika.StatusNoResponse:
+			s = "no response"
+		case m.OK():
+			s = "ok"
+		case m.Retcode != nil:
+			s = fmt.Sprintf("retcode %d", *m.Retcode)
+		default:
+			s = m.Status.String()
+		}
+		fmt.Fprintf(os.Stderr, "  → %s  %s\n", m.ID, s)
+	}
 }
 
 func policy() failPolicy {
@@ -153,6 +200,8 @@ func resolveOutput() outputMode {
 	switch flagOutput {
 	case "json":
 		return outputJSON
+	case "yaml":
+		return outputYAML
 	case "raw":
 		return outputRaw
 	case "pretty":

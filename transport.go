@@ -107,6 +107,7 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body []byte
 				wait = ra
 			}
 		}
+		c.log.Debug("retrying request", "method", method, "path", path, "attempt", attempt, "wait", wait)
 		select {
 		case <-ctx.Done():
 			return nil, apiError(ErrTransport, 0, "", "", ModuleUnknown)
@@ -134,11 +135,13 @@ func (c *Client) doOnce(ctx context.Context, method, path string, body []byte, t
 		req.Header.Set("X-Auth-Token", token)
 	}
 
+	c.log.Debug("http request", "method", method, "path", path)
 	resp, err := c.httpc.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
+	c.log.Debug("http response", "method", method, "path", path, "status", resp.StatusCode)
 	b, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err

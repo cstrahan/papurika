@@ -158,6 +158,41 @@ func TestRenderPrettyShapes(t *testing.T) {
 	}
 }
 
+func TestRenderYAML(t *testing.T) {
+	var buf bytes.Buffer
+	r := res(map[string]papurika.MinionResult{"a": mr("a", papurika.StatusResponded, intp(0))}, "a")
+	if err := render(&buf, r, outputYAML, false); err != nil {
+		t.Fatal(err)
+	}
+	out := buf.String()
+	for _, w := range []string{"schema: papurika.dev/result/v1", "status: responded", "outcome: ok"} {
+		if !strings.Contains(out, w) {
+			t.Errorf("yaml output missing %q\n---\n%s", w, out)
+		}
+	}
+	if strings.Contains(out, "{") {
+		t.Errorf("yaml output should be block style, not JSON:\n%s", out)
+	}
+}
+
+func TestWriteTree(t *testing.T) {
+	var buf bytes.Buffer
+	writeTree(&buf, map[string]any{
+		"os":       "Ubuntu",
+		"num_cpus": float64(4),
+		"ipv4":     []any{"10.0.0.1"},
+		"nested":   map[string]any{"k": "v"},
+		"truthy":   true,
+		"emptyVal": nil,
+	}, "")
+	out := buf.String()
+	for _, w := range []string{"os: Ubuntu", "num_cpus: 4", "- 10.0.0.1", "nested:", "  k: v", "truthy: true", "emptyVal: null"} {
+		if !strings.Contains(out, w) {
+			t.Errorf("tree missing %q\n---\n%s", w, out)
+		}
+	}
+}
+
 func TestRenderJSONSchema(t *testing.T) {
 	var buf bytes.Buffer
 	r := res(map[string]papurika.MinionResult{"a": mr("a", papurika.StatusResponded, intp(0))}, "a")
