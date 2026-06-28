@@ -58,9 +58,16 @@ The gather loop:
    first wins `Pending → Responded`, the second is a no-op. This is what makes SSE
    loss survivable — a `ret` dropped during a reconnect gap is backfilled by the
    next poll; duplicate late events are harmless.
-6. **Authoritative completion.** Done when `responded ∪ noResponse == Targeted`, or
-   the ctx deadline fires (§B). We decide **per minion** (partial-return jobs
-   populate `Result` for responders while down minions stay absent), not by
+6. **Completion (three terminal conditions).** The gather ends on the first of:
+   (a) every targeted minion reaches a terminal status
+   (`responded ∪ noResponse == Targeted`) → `ReasonAllReturned`; (b) the
+   **settle window** elapses with returns quiescent → leftover `Pending` minions
+   become `NoResponse` and the run completes **normally** as `ReasonSettled`
+   (this mirrors salt's own `timeout + gather_job_timeout`; a genuinely-down
+   minion lands here → reported as no-response, exit per `--fail` policy, **not** a
+   timeout error); or (c) the hard `ctx` deadline / cancel fires →
+   `ReasonDeadline` / `ReasonCanceled` (§B). We decide **per minion** (partial
+   jobs populate `Result` for responders while down minions stay absent), not by
    "`return[0]` non-empty."
 
 ```go
@@ -101,29 +108,41 @@ reconnect trigger. (Thundering-herd note in Open Questions.)
 
 ## B. context.Context & the timeout model
 
-`context.Context` is the **first arg everywhere** and the **only authoritative
-wall-clock bound**. Salt's own `timeout`/`gather_job_timeout` are set as *floors*
-(so the master gathers sanely and populates `missing` promptly) but never trusted
-as the bound — a live long job keeps `/jobs` empty for as long as it runs.
+There are **two distinct client-side timers**, and the distinction is the whole
+point:
+
+- **The settle window** (`WithSaltTimeout` + `WithGatherTimeout`) — how long the
+  gather waits for returns before declaring the leftovers no-response. Each new
+  return **extends** the quiet period by the gather timeout, so an active stream
+  keeps it open. When it elapses, the run completes **normally** (`ReasonSettled`,
+  exit per `--fail` policy). This is how a genuinely-down minion produces a partial
+  result with exit 1 — not a timeout. It mirrors salt's own
+  `timeout + gather_job_timeout`.
+- **The hard deadline** (`context.Context` / `WithDeadline` / CLI `--timeout`) — the
+  authoritative wall-clock bound. Hitting it is a **timeout** (`ReasonDeadline` →
+  exit 124); cancel/SIGINT is `ReasonCanceled` (exit 130). Whichever timer fires
+  first wins, so a `--timeout` shorter than the settle window turns a slow run into
+  a timeout, while the common case (no `--timeout`) settles normally.
 
 ```go
 func (c *Client) Run(ctx context.Context, spec JobSpec, opts ...RunOption) (*Result, error)
 
 type RunOption func(*runConfig)
-func WithDeadline(d time.Duration) RunOption       // convenience == a ctx deadline
-func WithSaltTimeout(d time.Duration) RunOption    // floor passed to salt (default 5s)
-func WithGatherTimeout(d time.Duration) RunOption  // floor passed to salt (default 10s)
-func OnUpdate(fn func(Update)) RunOption           // streaming progress (alt to a channel)
+func WithDeadline(d time.Duration) RunOption       // hard wall-clock deadline (== a ctx deadline) -> exit 124
+func WithSaltTimeout(d time.Duration) RunOption    // settle window: initial wait (default 5s)
+func WithGatherTimeout(d time.Duration) RunOption  // settle window: quiet period extended per return (default 10s)
+func WithOnUpdate(fn func(Update)) RunOption        // streaming progress (alt to a channel)
 func WithClientBatch(size string, o ...BatchOption) RunOption // §F
 func WithKillOnCancel(bool) RunOption              // §C; default false
 ```
 
-We inject `timeout`/`gather_job_timeout` into the lowstate as low floors; the
-caller's `ctx` deadline is enforced independently, client-side, and is expected to
-be ≥ the salt floor. A caller may set a *shorter* ctx deadline — fine: we abandon
-client-side and the master keeps running (jid recoverable).
+These settle params are **client-side**; we do not currently inject
+`timeout`/`gather_job_timeout` into the async lowstate (an async submit gathers in
+the master's background regardless, so the client window is what governs when *we*
+stop waiting). A live long job keeps `/jobs` empty for as long as it runs, which is
+exactly why the client owns its own timing rather than trusting salt's.
 
-**On ctx cancel/deadline:**
+**On ctx cancel/hard deadline:**
 1. Stop the poller, unsubscribe from the stream (release connections/worker).
 2. **Do not auto-kill the job** (cancel = "stop waiting", not "destroy work"). The
    master keeps running it; the jid stays resolvable for `keep_jobs_seconds` (24h).
@@ -265,7 +284,7 @@ func WithFailFast(threshold float64) BatchOption
 func WithPauseBetween(d time.Duration) BatchOption
 ```
 
-**Progress to the CLI:** both modes feed the same `OnUpdate` stream; each per-minion
+**Progress to the CLI:** both modes feed the same `WithOnUpdate` stream; each per-minion
 return is one `Update`. Client-side additionally emits chunk-boundary updates
 (index / inflight count) so the CLI can render a progress bar. The renderer is
 identical across modes. **Default:** `spec.Batch != ""` and no `WithClientBatch`

@@ -191,7 +191,7 @@ Strict separation so `--output json | jq` is always clean:
   `papurika run '*' fun --output json > out.json` yields a clean parseable file
   while a human still sees a live progress table on the terminal.
 
-The library's `OnUpdate` callbacks (async.md §F) render to a stderr-bound progress
+The library's `WithOnUpdate` callbacks (async.md §F) render to a stderr-bound progress
 sink; a non-TTY stderr or `--output json` swaps it for a no-op (or `-v` line ticks).
 
 ---
@@ -238,6 +238,14 @@ is information pepper discarded. Codes map from the library errors
 ([library.md](library.md) §C): `ErrAuthFailure`/`ErrAuthDenied`→77,
 `ErrMalformed`→65 (or 64 if pre-flight), `ErrTransport`→69, deadline→124.
 
+**Down minion → 1, not 124.** A genuinely-down minion is a *normal* partial
+completion: the gather **settle window** (async.md §B) elapses, the minion is
+reported `noresponse`, and the exit code follows `--fail` (1 by default). Exit
+**124** is reserved for the **hard** `--timeout` actually elapsing. So
+`papurika ping '*'` with one box down exits 1; `papurika --timeout 2s run '*'
+'sleep 60'` exits 124. Tune the settle window with `--salt-timeout` /
+`--gather-timeout`.
+
 ---
 
 ## E. Interrupt UX
@@ -278,7 +286,9 @@ again on interrupt, and `watch <jid>` resumes.
 | `--url`, `--eauth`, `-u/--user` | override endpoint/eauth/user | — |
 | `--output json\|pretty\|yaml\|raw` | render mode (pretty TTY / json piped) | — |
 | targeting selectors (§A) | `-L -E -G --grain-pcre -I --pillar-pcre -R -C -N` | `tgt_type` |
-| `--timeout DUR` | client wall-clock deadline (ctx); also sets salt floors | `timeout` (floor) |
+| `--timeout DUR` | **hard** wall-clock deadline (ctx); hitting it → exit 124 | — |
+| `--salt-timeout DUR` | settle window: initial wait for returns | — |
+| `--gather-timeout DUR` | settle window: quiet period (extended per return) before settling non-responders → exit per `--fail` | — |
 | `--batch N\|N%` | batching | `batch` (+ `local_batch`) |
 | `--batch-mode server\|client` | server-side `local_batch` vs client-side fan-out | selects path |
 | `--subset N` | subset targeting | `local_subset` |
