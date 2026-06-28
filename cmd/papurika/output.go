@@ -60,13 +60,14 @@ type summaryView struct {
 }
 
 type commandView struct {
-	Index   int              `json:"index"`
-	Client  string           `json:"client"`
-	Fun     string           `json:"fun"`
-	JID     string           `json:"jid,omitempty"`
-	Minions []minionView     `json:"minions,omitempty"`
-	Value   *json.RawMessage `json:"value,omitempty"`
-	Retcode *int             `json:"retcode,omitempty"`
+	Index    int              `json:"index"`
+	Client   string           `json:"client"`
+	Fun      string           `json:"fun"`
+	JID      string           `json:"jid,omitempty"`
+	Targeted []string         `json:"targeted,omitempty"`
+	Minions  []minionView     `json:"minions,omitempty"`
+	Value    *json.RawMessage `json:"value,omitempty"`
+	Retcode  *int             `json:"retcode,omitempty"`
 }
 
 type minionView struct {
@@ -79,7 +80,7 @@ type minionView struct {
 func toView(res *papurika.Result, okPred func(papurika.MinionResult) bool) resultView {
 	v := resultView{Schema: "papurika.dev/result/v1"}
 	for i, c := range res.Commands {
-		cv := commandView{Index: i, Client: string(c.Client), Fun: c.Fun, JID: c.JID, Retcode: c.Retcode}
+		cv := commandView{Index: i, Client: string(c.Client), Fun: c.Fun, JID: c.JID, Targeted: c.Targeted, Retcode: c.Retcode}
 		ids := make([]string, 0, len(c.Minions))
 		for id := range c.Minions {
 			ids = append(ids, id)
@@ -142,7 +143,9 @@ func isNoMatch(res *papurika.Result) bool {
 	for _, c := range res.Commands {
 		switch c.Client {
 		case papurika.ClientLocal, papurika.ClientLocalAsync, papurika.ClientLocalBatch, papurika.ClientLocalSubset, papurika.ClientSSH:
-			if len(c.Minions) > 0 || !c.Value.IsZero() {
+			// A jid or a targeted set means something WAS dispatched (e.g. an async
+			// submit) — not a no-match.
+			if len(c.Minions) > 0 || !c.Value.IsZero() || c.JID != "" || len(c.Targeted) > 0 {
 				return false
 			}
 		default:
@@ -176,50 +179,225 @@ func render(w io.Writer, res *papurika.Result, mode outputMode, color bool) erro
 func renderPretty(w io.Writer, res *papurika.Result, color bool) error {
 	g := glyphs{color: color}
 	for _, c := range res.Commands {
-		head := c.Fun
-		if c.JID != "" {
-			head = fmt.Sprintf("%s  (jid %s)", c.Fun, c.JID)
-		}
-		fmt.Fprintln(w, head)
-
-		if len(c.Minions) > 0 {
-			ids := make([]string, 0, len(c.Minions))
-			for id := range c.Minions {
-				ids = append(ids, id)
-			}
-			sort.Strings(ids)
-			var ok, fail, nr int
-			for _, id := range ids {
-				m := c.Minions[id]
-				switch {
-				case m.Status == papurika.StatusNoResponse:
-					fmt.Fprintf(w, "  %s %s   (no response)\n", g.dim("⋯"), id)
-					nr++
-				case m.Status == papurika.StatusPending:
-					fmt.Fprintf(w, "  %s %s   (pending)\n", g.dim("⋯"), id)
-					nr++
-				case m.OK():
-					fmt.Fprintf(w, "  %s %s   %s\n", g.green("✓"), id, summarize(m))
-					ok++
-				default:
-					fmt.Fprintf(w, "  %s %s   %s\n", g.red("✗"), id, summarize(m))
-					fail++
-				}
-			}
-			fmt.Fprintf(w, "%d targeted · %d ok · %d failed · %d no-response\n\n", len(ids), ok, fail, nr)
-		} else if !c.Value.IsZero() {
-			var pretty any
-			if c.Value.Decode(&pretty) == nil {
-				b, _ := json.MarshalIndent(pretty, "  ", "  ")
-				fmt.Fprintf(w, "  %s\n\n", string(b))
-			} else {
-				fmt.Fprintf(w, "  %s\n\n", string(c.Value.Raw()))
-			}
-		} else {
-			fmt.Fprintf(w, "  %s\n\n", g.dim("(no minions matched)"))
-		}
+		renderCommand(w, c, g)
 	}
 	return nil
+}
+
+func renderCommand(w io.Writer, c papurika.CommandResult, g glyphs) {
+	head := c.Fun
+	if c.JID != "" {
+		head = fmt.Sprintf("%s  (jid %s)", c.Fun, c.JID)
+	}
+	fmt.Fprintln(w, head)
+
+	switch {
+	case len(c.Minions) > 0:
+		if anyHighstate(c.Minions) {
+			renderStateMinions(w, c, g)
+		} else {
+			renderExecMinions(w, c, g)
+		}
+	case c.JID != "" || len(c.Targeted) > 0: // async submit (fire-and-forget)
+		fmt.Fprintf(w, "  submitted · %d minion(s) targeted\n", len(c.Targeted))
+		for _, id := range c.Targeted {
+			fmt.Fprintf(w, "    %s\n", id)
+		}
+		fmt.Fprintln(w)
+	case !c.Value.IsZero():
+		switch {
+		case strings.HasPrefix(c.Fun, "manage."):
+			renderManage(w, c.Value, g)
+		case strings.Contains(c.Fun, "key.list"):
+			renderKeyList(w, c.Value)
+		default:
+			renderValue(w, c.Value)
+		}
+	default:
+		fmt.Fprintf(w, "  %s\n\n", g.dim("(no minions matched)"))
+	}
+}
+
+func renderExecMinions(w io.Writer, c papurika.CommandResult, g glyphs) {
+	var ok, fail, nr int
+	for _, id := range sortedMinionIDs(c.Minions) {
+		m := c.Minions[id]
+		switch {
+		case m.Status == papurika.StatusNoResponse:
+			fmt.Fprintf(w, "  %s %s   (no response)\n", g.dim("⋯"), id)
+			nr++
+		case m.Status == papurika.StatusPending:
+			fmt.Fprintf(w, "  %s %s   (pending)\n", g.dim("⋯"), id)
+			nr++
+		case m.OK():
+			fmt.Fprintf(w, "  %s %s   %s\n", g.green("✓"), id, summarize(m))
+			ok++
+		default:
+			fmt.Fprintf(w, "  %s %s   %s\n", g.red("✗"), id, summarize(m))
+			fail++
+		}
+	}
+	fmt.Fprintf(w, "%d targeted · %d ok · %d failed · %d no-response\n\n", len(c.Minions), ok, fail, nr)
+}
+
+// stateEntry is one state's result inside a highstate return.
+type stateEntry struct {
+	Name     string         `json:"name"`
+	Result   *bool          `json:"result"` // true=ok, false=fail, null=test/no-op
+	Comment  string         `json:"comment"`
+	Changes  map[string]any `json:"changes"`
+	Duration float64        `json:"duration"` // ms
+	RunNum   int            `json:"__run_num__"`
+	ID       string         `json:"__id__"`
+}
+
+func anyHighstate(minions map[string]papurika.MinionResult) bool {
+	for _, m := range minions {
+		if m.Status == papurika.StatusResponded && looksHighstate(m.Value) {
+			return true
+		}
+	}
+	return false
+}
+
+func looksHighstate(v papurika.RawValue) bool {
+	var m map[string]json.RawMessage
+	if json.Unmarshal(v.Raw(), &m) != nil || len(m) == 0 {
+		return false
+	}
+	for _, e := range m {
+		var probe struct {
+			RunNum *int `json:"__run_num__"`
+		}
+		if json.Unmarshal(e, &probe) == nil && probe.RunNum != nil {
+			return true
+		}
+	}
+	return false
+}
+
+func renderStateMinions(w io.Writer, c papurika.CommandResult, g glyphs) {
+	var totalStates, totalOK, totalFail int
+	for _, id := range sortedMinionIDs(c.Minions) {
+		m := c.Minions[id]
+		if m.Status != papurika.StatusResponded {
+			fmt.Fprintf(w, "  %s %s   (%s)\n", g.dim("⋯"), id, m.Status)
+			continue
+		}
+		rc := 0
+		if m.Retcode != nil {
+			rc = *m.Retcode
+		}
+		fmt.Fprintf(w, "  %s   (retcode %d)\n", id, rc)
+		var states map[string]stateEntry
+		if m.Value.Decode(&states) != nil {
+			fmt.Fprintf(w, "    %s\n", g.dim("(unparseable state return)"))
+			continue
+		}
+		ordered := make([]stateEntry, 0, len(states))
+		for _, e := range states {
+			ordered = append(ordered, e)
+		}
+		sort.Slice(ordered, func(i, j int) bool { return ordered[i].RunNum < ordered[j].RunNum })
+		for _, e := range ordered {
+			totalStates++
+			var glyph, name string
+			switch {
+			case e.Result == nil:
+				glyph = g.dim("~") // test mode / no-op
+			case *e.Result:
+				glyph = g.green("✓")
+				totalOK++
+			default:
+				glyph = g.red("✗")
+				totalFail++
+			}
+			name = e.ID
+			if name == "" {
+				name = e.Name
+			}
+			line := fmt.Sprintf("    %s %s", glyph, name)
+			if e.Comment != "" {
+				line += "   " + firstLine(e.Comment)
+			}
+			if e.Duration > 0 {
+				line += fmt.Sprintf("   (%.1fms)", e.Duration)
+			}
+			if len(e.Changes) > 0 {
+				line += "  " + g.dim("[changed]")
+			}
+			fmt.Fprintln(w, line)
+		}
+	}
+	fmt.Fprintf(w, "%d minion(s) · %d states · %d ok · %d failed\n\n", len(c.Minions), totalStates, totalOK, totalFail)
+}
+
+// renderManage handles manage.up/down (a list) and manage.status ({up,down}).
+func renderManage(w io.Writer, v papurika.RawValue, g glyphs) {
+	var ud struct {
+		Up   []string `json:"up"`
+		Down []string `json:"down"`
+	}
+	if json.Unmarshal(v.Raw(), &ud) == nil && (ud.Up != nil || ud.Down != nil) {
+		for _, h := range ud.Up {
+			fmt.Fprintf(w, "  %s %s\n", g.green("●"), h)
+		}
+		for _, h := range ud.Down {
+			fmt.Fprintf(w, "  %s %s\n", g.red("○"), h)
+		}
+		fmt.Fprintf(w, "%d up · %d down\n\n", len(ud.Up), len(ud.Down))
+		return
+	}
+	var hosts []string
+	if json.Unmarshal(v.Raw(), &hosts) == nil {
+		for _, h := range hosts {
+			fmt.Fprintf(w, "  %s %s\n", g.green("●"), h)
+		}
+		fmt.Fprintf(w, "%d\n\n", len(hosts))
+		return
+	}
+	renderValue(w, v)
+}
+
+// renderKeyList handles wheel key.list_all.
+func renderKeyList(w io.Writer, v papurika.RawValue) {
+	var k struct {
+		Minions  []string `json:"minions"`
+		Pre      []string `json:"minions_pre"`
+		Rejected []string `json:"minions_rejected"`
+		Denied   []string `json:"minions_denied"`
+	}
+	if json.Unmarshal(v.Raw(), &k) != nil {
+		renderValue(w, v)
+		return
+	}
+	row := func(label string, hosts []string) {
+		fmt.Fprintf(w, "  %-11s (%d)   %s\n", label, len(hosts), strings.Join(hosts, "  "))
+	}
+	row("accepted", k.Minions)
+	row("unaccepted", k.Pre)
+	row("rejected", k.Rejected)
+	row("denied", k.Denied)
+	fmt.Fprintln(w)
+}
+
+func renderValue(w io.Writer, v papurika.RawValue) {
+	var pretty any
+	if v.Decode(&pretty) == nil {
+		b, _ := json.MarshalIndent(pretty, "  ", "  ")
+		fmt.Fprintf(w, "  %s\n\n", string(b))
+	} else {
+		fmt.Fprintf(w, "  %s\n\n", string(v.Raw()))
+	}
+}
+
+func sortedMinionIDs(minions map[string]papurika.MinionResult) []string {
+	ids := make([]string, 0, len(minions))
+	for id := range minions {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	return ids
 }
 
 // summarize renders a one-line value summary for a minion.

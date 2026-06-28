@@ -407,6 +407,175 @@ func commandFromMap(m map[string]any) papurika.Command {
 	return c
 }
 
+// newStateCmd is `run` specialized to state.*: with sls names it runs
+// state.apply <sls...>, with none it runs state.highstate.
+func newStateCmd() *cobra.Command {
+	tg := &targeting{}
+	c := &cobra.Command{
+		Use:   "state <tgt> [sls...]",
+		Short: "Apply state (state.apply <sls...> / state.highstate)",
+		Args:  cobra.MinimumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			tt, err := tg.tgtType()
+			if err != nil {
+				return err
+			}
+			pos, kw := parseArgs(args[1:])
+			fun := "state.highstate"
+			var arg []any
+			if len(pos) > 0 {
+				fun, arg = "state.apply", pos
+			}
+			spec := papurika.JobSpec{Target: args[0], TgtType: tt, Fun: fun, Arg: arg, Kwarg: kw, Batch: batchIfServer(tg)}
+			cl, err := buildClient()
+			if err != nil {
+				return err
+			}
+			opts := runOpts()
+			if tg.clientBatch && tg.batch != "" {
+				opts = append(opts, papurika.WithClientBatch(tg.batch))
+			}
+			res, rerr := cl.Run(cmd.Context(), spec, opts...)
+			return emit(res, rerr)
+		},
+	}
+	tg.register(c)
+	return c
+}
+
+// newKeyCmd groups the wheel key.* operations.
+func newKeyCmd() *cobra.Command {
+	key := &cobra.Command{Use: "key", Short: "Minion key management (wheel key.*)"}
+	key.AddCommand(
+		keySub("list", "List all keys (accepted/pending/rejected/denied)", "key.list_all", false),
+		keySub("finger", "Show key fingerprint(s)", "key.finger", true),
+		keySub("accept", "Accept pending minion key(s)", "key.accept", true),
+		keySub("reject", "Reject minion key(s)", "key.reject", true),
+		keySub("delete", "Delete minion key(s)", "key.delete", true),
+	)
+	return key
+}
+
+func keySub(use, short, fun string, needsMatch bool) *cobra.Command {
+	args := cobra.NoArgs
+	useStr := use
+	if needsMatch {
+		args = cobra.ExactArgs(1)
+		useStr = use + " <match>"
+	}
+	return &cobra.Command{
+		Use:   useStr,
+		Short: short,
+		Args:  args,
+		RunE: func(cmd *cobra.Command, a []string) error {
+			wc := papurika.Wheel(fun)
+			if needsMatch {
+				wc = wc.WithKwarg("match", a[0])
+			}
+			cl, err := buildClient()
+			if err != nil {
+				return err
+			}
+			res, werr := cl.Exec(cmd.Context(), wc)
+			return emit(res, werr)
+		},
+	}
+}
+
+// newEventsCmd tails the salt event bus, printing one JSON object per event.
+func newEventsCmd() *cobra.Command {
+	var filter string
+	c := &cobra.Command{
+		Use:   "events",
+		Short: "Tail the salt event bus (NDJSON to stdout)",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cl, err := buildClient()
+			if err != nil {
+				return err
+			}
+			stream, err := cl.Events(cmd.Context())
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "papurika: %v\n", err)
+				return &exitErr{code: exitUnavailable}
+			}
+			defer stream.Close()
+			ch, unsub := stream.Subscribe(filter)
+			defer unsub()
+			enc := json.NewEncoder(os.Stdout)
+			for {
+				select {
+				case <-cmd.Context().Done():
+					return &exitErr{code: exitInterrupted}
+				case ev, ok := <-ch:
+					if !ok {
+						return &exitErr{code: exitOK}
+					}
+					_ = enc.Encode(struct {
+						Tag  string          `json:"tag"`
+						Data json.RawMessage `json:"data"`
+					}{ev.Tag, ev.Data})
+				}
+			}
+		},
+	}
+	c.Flags().StringVar(&filter, "filter", "", "only events whose tag starts with this prefix")
+	return c
+}
+
+// --- low-level: one client = one subcommand ---
+
+// newClientCmd builds a to-the-metal command for a target-taking client
+// (local/local_async/local_batch/local_subset/ssh), via a synchronous Exec.
+func newClientCmd(use, short string, client papurika.ClientType, wantSubset bool) *cobra.Command {
+	tg := &targeting{}
+	var subset int
+	c := &cobra.Command{
+		Use:   use,
+		Short: short,
+		Args:  cobra.MinimumNArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			tt, err := tg.tgtType()
+			if err != nil {
+				return err
+			}
+			pos, kw := parseArgs(args[2:])
+			lc := papurika.Command{Client: client, Tgt: args[0], TgtType: tt, Fun: args[1], Arg: pos, Kwarg: kw, Batch: tg.batch, Subset: subset}
+			cl, err := buildClient()
+			if err != nil {
+				return err
+			}
+			res, rerr := cl.Exec(cmd.Context(), lc)
+			return emit(res, rerr)
+		},
+	}
+	tg.register(c)
+	if wantSubset {
+		c.Flags().IntVar(&subset, "subset", 0, "number of minions in the subset")
+	}
+	return c
+}
+
+// newMasterCmd builds a to-the-metal command for a no-target client
+// (runner_async/wheel_async), via a synchronous Exec.
+func newMasterCmd(use, short string, client papurika.ClientType) *cobra.Command {
+	return &cobra.Command{
+		Use:   use,
+		Short: short,
+		Args:  cobra.MinimumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			_, kw := parseArgs(args[1:])
+			mc := papurika.Command{Client: client, Fun: args[0], Kwarg: kw}
+			cl, err := buildClient()
+			if err != nil {
+				return err
+			}
+			res, rerr := cl.Exec(cmd.Context(), mc)
+			return emit(res, rerr)
+		},
+	}
+}
+
 func usageErr(msg string) error { return &usageError{msg} }
 
 type usageError struct{ msg string }

@@ -54,15 +54,27 @@ func newRootCmd() *cobra.Command {
 	pf.BoolVar(&flagAllowNR, "allow-noresponse", false, "non-responders do not count as failure")
 
 	root.AddCommand(
+		// high-level
 		newRunCmd(),
+		newStateCmd(),
+		newPingCmd(),
 		newSubmitCmd(),
 		newWatchCmd(),
-		newPingCmd(),
-		newRunnerCmd(),
-		newWheelCmd(),
 		newJobCmd(),
 		newJobsCmd(),
 		newKillCmd(),
+		newEventsCmd(),
+		newKeyCmd(),
+		// low-level (one client = one subcommand)
+		newClientCmd("local <tgt> <fun> [args...]", "client=local (synchronous)", papurika.ClientLocal, false),
+		newClientCmd("local-async <tgt> <fun> [args...]", "client=local_async → jid", papurika.ClientLocalAsync, false),
+		newClientCmd("local-batch <tgt> <fun> [args...]", "client=local_batch (server-side)", papurika.ClientLocalBatch, false),
+		newClientCmd("local-subset <tgt> <fun> [args...]", "client=local_subset", papurika.ClientLocalSubset, true),
+		newRunnerCmd(),
+		newMasterCmd("runner-async <fun> [k=v...]", "client=runner_async → jid", papurika.ClientRunnerAsync),
+		newWheelCmd(),
+		newMasterCmd("wheel-async <fun> [k=v...]", "client=wheel_async → jid", papurika.ClientWheelAsync),
+		newClientCmd("ssh <tgt> <fun> [args...]", "client=ssh (synchronous)", papurika.ClientSSH, false),
 		newLowstateCmd(),
 	)
 	return root

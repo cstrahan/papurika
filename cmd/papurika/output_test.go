@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/cstrahan/papurika"
@@ -84,7 +85,10 @@ func TestExitCodeErrors(t *testing.T) {
 }
 
 func TestExitCodeNoMatch(t *testing.T) {
-	empty := res(map[string]papurika.MinionResult{})
+	// A true no-match: local command, no jid, no targeted set, no minions.
+	empty := &papurika.Result{Commands: []papurika.CommandResult{{
+		Client: papurika.ClientLocal, Fun: "test.ping",
+	}}}
 	if got := exitCode(empty, nil, failAny, false); got != exitNoMatch {
 		t.Errorf("empty local result = %d, want %d (no match)", got, exitNoMatch)
 	}
@@ -105,6 +109,52 @@ func TestRunnerValueOutcomeOK(t *testing.T) {
 	}
 	if got := exitCode(runnerRes, nil, failAny, false); got != exitOK {
 		t.Errorf("runner exit = %d, want 0", got)
+	}
+}
+
+func TestRenderPrettyShapes(t *testing.T) {
+	cases := []struct {
+		name string
+		cmd  papurika.CommandResult
+		want []string
+	}{
+		{
+			name: "highstate",
+			cmd: papurika.CommandResult{Client: papurika.ClientLocal, Fun: "state.apply", JID: "1",
+				Minions: map[string]papurika.MinionResult{"m1": {ID: "m1", Status: papurika.StatusResponded, Retcode: intp(0),
+					Value: papurika.NewRawValue(json.RawMessage(`{"s_|-a":{"name":"a","result":true,"comment":"ok","duration":1.5,"__run_num__":0,"__id__":"a"},"s_|-b":{"result":false,"comment":"boom","__run_num__":1,"__id__":"b"}}`))}}},
+			want: []string{"state.apply", "✓ a", "ok", "✗ b", "boom", "states"},
+		},
+		{
+			name: "manage status up/down",
+			cmd: papurika.CommandResult{Client: papurika.ClientRunner, Fun: "manage.status",
+				Value: papurika.NewRawValue(json.RawMessage(`{"up":["m1"],"down":["m2"]}`))},
+			want: []string{"● m1", "○ m2", "1 up · 1 down"},
+		},
+		{
+			name: "key list",
+			cmd: papurika.CommandResult{Client: papurika.ClientWheel, Fun: "wheel.key.list_all",
+				Value: papurika.NewRawValue(json.RawMessage(`{"minions":["m1"],"minions_pre":["m2"],"minions_rejected":[],"minions_denied":[]}`))},
+			want: []string{"accepted", "m1", "unaccepted", "m2"},
+		},
+		{
+			name: "async submit",
+			cmd: papurika.CommandResult{Client: papurika.ClientLocalAsync, Fun: "test.ping", JID: "9",
+				Targeted: []string{"m1", "m2"}},
+			want: []string{"submitted", "m1", "m2"},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			renderCommand(&buf, tc.cmd, glyphs{color: false})
+			out := buf.String()
+			for _, w := range tc.want {
+				if !strings.Contains(out, w) {
+					t.Errorf("output missing %q\n---\n%s", w, out)
+				}
+			}
+		})
 	}
 }
 
