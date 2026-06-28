@@ -486,9 +486,8 @@ before its nominal expiry.
 
 ## Open questions
 
-1. **Module path / org** — `github.com/cstrahan/papurika` is a placeholder; confirm.
-2. **macOS Keychain** — file `FileStore` (0600) is the default token store; do we want
+1. **macOS Keychain** — file `FileStore` (0600) is the default token store; do we want
    an opt-in Keychain-backed `Store` on macOS? (The `Store` interface already allows it.)
-3. **Retry of `test.ping`-class reads** — should we ship a small allowlist of known
+2. **Retry of `test.ping`-class reads** — should we ship a small allowlist of known
    side-effect-free functions that are retried even over `POST /`, or leave that
    entirely to `WithRetryNonIdempotent`?

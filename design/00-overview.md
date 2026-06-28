@@ -50,7 +50,7 @@ These are stated **once here** and referenced elsewhere — not re-litigated per
 
 | Decision | Choice | Rationale |
 |---|---|---|
-| Module path | `github.com/cstrahan/papurika` *(placeholder — confirm)* | — |
+| Module path | `github.com/cstrahan/papurika` | — |
 | Binary name | `papurika` | — |
 | CLI framework | `cobra` + `pflag` | subcommand tree with grouped help; Go-ecosystem default |
 | Config format | **TOML** | clear profile sections, fewer footguns than YAML |
