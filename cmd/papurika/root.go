@@ -25,6 +25,8 @@ var (
 	flagFail     string
 	flagAllowNR  bool
 	flagCACert   string
+	flagSaltTO   time.Duration
+	flagGatherTO time.Duration
 )
 
 func newRootCmd() *cobra.Command {
@@ -41,7 +43,9 @@ func newRootCmd() *cobra.Command {
 	pf.StringVarP(&flagUser, "user", "u", "", "eauth username (overrides profile)")
 	pf.StringVar(&flagEauth, "eauth", "", "eauth backend (overrides profile)")
 	pf.StringVarP(&flagOutput, "output", "o", "", "output mode: pretty|json|raw (default: pretty on a TTY, json when piped)")
-	pf.DurationVar(&flagTimeout, "timeout", 0, "client wall-clock deadline for the operation")
+	pf.DurationVar(&flagTimeout, "timeout", 0, "hard client wall-clock deadline (exit 124 if hit; 0 = none)")
+	pf.DurationVar(&flagSaltTO, "salt-timeout", 0, "salt initial gather timeout floor")
+	pf.DurationVar(&flagGatherTO, "gather-timeout", 0, "quiet window after which non-responders are settled (normal completion)")
 	pf.BoolVar(&flagInsecure, "insecure", false, "skip TLS certificate verification")
 	pf.StringVar(&flagCACert, "cacert", "", "PEM file of trusted CA certs")
 	pf.BoolVar(&flagNoColor, "no-color", false, "disable ANSI color (also honors NO_COLOR)")
@@ -111,6 +115,12 @@ func runOpts() []papurika.RunOption {
 	var o []papurika.RunOption
 	if flagTimeout > 0 {
 		o = append(o, papurika.WithDeadline(flagTimeout))
+	}
+	if flagSaltTO > 0 {
+		o = append(o, papurika.WithSaltTimeout(flagSaltTO))
+	}
+	if flagGatherTO > 0 {
+		o = append(o, papurika.WithGatherTimeout(flagGatherTO))
 	}
 	return o
 }

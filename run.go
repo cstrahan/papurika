@@ -219,6 +219,31 @@ func (c *Client) gather(ctx context.Context, job Job, cfg runConfig) CommandResu
 		reconnects = stream.Reconnects()
 	}
 
+	// The gather window: how long we wait for returns before settling the
+	// leftovers as non-responders. This mirrors salt's own timeout +
+	// gather_job_timeout and is a NORMAL completion (exit per policy), distinct
+	// from the hard ctx deadline / --timeout (which is exit 124). Each new return
+	// extends the quiet period by gatherTimeout, so an active stream keeps it open.
+	settleWindow := cfg.saltTimeout + cfg.gatherTimeout
+	if settleWindow <= 0 {
+		settleWindow = 15 * time.Second
+	}
+	settleTimer := time.NewTimer(settleWindow)
+	defer settleTimer.Stop()
+	resetSettle := func() {
+		if !settleTimer.Stop() {
+			select {
+			case <-settleTimer.C:
+			default:
+			}
+		}
+		q := cfg.gatherTimeout
+		if q <= 0 {
+			q = 10 * time.Second
+		}
+		settleTimer.Reset(q)
+	}
+
 	terminal := func() int {
 		n := 0
 		for _, m := range cr.Minions {
@@ -237,9 +262,25 @@ func (c *Client) gather(ctx context.Context, job Job, cfg runConfig) CommandResu
 			cr.Targeted = append(cr.Targeted, m.ID) // a minion the submit didn't list
 		}
 		cr.Minions[m.ID] = m
+		if m.Status == StatusResponded {
+			resetSettle() // a fresh return — extend the quiet window
+		}
 		if cfg.onUpdate != nil {
 			cfg.onUpdate(Update{JID: job.JID, Minion: m, Source: src})
 		}
+	}
+	settle := func() CommandResult {
+		for id, m := range cr.Minions {
+			if m.Status == StatusPending {
+				m.Status = StatusNoResponse
+				cr.Minions[id] = m
+				if cfg.onUpdate != nil {
+					cfg.onUpdate(Update{JID: job.JID, Minion: m, Source: SourcePoll})
+				}
+			}
+		}
+		cr.Complete, cr.Reason = true, ReasonSettled
+		return cr
 	}
 
 	if terminal() == len(cr.Targeted) && len(cr.Targeted) > 0 {
@@ -292,6 +333,14 @@ func (c *Client) gather(ctx context.Context, job Job, cfg runConfig) CommandResu
 				cr.Complete, cr.Reason = true, ReasonAllReturned
 				return cr
 			}
+
+		case <-settleTimer.C:
+			// Gather window elapsed with returns quiescent: do one last poll to
+			// catch anything in flight, then settle the rest as non-responders.
+			if poll() {
+				return c.finish(&cr)
+			}
+			return settle()
 
 		case <-reconnects:
 			if poll() {

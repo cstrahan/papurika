@@ -178,6 +178,35 @@ func TestRunNoMatch(t *testing.T) {
 	}
 }
 
+func TestRunSettlesDownMinion(t *testing.T) {
+	fastPolls(t)
+	jid := "20260627000000000099"
+	targeted := []string{"m1", "m2"}
+	// m2 never returns. With no hard deadline, the gather window should settle:
+	// m2 becomes a non-responder and the run completes NORMALLY (not a timeout).
+	srv := engineServer(t, jid, targeted, func(int) map[string]string {
+		return map[string]string{"m1": "true"}
+	})
+	defer srv.Close()
+	c := engineClient(t, srv)
+
+	res, err := c.Run(context.Background(), JobSpec{Target: "*", Fun: "test.ping"},
+		WithSaltTimeout(30*time.Millisecond), WithGatherTimeout(30*time.Millisecond))
+	if err != nil {
+		t.Fatalf("settle should be a normal completion, got err %v", err)
+	}
+	cr := res.Commands[0]
+	if !cr.Complete || cr.Reason != ReasonSettled {
+		t.Errorf("complete=%v reason=%v, want settled", cr.Complete, cr.Reason)
+	}
+	if got := res.Responders(); len(got) != 1 || got[0] != "m1" {
+		t.Errorf("responders = %v, want [m1]", got)
+	}
+	if got := res.NonResponders(); len(got) != 1 || got[0] != "m2" {
+		t.Errorf("nonresponders = %v, want [m2]", got)
+	}
+}
+
 func TestSubmitFireAndForget(t *testing.T) {
 	jid := "20260627000000000003"
 	srv := engineServer(t, jid, []string{"m1"}, func(int) map[string]string { return nil })

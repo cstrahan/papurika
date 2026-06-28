@@ -132,8 +132,9 @@ type CompletionReason int
 
 const (
 	ReasonNone        CompletionReason = iota
-	ReasonAllReturned                  // every targeted minion reached a terminal status
-	ReasonDeadline                     // ctx deadline / --timeout elapsed
+	ReasonAllReturned                  // every targeted minion returned
+	ReasonSettled                      // gather window elapsed; leftover minions are non-responders
+	ReasonDeadline                     // hard ctx deadline / --timeout elapsed (not normal completion)
 	ReasonCanceled                     // ctx canceled (e.g. SIGINT)
 	ReasonStreamFatal                  // unrecoverable gather error (e.g. jid aged out mid-run)
 )
@@ -142,6 +143,8 @@ func (r CompletionReason) String() string {
 	switch r {
 	case ReasonAllReturned:
 		return "all_returned"
+	case ReasonSettled:
+		return "settled"
 	case ReasonDeadline:
 		return "deadline"
 	case ReasonCanceled:
