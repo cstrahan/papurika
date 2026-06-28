@@ -190,6 +190,8 @@ func renderPretty(w io.Writer, res *papurika.Result, color bool) error {
 			} else {
 				fmt.Fprintf(w, "  %s\n\n", string(c.Value.Raw()))
 			}
+		} else {
+			fmt.Fprintf(w, "  %s\n\n", g.dim("(no minions matched)"))
 		}
 	}
 	return nil

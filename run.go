@@ -109,11 +109,19 @@ func (c *Client) Submit(ctx context.Context, spec JobSpec, opts ...RunOption) (*
 		return c.submitClientBatch(ctx, spec, cfg)
 	}
 	job, err := c.submitOne(ctx, spec)
+	if errors.Is(err, errNoMatch) {
+		return &Submission{}, nil // nothing matched; no jids
+	}
 	if err != nil {
 		return nil, err
 	}
 	return &Submission{Jobs: []Job{job}}, nil
 }
+
+// errNoMatch is an internal sentinel: the async submit matched no minion
+// (salt returns {"return":[{}]} with no jid). It is not an error to the caller —
+// Run/Submit translate it to an empty result.
+var errNoMatch = errors.New("papurika: target matched no minion")
 
 // submitOne POSTs a single local_async job and returns its identity.
 func (c *Client) submitOne(ctx context.Context, spec JobSpec) (Job, error) {
@@ -124,9 +132,20 @@ func (c *Client) submitOne(ctx context.Context, spec JobSpec) (Job, error) {
 	}
 	cr := res.Commands[0]
 	if cr.JID == "" {
+		// No jid + no targeted minions => the target matched nothing.
+		if len(cr.Targeted) == 0 {
+			return Job{}, errNoMatch
+		}
 		return Job{}, apiError(ErrMalformed, 0, "", string(cr.Raw()), ModuleUnknown)
 	}
 	return Job{JID: cr.JID, Targeted: cr.Targeted, Fun: spec.Fun, Client: ClientLocalAsync}, nil
+}
+
+// noMatchResult is the empty-but-valid result for a target that matched nothing.
+func noMatchResult(spec JobSpec) *Result {
+	return &Result{Commands: []CommandResult{{
+		Client: ClientLocal, Fun: spec.Fun, Minions: map[string]MinionResult{}, Complete: true,
+	}}}
 }
 
 // Run submits and gathers to completion or deadline, returning the normalized
@@ -158,6 +177,9 @@ func (c *Client) Run(ctx context.Context, spec JobSpec, opts ...RunOption) (res 
 
 	// Default: one async job, gathered over events + /jobs.
 	job, err := c.submitOne(ctx, spec)
+	if errors.Is(err, errNoMatch) {
+		return noMatchResult(spec), nil
+	}
 	if err != nil {
 		return &Result{}, err
 	}
@@ -367,6 +389,9 @@ func (c *Client) submitClientBatch(ctx context.Context, spec JobSpec, cfg runCon
 		js.TgtType = TgtList
 		js.Batch = ""
 		job, err := c.submitOne(ctx, js)
+		if errors.Is(err, errNoMatch) {
+			continue // a chunk's minions vanished between resolve and submit
+		}
 		if err != nil {
 			return sub, err
 		}

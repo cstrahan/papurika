@@ -153,6 +153,31 @@ func TestRunDeadlinePartialAndJID(t *testing.T) {
 	}
 }
 
+func TestRunNoMatch(t *testing.T) {
+	// local_async to a target matching nothing returns {"return":[{}]} (no jid).
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Server", "CherryPy/18")
+		if r.URL.Path == "/login" {
+			io.WriteString(w, loginBody("TOK1"))
+			return
+		}
+		io.WriteString(w, `{"return":[{}]}`)
+	}))
+	defer srv.Close()
+	c := engineClient(t, srv)
+
+	res, err := c.Run(context.Background(), JobSpec{Target: "ghost", Fun: "test.ping"})
+	if err != nil {
+		t.Fatalf("no-match should not be an error, got %v", err)
+	}
+	if len(res.Commands) != 1 || len(res.Commands[0].Minions) != 0 {
+		t.Fatalf("expected one empty command, got %+v", res.Commands)
+	}
+	if len(res.Responders()) != 0 || len(res.NonResponders()) != 0 {
+		t.Errorf("expected no responders/non-responders")
+	}
+}
+
 func TestSubmitFireAndForget(t *testing.T) {
 	jid := "20260627000000000003"
 	srv := engineServer(t, jid, []string{"m1"}, func(int) map[string]string { return nil })
