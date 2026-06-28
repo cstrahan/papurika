@@ -12,29 +12,29 @@ import (
 var (
 	// ErrAuthFailure: authentication failed (bad credentials, expired/invalid
 	// token). Triggers a single automatic re-auth + retry in the transport.
-	ErrAuthFailure = errors.New("papurika: authentication failed")
+	ErrAuthFailure = errors.New("authentication failed")
 	// ErrAuthDenied: authenticated but not authorized (valid token, missing perm).
 	// On cherrypy this is a 401; on tornado it is a 200 with "Failed to
 	// authenticate" in the body. Never retried — re-login cannot grant a perm.
-	ErrAuthDenied = errors.New("papurika: authorization denied")
+	ErrAuthDenied = errors.New("authorization denied")
 	// ErrNotFound: a requested resource does not exist.
-	ErrNotFound = errors.New("papurika: not found")
+	ErrNotFound = errors.New("not found")
 	// ErrJobNotFound: a jid is unknown or aged out of the job cache (the explicit
 	// Error field on GET /jobs/<jid>).
-	ErrJobNotFound = errors.New("papurika: job not found")
+	ErrJobNotFound = errors.New("job not found")
 	// ErrMalformed: the request was rejected as malformed (400 bad JSON; or salt's
 	// "missing fun/tgt", which is a 500 on cherrypy / a 200 exception on tornado).
-	ErrMalformed = errors.New("papurika: malformed request")
+	ErrMalformed = errors.New("malformed request")
 	// ErrNoResponse: one or more targeted minions did not respond. Only returned
 	// when the caller opts into strict no-response-is-an-error handling; by default
 	// non-responders are reported via Result, not as an error.
-	ErrNoResponse = errors.New("papurika: minion did not respond")
+	ErrNoResponse = errors.New("minion did not respond")
 	// ErrTransport: a network/TLS/timeout failure, or a context cancellation. Wraps
 	// the underlying cause (e.g. context.DeadlineExceeded).
-	ErrTransport = errors.New("papurika: transport error")
+	ErrTransport = errors.New("transport error")
 	// ErrUnsupported: the requested operation is not supported by the target netapi
 	// module (e.g. wheel/local_batch on rest_tornado).
-	ErrUnsupported = errors.New("papurika: unsupported by netapi module")
+	ErrUnsupported = errors.New("unsupported by netapi module")
 )
 
 // Module identifies the salt-api netapi module a response came from (best-effort,

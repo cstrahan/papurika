@@ -90,7 +90,12 @@ func decodeJob(jid string, body []byte) (*JobResult, error) {
 		return nil, apiError(ErrMalformed, http.StatusOK, "application/json", string(body), ModuleUnknown)
 	}
 	if len(env.Info) == 0 {
-		return nil, apiError(ErrJobNotFound, http.StatusOK, "application/json", string(body), ModuleUnknown)
+		// No info array. On cherrypy this never happens (a missing jid still
+		// returns info[0].Error); other modules (e.g. rest_tornado) shape /jobs
+		// differently. Treat it as "no data this poll" rather than not-found, so
+		// the gather keeps reconciling via the event bus + settle window instead
+		// of bailing. (cherrypy-first: we don't parse the tornado shape here.)
+		return &JobResult{Result: CommandResult{JID: jid, Minions: map[string]MinionResult{}, raw: body}}, nil
 	}
 	info := env.Info[0]
 	if info.Error != "" {
