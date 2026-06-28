@@ -175,6 +175,9 @@ func emit(res *papurika.Result, err error) error {
 	if res != nil {
 		_ = render(os.Stdout, res, resolveOutput(), useColor())
 	}
+	if err == nil && isNoMatch(res) {
+		fmt.Fprintln(os.Stderr, "papurika: no minions matched the target")
+	}
 	if err != nil && res != nil {
 		if jids := res.JIDs(); len(jids) > 0 {
 			fmt.Fprintf(os.Stderr, "papurika: interrupted/incomplete — jid(s): %v\n", jids)

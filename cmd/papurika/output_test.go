@@ -88,6 +88,24 @@ func TestExitCodeNoMatch(t *testing.T) {
 	if got := exitCode(empty, nil, failAny, false); got != exitNoMatch {
 		t.Errorf("empty local result = %d, want %d (no match)", got, exitNoMatch)
 	}
+	// The JSON outcome must agree with the exit code (not the misleading "ok").
+	if got := toView(empty, defaultOK).Summary.Outcome; got != "nomatch" {
+		t.Errorf("no-match outcome = %q, want nomatch", got)
+	}
+}
+
+func TestRunnerValueOutcomeOK(t *testing.T) {
+	// A runner command (value-bearing, no minions) is "ok", not "nomatch".
+	runnerRes := &papurika.Result{Commands: []papurika.CommandResult{{
+		Client: papurika.ClientRunner, Fun: "manage.up",
+		Value: papurika.NewRawValue(json.RawMessage(`["m1"]`)),
+	}}}
+	if got := toView(runnerRes, defaultOK).Summary.Outcome; got != "ok" {
+		t.Errorf("runner outcome = %q, want ok", got)
+	}
+	if got := exitCode(runnerRes, nil, failAny, false); got != exitOK {
+		t.Errorf("runner exit = %d, want 0", got)
+	}
 }
 
 func TestRenderJSONSchema(t *testing.T) {

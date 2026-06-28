@@ -110,14 +110,20 @@ func toView(res *papurika.Result, okPred func(papurika.MinionResult) bool) resul
 		}
 		v.Commands = append(v.Commands, cv)
 	}
-	v.Summary.Outcome = outcome(v.Summary)
+	v.Summary.Outcome = outcome(res, v.Summary)
 	return v
 }
 
-func outcome(s summaryView) string {
+func outcome(res *papurika.Result, s summaryView) string {
+	if s.Targeted == 0 {
+		// A local command that matched no minion is "nomatch" (consistent with
+		// exit 2); a runner/wheel command (value-bearing, no minions) is "ok".
+		if isNoMatch(res) {
+			return "nomatch"
+		}
+		return "ok"
+	}
 	switch {
-	case s.Targeted == 0:
-		return "ok" // runner/wheel or no-minion command
 	case s.Failed == 0 && s.NoResponse == 0:
 		return "ok"
 	case s.Succeeded == 0:
@@ -125,6 +131,25 @@ func outcome(s summaryView) string {
 	default:
 		return "partial"
 	}
+}
+
+// isNoMatch reports whether every command is a local-family command that matched
+// no minion (no per-minion results and no value) — i.e. the target hit nothing.
+func isNoMatch(res *papurika.Result) bool {
+	if res == nil || len(res.Commands) == 0 {
+		return false
+	}
+	for _, c := range res.Commands {
+		switch c.Client {
+		case papurika.ClientLocal, papurika.ClientLocalAsync, papurika.ClientLocalBatch, papurika.ClientLocalSubset, papurika.ClientSSH:
+			if len(c.Minions) > 0 || !c.Value.IsZero() {
+				return false
+			}
+		default:
+			return false // runner/wheel are never "no match"
+		}
+	}
+	return true
 }
 
 func defaultOK(m papurika.MinionResult) bool { return m.OK() }
@@ -266,18 +291,11 @@ func exitCode(res *papurika.Result, err error, policy failPolicy, allowNoRespons
 
 	view := toView(res, defaultOK)
 	s := view.Summary
-	// A local command that matched no minion (nothing targeted, no runner value).
 	if s.Targeted == 0 {
-		hasValue := false
-		for _, c := range res.Commands {
-			if !c.Value.IsZero() {
-				hasValue = true
-			}
+		if isNoMatch(res) {
+			return exitNoMatch // local target hit nothing
 		}
-		if !hasValue && localish(res) {
-			return exitNoMatch
-		}
-		return exitOK
+		return exitOK // runner/wheel value
 	}
 
 	notOK := s.Failed
@@ -298,14 +316,4 @@ func exitCode(res *papurika.Result, err error, policy failPolicy, allowNoRespons
 		}
 		return exitOK
 	}
-}
-
-func localish(res *papurika.Result) bool {
-	for _, c := range res.Commands {
-		switch c.Client {
-		case papurika.ClientLocal, papurika.ClientLocalAsync, papurika.ClientLocalBatch, papurika.ClientLocalSubset, papurika.ClientSSH:
-			return true
-		}
-	}
-	return false
 }
