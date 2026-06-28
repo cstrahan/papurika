@@ -26,10 +26,10 @@ type EventStream struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	mu         sync.Mutex
-	subs       map[int]*subscription
-	nextID     int
-	reconnects chan struct{}
+	mu           sync.Mutex
+	subs         map[int]*subscription
+	nextID       int
+	recListeners []chan struct{} // one per Reconnects() caller; each gets every pulse
 }
 
 type subscription struct {
@@ -52,11 +52,10 @@ func (c *Client) Events(ctx context.Context) (*EventStream, error) {
 		return nil, apiError(ErrTransport, 0, "", err.Error(), ModuleUnknown)
 	}
 	es := &EventStream{
-		c:          c,
-		ctx:        sctx,
-		cancel:     cancel,
-		subs:       map[int]*subscription{},
-		reconnects: make(chan struct{}, 1),
+		c:      c,
+		ctx:    sctx,
+		cancel: cancel,
+		subs:   map[int]*subscription{},
 	}
 	go es.run(conn)
 	return es, nil
@@ -80,9 +79,18 @@ func (es *EventStream) Subscribe(tagPrefix string) (<-chan Event, func()) {
 	}
 }
 
-// Reconnects pulses (non-blocking) each time the underlying connection is
-// re-established after a drop.
-func (es *EventStream) Reconnects() <-chan struct{} { return es.reconnects }
+// Reconnects returns a channel that pulses (non-blocking) each time the
+// underlying connection is re-established after a drop. Each call registers an
+// independent listener, so every consumer of a shared stream sees every pulse —
+// important because a reconnect can drop events for all in-flight jobs, and each
+// must force its own /jobs backfill.
+func (es *EventStream) Reconnects() <-chan struct{} {
+	ch := make(chan struct{}, 1)
+	es.mu.Lock()
+	es.recListeners = append(es.recListeners, ch)
+	es.mu.Unlock()
+	return ch
+}
 
 // Close terminates the stream and all subscriptions.
 func (es *EventStream) Close() { es.cancel() }
@@ -155,8 +163,12 @@ func (es *EventStream) broadcast(f sse.Frame) {
 }
 
 func (es *EventStream) pulseReconnect() {
-	select {
-	case es.reconnects <- struct{}{}:
-	default:
+	es.mu.Lock()
+	defer es.mu.Unlock()
+	for _, ch := range es.recListeners {
+		select {
+		case ch <- struct{}{}:
+		default: // listener already has a pending pulse; one is enough
+		}
 	}
 }
