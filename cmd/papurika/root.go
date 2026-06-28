@@ -184,22 +184,42 @@ func isTTY(f *os.File) bool {
 // It also prints a recovery banner to stderr on interruption/timeout so the jid
 // is never lost.
 func emit(res *papurika.Result, err error) error {
+	// Pure failure (auth/transport/malformed with nothing gathered): print the
+	// error to stderr and emit nothing to stdout — don't render a misleading
+	// empty "ok" result.
+	if err != nil && !resultHasContent(res) {
+		fmt.Fprintf(os.Stderr, "papurika: %v\n", err)
+		return &exitErr{code: exitCode(res, err, policy(), flagAllowNR)}
+	}
 	if res != nil {
 		_ = render(os.Stdout, res, resolveOutput(), useColor())
 	}
 	if err == nil && isNoMatch(res) {
 		fmt.Fprintln(os.Stderr, "papurika: no minions matched the target")
 	}
-	if err != nil && res != nil {
+	// Partial results (interrupt/deadline) that DID gather something: keep the jid
+	// recoverable.
+	if err != nil {
 		if jids := res.JIDs(); len(jids) > 0 {
 			fmt.Fprintf(os.Stderr, "papurika: interrupted/incomplete — jid(s): %v\n", jids)
 			fmt.Fprintf(os.Stderr, "papurika: resume with: papurika watch %s\n", joinJIDs(jids))
 		}
 	}
-	if err != nil && res == nil {
-		fmt.Fprintf(os.Stderr, "papurika: %v\n", err)
-	}
 	return &exitErr{code: exitCode(res, err, policy(), flagAllowNR)}
+}
+
+// resultHasContent reports whether a result carries anything worth rendering
+// (a jid, a targeted set, per-minion results, or a runner/wheel value).
+func resultHasContent(res *papurika.Result) bool {
+	if res == nil {
+		return false
+	}
+	for _, c := range res.Commands {
+		if c.JID != "" || len(c.Targeted) > 0 || len(c.Minions) > 0 || !c.Value.IsZero() {
+			return true
+		}
+	}
+	return false
 }
 
 func joinJIDs(jids []string) string {
