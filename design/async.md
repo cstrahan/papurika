@@ -88,7 +88,8 @@ type Execution struct { job Job; minions map[string]MinionResult; /* ... */ }
   cancel the poller — never poll a finished job.
 - **Missing-jid guard:** if a poll returns the explicit `info[0].Error` *after* a
   successful submit (job aged out mid-run, or an HA pool routed us to a master
-  without the shared cache), surface `StreamFatal` with the jid — don't spin. A
+  without the shared cache — see [high-availability.md](high-availability.md)),
+  surface `StreamFatal` with the jid — don't spin. A
   `/jobs` body with **no `info` array at all** (e.g. rest_tornado, whose shape we
   deliberately don't parse — cherrypy-first) is *not* treated as missing: it's
   "no data this poll", so the gather keeps reconciling via the event bus + settle
@@ -358,7 +359,9 @@ func (c *Client) Ping(ctx context.Context, target, tgtType string, opts ...RunOp
 3. **Polling defaults** (`initialPollDelay` 2s, `maxPollInterval` 10s, exp ramp) —
    per-call only, or also a `Client`-level default? Tighter for interactive CLI?
 4. **HA without shared job cache** — a jid from master A may be unresolvable on
-   master B. Do we pin `Watch`/follow-up to the submitting endpoint (carry it on
-   `Submission`/`Job`), or assume a shared `master_job_cache`?
+   master B (and the SSE bus is per-master). Full treatment, failure modes, and
+   mitigations in **[high-availability.md](high-availability.md)** (not yet
+   implemented). Open: pin `Watch`/follow-up to the submitting endpoint vs. assume
+   a sticky LB / shared `master_job_cache`.
 5. **Client-side batch target staleness** — resolve target→list once up front, or
    re-resolve per chunk on a churning fleet?

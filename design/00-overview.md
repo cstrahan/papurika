@@ -12,6 +12,10 @@ This is the index. The detail lives in:
   reconciliation, `watch`, fire-and-forget, interrupt/partial-results, batching, liveness.
 - **[cli.md](cli.md)** — the command surface, output model, stdout/stderr policy,
   exit-code policy, interrupt UX, flags.
+- **[high-availability.md](high-availability.md)** — *(design note, not yet
+  implemented)* jid affinity behind a multi-master LB: the failure modes, the
+  server-/client-side mitigations, and what the code does today. To be reconciled
+  into the docs above once the approach is settled.
 
 Grounding (every behavioral claim traces to these):
 [`research/pepper_design_analysis.md`](../research/pepper_design_analysis.md),
