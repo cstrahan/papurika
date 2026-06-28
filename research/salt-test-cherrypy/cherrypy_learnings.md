@@ -201,6 +201,24 @@ pepper-skill warning about batch nesting differently did **not** reproduce here
 — likely a `full_return`/CLI artifact, not a cherrypy-over-the-wire thing.)
 `batch` accepts a count (`"1"`) or percentage (`"50%"`).
 
+**`local_batch` does NOT stream — the response is fully buffered (verified).**
+Despite the docs hinting at streaming, rest_cherrypy holds the entire batch
+result and sends it as one `Content-Length`-delimited body *after the whole job
+completes*. Probe: `batch=1`, two minions, `cmd.run 'sleep 2; date +%s.%N'` (so the
+two run sequentially, ~2s apart). The HTTP response:
+```
+status=200  Transfer-Encoding=None  Content-Length=101
+[4.61s] {"return": [{"builtin.minion": "...894.84"}, {"builtin.minion2": "...897.01"}]}
+```
+The body arrived at **4.6s — after both minions finished** (their embedded
+timestamps are ~2.17s apart), with a fixed `Content-Length` and no chunked
+encoding. So there's no per-batch flush a client could consume incrementally.
+**Implication:** server-side batch can't give a client streaming progress *or* a
+jid (the sync response carries none). The only way to stream batch progress (and
+recover jids) is **client-side batching** — resolve the target, chunk it, and fan
+out `local_async` per chunk. This is why papurika offers `--client-batch` and why
+its NDJSON output streams there but not for server-side `--batch`.
+
 ### `runner` (sync) — `out/04*.json`
 `return[0]` is the runner's **bare return value, NOT wrapped**:
 - `cache.grains tgt=*` → `{minion: {<grains>}}` (read from master cache, no

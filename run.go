@@ -61,6 +61,7 @@ type runConfig struct {
 	saltTimeout   time.Duration
 	gatherTimeout time.Duration
 	onUpdate      func(Update)
+	onSubmit      func(Job)
 	killOnCancel  bool
 	clientBatch   string // non-empty => client-side batching at this size
 	maxInflight   int
@@ -84,6 +85,13 @@ func WithGatherTimeout(d time.Duration) RunOption { return func(c *runConfig) { 
 
 // OnUpdate registers a per-minion progress callback.
 func WithOnUpdate(fn func(Update)) RunOption { return func(c *runConfig) { c.onUpdate = fn } }
+
+// WithOnSubmit registers a callback invoked once per async job the moment it is
+// submitted (jid + targeted set known), before gathering begins — the hook that
+// lets a streaming consumer record the jid before any return arrives, so an
+// interrupt can never lose it. For client-side batching it fires once per chunk
+// jid (possibly concurrently — the callback must be safe for concurrent use).
+func WithOnSubmit(fn func(Job)) RunOption { return func(c *runConfig) { c.onSubmit = fn } }
 
 // WithKillOnCancel sends saltutil.kill_job when ctx is canceled (default: leave
 // the job running, jid recoverable).
@@ -182,6 +190,9 @@ func (c *Client) Run(ctx context.Context, spec JobSpec, opts ...RunOption) (res 
 	}
 	if err != nil {
 		return &Result{}, err
+	}
+	if cfg.onSubmit != nil {
+		cfg.onSubmit(job)
 	}
 	cr := c.gather(ctx, job, cfg)
 	res = &Result{Commands: []CommandResult{cr}}
@@ -474,6 +485,9 @@ func (c *Client) runClientBatch(ctx context.Context, spec JobSpec, cfg runConfig
 			job, err := c.submitOne(ctx, js)
 			if err != nil {
 				return
+			}
+			if cfg.onSubmit != nil {
+				cfg.onSubmit(job)
 			}
 			cr := c.gather(ctx, job, cfg)
 			mu.Lock()

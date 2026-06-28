@@ -263,14 +263,25 @@ essentially instantly — no deadlock. CLI: `papurika watch [--for all-returned|
 Default **server-side `local_batch`**; **client-side** opt-in for interactive UX.
 Either way the engine normalizes the shape so callers never see per-chunk fan-out.
 
-**Server-side (default).** Send `client: local_batch`, `batch: "<n|pct>"`. The
-response is `return: [{chunk1},{chunk2},…]` — the engine **merges** the per-chunk
-maps into one `map[string]MinionResult` (ids are unique keys; lossless) and unwraps
-the spliced envelope (`ret` if present, else dict − metadata). One jid,
-master-orchestrated, survives client disconnect, one auth — the durability/CI/
-large-fleet choice. **Crucially, progress still flows:** each minion's
-`salt/job/<jid>/ret/<minion>` event fires as its chunk runs, so the CLI gets live
-per-minion progress even though it's one server-side job.
+**Server-side (default).** Send `client: local_batch`, `batch: "<n|pct>"`. This is
+a **synchronous** `POST /` — the master orchestrates the batching and returns
+`return: [{chunk1},{chunk2},…]`; the engine **merges** the per-chunk maps into one
+`map[string]MinionResult` (ids are unique keys; lossless) and unwraps the spliced
+envelope (`ret` if present, else dict − metadata). Master-orchestrated, survives
+client disconnect — the durability/CI/large-fleet choice.
+
+Its limits are inherent to salt-api, **verified empirically** (see
+`cherrypy_learnings.md` `local_batch`): rest_cherrypy **buffers the whole batch
+response** and sends it with a fixed `Content-Length` only *after the entire job
+completes* — it does **not** chunk/flush per batch. So server-side batch gives the
+client **no live progress, no incremental output, and no jid** (the sync response
+carries none). Reading the body incrementally is impossible because the server
+doesn't stream it. (An earlier draft claimed progress "still flows" via per-minion
+`ret` events — it doesn't, because the sync path neither subscribes to `/events`
+nor has a jid to correlate.)
+
+**If you need streaming progress or a recoverable jid while batching, use
+client-side batching** — it's the only mechanism that can.
 
 **Client-side (opt-in).** `WithClientBatch(size, …)`: resolve target → static
 minion list (a discovery `test.ping` or key list), chunk it, and fan out one
@@ -289,11 +300,14 @@ func WithFailFast(threshold float64) BatchOption
 func WithPauseBetween(d time.Duration) BatchOption
 ```
 
-**Progress to the CLI:** both modes feed the same `WithOnUpdate` stream; each per-minion
-return is one `Update`. Client-side additionally emits chunk-boundary updates
-(index / inflight count) so the CLI can render a progress bar. The renderer is
-identical across modes. **Default:** `spec.Batch != ""` and no `WithClientBatch`
-⇒ server-side; `WithClientBatch` ⇒ client-side; no batch ⇒ a single `local_async`.
+**Progress to the CLI:** the **non-batch** and **client-side-batch** paths feed the
+`WithOnUpdate` / `WithOnSubmit` stream (each per-minion return is one `Update`;
+each chunk submit is one `Job`), so live progress and NDJSON streaming work. The
+**server-side-batch** path is a single blocking call that does *not* fire those
+callbacks — its results materialize all at once when the call returns, so there's
+no live progress there (consistent with the buffered-response finding above).
+**Default:** `spec.Batch != ""` and no `WithClientBatch` ⇒ server-side;
+`WithClientBatch` ⇒ client-side; no batch ⇒ a single `local_async`.
 
 ---
 

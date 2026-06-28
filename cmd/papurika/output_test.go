@@ -193,6 +193,91 @@ func TestWriteTree(t *testing.T) {
 	}
 }
 
+// parseLines splits NDJSON output into decoded objects, asserting each is valid.
+func parseLines(t *testing.T, b []byte) []map[string]any {
+	t.Helper()
+	var out []map[string]any
+	for _, ln := range strings.Split(strings.TrimSpace(string(b)), "\n") {
+		if ln == "" {
+			continue
+		}
+		var m map[string]any
+		if err := json.Unmarshal([]byte(ln), &m); err != nil {
+			t.Fatalf("invalid NDJSON line %q: %v", ln, err)
+		}
+		out = append(out, m)
+	}
+	return out
+}
+
+func TestWriteNDJSONComplete(t *testing.T) {
+	r := &papurika.Result{Commands: []papurika.CommandResult{{
+		Client: papurika.ClientLocalAsync, Fun: "test.ping", JID: "42",
+		Targeted: []string{"m1", "m2"},
+		Minions: map[string]papurika.MinionResult{
+			"m1": mr("m1", papurika.StatusResponded, intp(0)),
+			"m2": mr("m2", papurika.StatusNoResponse, nil),
+		},
+	}}}
+	var buf bytes.Buffer
+	if err := writeNDJSON(&buf, r); err != nil {
+		t.Fatal(err)
+	}
+	lines := parseLines(t, buf.Bytes())
+	if lines[0]["type"] != "submitted" || lines[0]["jid"] != "42" {
+		t.Errorf("first line must be submitted+jid, got %v", lines[0])
+	}
+	if lines[len(lines)-1]["type"] != "summary" {
+		t.Errorf("last line must be summary, got %v", lines[len(lines)-1])
+	}
+}
+
+func TestNDJSONStreamerSubmittedFirstAndBackfill(t *testing.T) {
+	var buf bytes.Buffer
+	st := newNDJSONStreamer(&buf)
+
+	job := papurika.Job{JID: "99", Targeted: []string{"m1", "m2"}}
+	st.onSubmit(job)
+	st.onUpdate(papurika.Update{JID: "99", Minion: mr("m1", papurika.StatusResponded, intp(0))})
+	// m2 never streamed; finish must backfill it from the result, then summary.
+	res := &papurika.Result{Commands: []papurika.CommandResult{{
+		Client: papurika.ClientLocalAsync, Fun: "test.ping", JID: "99",
+		Targeted: []string{"m1", "m2"},
+		Minions: map[string]papurika.MinionResult{
+			"m1": mr("m1", papurika.StatusResponded, intp(0)),
+			"m2": mr("m2", papurika.StatusNoResponse, nil),
+		},
+	}}}
+	st.finish(res, nil)
+
+	lines := parseLines(t, buf.Bytes())
+	if lines[0]["type"] != "submitted" || lines[0]["jid"] != "99" {
+		t.Fatalf("first line must carry the jid (no-lost-jid), got %v", lines[0])
+	}
+	// Count minion lines: m1 (streamed) + m2 (backfilled) = 2, no dup of m1.
+	var minions, summaries int
+	seen := map[string]bool{}
+	for _, l := range lines {
+		switch l["type"] {
+		case "minion":
+			id, _ := l["id"].(string)
+			if seen[id] {
+				t.Errorf("minion %s emitted twice", id)
+			}
+			seen[id] = true
+			minions++
+		case "summary":
+			summaries++
+		}
+	}
+	if minions != 2 || !seen["m1"] || !seen["m2"] {
+		t.Errorf("want 2 distinct minion lines (m1,m2), got %d %v", minions, seen)
+	}
+	if summaries != 1 || lines[len(lines)-1]["type"] != "summary" {
+		t.Errorf("want exactly one trailing summary line")
+	}
+}
+
 func TestRenderJSONSchema(t *testing.T) {
 	var buf bytes.Buffer
 	r := res(map[string]papurika.MinionResult{"a": mr("a", papurika.StatusResponded, intp(0))}, "a")

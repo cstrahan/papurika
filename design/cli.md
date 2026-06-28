@@ -92,12 +92,25 @@ jid already in its target state renders and exits without blocking.
 
 ## B. Output model
 
-`--output json|pretty|yaml|raw`. Default: **pretty** when stdout is a TTY, **json**
-when piped. **Zero dependency on Salt's Python outputters** — we render natively.
+`--output json|pretty|yaml|ndjson|raw`. Default: **pretty** when stdout is a TTY,
+**json** when piped. **Zero dependency on Salt's Python outputters** — we render
+natively.
 
 The **JSON output is the unified result model** ([library.md](library.md) §B) —
 a stable, versioned, documented schema. It's the contract scripts consume; pretty
-is a lossy projection of it.
+is a lossy projection of it; `yaml` is the same model as YAML.
+
+**`ndjson`** is the streaming sibling of `json`: one self-contained JSON object
+per line, emitted *as the run progresses*. For a gathering run it emits a
+`{"type":"submitted","jid":…,"targeted":[…]}` line **first** (the instant the jid
+exists — so the jid is never lost to an interrupt, satisfying the no-lost-jid rule
+on the stdout stream itself), then one `{"type":"minion",…}` line per return, then
+a trailing `{"type":"summary",…}`. Ideal for piping a large/long run into `jq -c`
+or a live processor. Caveat: **server-side `--batch` can't stream** — salt-api
+buffers the whole `local_batch` response and returns no jid (verified;
+`async.md` §F), so under server-side batch ndjson degrades to minion + summary
+lines emitted at the end with no `submitted`/jid line. Use **`--client-batch`** for
+streaming + jids while batching.
 
 ### JSON (`papurika.dev/result/v1`)
 

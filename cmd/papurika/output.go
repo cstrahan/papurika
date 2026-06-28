@@ -8,6 +8,7 @@ import (
 	"io"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/cstrahan/papurika"
 	sigsyaml "sigs.k8s.io/yaml"
@@ -20,6 +21,7 @@ const (
 	outputPretty outputMode = "pretty"
 	outputJSON   outputMode = "json"
 	outputYAML   outputMode = "yaml"
+	outputNDJSON outputMode = "ndjson"
 	outputRaw    outputMode = "raw"
 )
 
@@ -175,6 +177,8 @@ func render(w io.Writer, res *papurika.Result, mode outputMode, color bool) erro
 		}
 		_, err = w.Write(b)
 		return err
+	case outputNDJSON:
+		return writeNDJSON(w, res)
 	case outputRaw:
 		for _, c := range res.Commands {
 			if len(c.Raw()) > 0 {
@@ -185,6 +189,125 @@ func render(w io.Writer, res *papurika.Result, mode outputMode, color bool) erro
 	default:
 		return renderPretty(w, res, color)
 	}
+}
+
+// --- NDJSON: one self-contained JSON object per line (newline-delimited) ---
+
+type ndjsonSubmit struct {
+	Type     string   `json:"type"` // "submitted"
+	JID      string   `json:"jid"`
+	Targeted []string `json:"targeted"`
+}
+
+type ndjsonMinion struct {
+	Type    string          `json:"type"` // "minion"
+	JID     string          `json:"jid,omitempty"`
+	ID      string          `json:"id"`
+	Status  string          `json:"status"`
+	Retcode *int            `json:"retcode"`
+	Return  json.RawMessage `json:"return"`
+}
+
+type ndjsonValue struct {
+	Type    string          `json:"type"` // "value" (runner/wheel)
+	JID     string          `json:"jid,omitempty"`
+	Fun     string          `json:"fun"`
+	Retcode *int            `json:"retcode,omitempty"`
+	Success *bool           `json:"success,omitempty"`
+	Return  json.RawMessage `json:"return"`
+}
+
+type ndjsonSummary struct {
+	Type string   `json:"type"` // "summary"
+	JIDs []string `json:"jids,omitempty"`
+	summaryView
+}
+
+type ndjsonError struct {
+	Type  string `json:"type"` // "error"
+	Error string `json:"error"`
+}
+
+func minionLine(jid string, m papurika.MinionResult) ndjsonMinion {
+	ret := m.Value.Raw()
+	if len(ret) == 0 {
+		ret = json.RawMessage("null")
+	}
+	return ndjsonMinion{Type: "minion", JID: jid, ID: m.ID, Status: m.Status.String(), Retcode: m.Retcode, Return: ret}
+}
+
+// writeNDJSON emits a complete (non-streamed) result as NDJSON: a submitted line
+// for any async-shaped command, a minion line per minion (or a value line for
+// runner/wheel), then a summary line. Used by emit-based commands.
+func writeNDJSON(w io.Writer, res *papurika.Result) error {
+	enc := json.NewEncoder(w)
+	for _, c := range res.Commands {
+		if c.JID != "" || len(c.Targeted) > 0 {
+			_ = enc.Encode(ndjsonSubmit{Type: "submitted", JID: c.JID, Targeted: c.Targeted})
+		}
+		for _, id := range sortedMinionIDs(c.Minions) {
+			_ = enc.Encode(minionLine(c.JID, c.Minions[id]))
+		}
+		if len(c.Minions) == 0 && !c.Value.IsZero() {
+			ret := c.Value.Raw()
+			if len(ret) == 0 {
+				ret = json.RawMessage("null")
+			}
+			_ = enc.Encode(ndjsonValue{Type: "value", JID: c.JID, Fun: c.Fun, Retcode: c.Retcode, Success: c.Success, Return: ret})
+		}
+	}
+	v := toView(res, defaultOK)
+	return enc.Encode(ndjsonSummary{Type: "summary", JIDs: res.JIDs(), summaryView: v.Summary})
+}
+
+// ndjsonStreamer drives the streaming NDJSON path for run/state/ping. It emits a
+// "submitted" line the instant a jid exists (so the jid is the FIRST line and is
+// never lost to an interrupt), then a "minion" line per return, then a trailing
+// "summary". Safe for concurrent callbacks (client-side batch).
+type ndjsonStreamer struct {
+	mu   sync.Mutex
+	enc  *json.Encoder
+	seen map[string]bool
+}
+
+func newNDJSONStreamer(w io.Writer) *ndjsonStreamer {
+	return &ndjsonStreamer{enc: json.NewEncoder(w), seen: map[string]bool{}}
+}
+
+func (s *ndjsonStreamer) onSubmit(j papurika.Job) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	_ = s.enc.Encode(ndjsonSubmit{Type: "submitted", JID: j.JID, Targeted: j.Targeted})
+}
+
+func (s *ndjsonStreamer) onUpdate(u papurika.Update) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.seen[u.Minion.ID] {
+		return
+	}
+	s.seen[u.Minion.ID] = true
+	_ = s.enc.Encode(minionLine(u.JID, u.Minion))
+}
+
+// finish flushes any minions that completed before streaming caught them, an
+// error line on a content-less failure, and the summary.
+func (s *ndjsonStreamer) finish(res *papurika.Result, err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, c := range res.Commands {
+		for _, id := range sortedMinionIDs(c.Minions) {
+			if !s.seen[id] {
+				s.seen[id] = true
+				_ = s.enc.Encode(minionLine(c.JID, c.Minions[id]))
+			}
+		}
+	}
+	if err != nil && !resultHasContent(res) {
+		_ = s.enc.Encode(ndjsonError{Type: "error", Error: err.Error()})
+	}
+	v := toView(res, defaultOK)
+	_ = s.enc.Encode(ndjsonSummary{Type: "summary", JIDs: res.JIDs(), summaryView: v.Summary})
 }
 
 func renderPretty(w io.Writer, res *papurika.Result, color bool) error {

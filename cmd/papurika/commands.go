@@ -118,12 +118,11 @@ func newRunCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			opts := runOpts()
+			var extra []papurika.RunOption
 			if tg.clientBatch && tg.batch != "" {
-				opts = append(opts, papurika.WithClientBatch(tg.batch))
+				extra = append(extra, papurika.WithClientBatch(tg.batch))
 			}
-			res, err := cl.Run(cmd.Context(), spec, opts...)
-			return emit(res, err)
+			return runSpec(cmd, cl, spec, extra...)
 		},
 	}
 	tg.register(c)
@@ -209,8 +208,8 @@ func newPingCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			res, perr := cl.Ping(cmd.Context(), args[0], tt, runOpts()...)
-			return emit(res, perr)
+			// Ping is Run with test.ping; route through runSpec for ndjson/progress.
+			return runSpec(cmd, cl, papurika.JobSpec{Target: args[0], TgtType: tt, Fun: "test.ping"})
 		},
 	}
 	tg.register(c)
@@ -431,12 +430,11 @@ func newStateCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			opts := runOpts()
+			var extra []papurika.RunOption
 			if tg.clientBatch && tg.batch != "" {
-				opts = append(opts, papurika.WithClientBatch(tg.batch))
+				extra = append(extra, papurika.WithClientBatch(tg.batch))
 			}
-			res, rerr := cl.Run(cmd.Context(), spec, opts...)
-			return emit(res, rerr)
+			return runSpec(cmd, cl, spec, extra...)
 		},
 	}
 	tg.register(c)

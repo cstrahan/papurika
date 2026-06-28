@@ -43,7 +43,7 @@ func newRootCmd() *cobra.Command {
 	pf.StringVar(&flagURL, "url", "", "salt-api URL (overrides profile)")
 	pf.StringVarP(&flagUser, "user", "u", "", "eauth username (overrides profile)")
 	pf.StringVar(&flagEauth, "eauth", "", "eauth backend (overrides profile)")
-	pf.StringVarP(&flagOutput, "output", "o", "", "output mode: pretty|json|yaml|raw (default: pretty on a TTY, json when piped)")
+	pf.StringVarP(&flagOutput, "output", "o", "", "output mode: pretty|json|yaml|ndjson|raw (default: pretty on a TTY, json when piped)")
 	pf.DurationVar(&flagTimeout, "timeout", 0, "hard client wall-clock deadline (exit 124 if hit; 0 = none)")
 	pf.DurationVar(&flagSaltTO, "salt-timeout", 0, "salt initial gather timeout floor")
 	pf.DurationVar(&flagGatherTO, "gather-timeout", 0, "quiet window after which non-responders are settled (normal completion)")
@@ -127,7 +127,8 @@ func timeoutStr() string {
 	return ""
 }
 
-func runOpts() []papurika.RunOption {
+// timingOpts are the deadline/settle-window options (no progress callback).
+func timingOpts() []papurika.RunOption {
 	var o []papurika.RunOption
 	if flagTimeout > 0 {
 		o = append(o, papurika.WithDeadline(flagTimeout))
@@ -138,10 +139,35 @@ func runOpts() []papurika.RunOption {
 	if flagGatherTO > 0 {
 		o = append(o, papurika.WithGatherTimeout(flagGatherTO))
 	}
+	return o
+}
+
+// runOpts is timingOpts plus the stderr live-progress callback (the default
+// non-streaming path).
+func runOpts() []papurika.RunOption {
+	o := timingOpts()
 	if fn := progressFunc(); fn != nil {
 		o = append(o, papurika.WithOnUpdate(fn))
 	}
 	return o
+}
+
+// runSpec executes a JobSpec and renders it, choosing the streaming NDJSON path
+// (submitted-first, per-minion lines) when --output ndjson, else the buffered
+// path with live stderr progress.
+func runSpec(cmd *cobra.Command, cl *papurika.Client, spec papurika.JobSpec, extra ...papurika.RunOption) error {
+	ctx := cmd.Context()
+	if resolveOutput() == outputNDJSON {
+		st := newNDJSONStreamer(os.Stdout)
+		opts := append(timingOpts(), papurika.WithOnSubmit(st.onSubmit), papurika.WithOnUpdate(st.onUpdate))
+		opts = append(opts, extra...)
+		res, err := cl.Run(ctx, spec, opts...)
+		st.finish(res, err)
+		return &exitErr{code: exitCode(res, err, policy(), flagAllowNR)}
+	}
+	opts := append(runOpts(), extra...)
+	res, err := cl.Run(ctx, spec, opts...)
+	return emit(res, err)
 }
 
 // buildLogger maps -v repetition to an slog level on stderr. Returns nil at -v0
@@ -202,6 +228,8 @@ func resolveOutput() outputMode {
 		return outputJSON
 	case "yaml":
 		return outputYAML
+	case "ndjson":
+		return outputNDJSON
 	case "raw":
 		return outputRaw
 	case "pretty":
