@@ -86,9 +86,14 @@ type Execution struct { job Job; minions map[string]MinionResult; /* ... */ }
   backfill poll, then resume. This is the concrete answer to "survive SSE gaps."
 - **Short-circuit:** the instant the reducer sees all-targeted-terminal from events,
   cancel the poller — never poll a finished job.
-- **Missing-jid guard:** if a poll returns `info[0].Error` *after* a successful
-  submit (job aged out mid-run, or an HA pool routed us to a master without the
-  shared cache), surface `StreamFatal` with the jid — don't spin.
+- **Missing-jid guard:** if a poll returns the explicit `info[0].Error` *after* a
+  successful submit (job aged out mid-run, or an HA pool routed us to a master
+  without the shared cache), surface `StreamFatal` with the jid — don't spin. A
+  `/jobs` body with **no `info` array at all** (e.g. rest_tornado, whose shape we
+  deliberately don't parse — cherrypy-first) is *not* treated as missing: it's
+  "no data this poll", so the gather keeps reconciling via the event bus + settle
+  window rather than bailing. So a job on tornado still gathers its returns over
+  `/events` and settles non-responders normally.
 
 **Shared event stream** (`internal/sse`) — one SSE connection multiplexes all
 in-flight jobs:

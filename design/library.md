@@ -15,28 +15,35 @@ functional options; errors wrap with `%w`; no global mutable state.
 
 ```
 github.com/cstrahan/papurika
-├── client.go        PUBLIC  Client, New, NewFromConfig, Option
+├── client.go        PUBLIC  Client, New/NewFromConfig, Option, Login, Exec/ExecStateless
 ├── command.go       PUBLIC  Command (lowstate builder), JobSpec, ClientType, TgtType
 ├── result.go        PUBLIC  Result, CommandResult, MinionResult, Status, RawValue
 ├── errors.go        PUBLIC  sentinels + APIError, Module
-├── exec.go          PUBLIC  Exec / ExecStateless (raw lowstate POST)
-├── run.go           PUBLIC  Run / Submit / Ping / Kill   (engine entrypoints; async.md)
-├── watch.go         PUBLIC  Watch, WatchState           (async.md)
-├── events.go        PUBLIC  Events() -> *EventStream     (async.md)
+├── run.go           PUBLIC  Run / Submit / Ping / Kill (async engine; async.md)
+├── watch.go         PUBLIC  Watch, WatchState (async.md)
+├── events.go        PUBLIC  Events() -> *EventStream (async.md)
 ├── jobs.go          PUBLIC  Job / Jobs, JobResult, JobMeta
+├── envelope.go      (unexported) per-client-type wire decoders -> unified model
+├── transport.go     (unexported) pooled *http.Client, retry, classify, re-auth
 ├── config/          PUBLIC  Config, Profile, Load, Resolve, SecretSource
 └── internal/
-    ├── transport/   pooled *http.Client, retry, single-flight re-auth, classify
-    ├── envelope/    per-client-type wire decoders -> unified model
     ├── sse/         shared /events stream (fan-out, reconnect)  (async.md)
     └── tokencache/  0600 file store keyed by endpoint
 ```
 
-**Public** is the third-party import contract — keep it small and stable. The
+**Public** is the third-party import contract — keep it small and stable: the
 `Client`, the `Result` model, the error taxonomy, the `Command`/`JobSpec` builders,
-and `config` are public. Everything that absorbs salt-api's quirks is `internal/`
-(decoders, retry/re-auth, SSE reconnect, cache file format) so we can refactor it
-freely. The CLI imports only the public surface.
+and `config`.
+
+> **Implementation note — envelope/transport live in the root package, not
+> `internal/`.** An earlier draft put the wire decoders and the HTTP transport in
+> their own `internal/` packages. They can't be: both *produce the public types*
+> (`Result`, the `APIError` sentinels), so a separate package would import
+> `papurika` while `papurika` imports it — an import cycle. So `envelope.go` and
+> `transport.go` are unexported code in the root package (their identifiers are
+> lowercase, so they're just as hidden from third parties as `internal/` would be).
+> Only the genuinely independent, cycle-free utilities — the SSE reader and the
+> token-cache store — remain in `internal/`. The CLI imports only the public surface.
 
 ### The Client
 

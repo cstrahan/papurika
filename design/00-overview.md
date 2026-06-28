@@ -72,22 +72,22 @@ These are stated **once here** and referenced elsewhere — not re-litigated per
 ├─────────────────────────────────────────────────────────────┤
 │ papurika      (PUBLIC library: Client, Result model, errors,  │  → library.md
 │                Command/JobSpec, Run/Submit/Watch/Exec/…)       │     async.md
+│   · envelope.go   wire-shape decoders → unified model (unexported)
+│   · transport.go  pooled *http.Client, retry, re-auth, classify (unexported)
 │ config        (PUBLIC: TOML, profiles, XDG, SecretSource)      │
 ├─────────────────────────────────────────────────────────────┤
-│ internal/transport   pooled *http.Client, retry, re-auth,      │
-│                       status+body classification               │
-│ internal/envelope    wire-shape decoders → unified model       │
 │ internal/sse         shared /events stream (fan-out, reconnect)│
 │ internal/tokencache  0600 file store keyed by endpoint         │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 The **public** surface (`papurika`, `config`) is small and stable — that's the
-third-party import contract. Everything that has to absorb salt-api's quirks (the
-envelope decoders, the retry/re-auth state machine, the SSE reconnect logic, the
-token-cache file format) is `internal/`, free to change. The CLI is *just another
-consumer* of the public library — it gets no privileged access, which keeps the
-library honest.
+third-party import contract. The wire decoders and HTTP transport are **unexported
+code in the root package** (not `internal/`) because they produce the public
+`Result`/error types — a separate package would create an import cycle; lowercase
+identifiers keep them just as hidden. The genuinely independent utilities (SSE
+reader, token-cache store) live in `internal/`. The CLI is *just another consumer*
+of the public library — no privileged access, which keeps the library honest.
 
 ## Cross-cutting principles
 
