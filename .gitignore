@@ -8,3 +8,6 @@ __pycache__/
 
 # developer-specific, non-tracked storage
 local
+
+!.claude/
+!.claude/**
