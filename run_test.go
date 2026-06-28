@@ -1,0 +1,193 @@
+package papurika
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"sync/atomic"
+	"testing"
+	"time"
+
+	"github.com/cstrahan/papurika/config"
+	"github.com/cstrahan/papurika/internal/tokencache"
+)
+
+// fastPolls shrinks the gather poll cadence for tests and restores it after.
+func fastPolls(t *testing.T) {
+	t.Helper()
+	op, ob := initialPollDelay, pollBackoffMax
+	initialPollDelay = 20 * time.Millisecond
+	pollBackoffMax = 40 * time.Millisecond
+	t.Cleanup(func() { initialPollDelay, pollBackoffMax = op, ob })
+}
+
+// engineServer fakes login + local_async submit + /jobs/<jid> polling. /events
+// 404s, exercising the polling fallback. jobReturns controls what each /jobs poll
+// reports (called per poll).
+func engineServer(t *testing.T, jid string, targeted []string, jobReturns func(poll int) map[string]string) *httptest.Server {
+	t.Helper()
+	var polls atomic.Int32
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Server", "CherryPy/18")
+		switch {
+		case r.URL.Path == "/login":
+			io.WriteString(w, loginBody("TOK1"))
+		case r.URL.Path == "/":
+			// local_async submit.
+			fmt.Fprintf(w, `{"return":[{"jid":%q,"minions":%s}]}`, jid, jsonList(targeted))
+		case r.URL.Path == "/jobs/"+jid:
+			n := int(polls.Add(1))
+			rets := jobReturns(n)
+			io.WriteString(w, jobBody(jid, targeted, rets))
+		case r.URL.Path == "/events":
+			http.Error(w, "no sse in test", http.StatusNotFound)
+		default:
+			http.Error(w, "nope", 404)
+		}
+	}))
+}
+
+func jsonList(ss []string) string {
+	out := "["
+	for i, s := range ss {
+		if i > 0 {
+			out += ","
+		}
+		out += fmt.Sprintf("%q", s)
+	}
+	return out + "]"
+}
+
+// jobBody builds a GET /jobs/<jid> response: info[0].Result holds returns.
+func jobBody(jid string, minions []string, rets map[string]string) string {
+	result := "{"
+	first := true
+	for id, val := range rets {
+		if !first {
+			result += ","
+		}
+		first = false
+		result += fmt.Sprintf("%q:{\"return\":%s,\"retcode\":0,\"success\":true}", id, val)
+	}
+	result += "}"
+	return fmt.Sprintf(`{"info":[{"jid":%q,"Function":"test.ping","Minions":%s,"Result":%s}],"return":[%s]}`,
+		jid, jsonList(minions), result, result)
+}
+
+func engineClient(t *testing.T, srv *httptest.Server) *Client {
+	t.Helper()
+	c, err := New(srv.URL,
+		WithHTTPClient(srv.Client()),
+		WithCredentials("alice", config.StaticSecret("pw")),
+		WithTokenCache(tokencache.NewMemStore()),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return c
+}
+
+func TestRunGathersViaPolling(t *testing.T) {
+	fastPolls(t)
+	jid := "20260627000000000001"
+	targeted := []string{"m1", "m2"}
+	// Poll 1: only m1 back. Poll 2+: both back.
+	srv := engineServer(t, jid, targeted, func(poll int) map[string]string {
+		if poll < 2 {
+			return map[string]string{"m1": "true"}
+		}
+		return map[string]string{"m1": "true", "m2": "true"}
+	})
+	defer srv.Close()
+
+	c := engineClient(t, srv)
+	res, err := c.Run(context.Background(), JobSpec{Target: "*", Fun: "test.ping"}, WithDeadline(5*time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
+	cr := res.Commands[0]
+	if cr.JID != jid {
+		t.Errorf("jid = %q, want %q", cr.JID, jid)
+	}
+	if !cr.Complete || cr.Reason != ReasonAllReturned {
+		t.Errorf("not complete: complete=%v reason=%v", cr.Complete, cr.Reason)
+	}
+	if got := res.Responders(); len(got) != 2 {
+		t.Errorf("responders = %v, want 2", got)
+	}
+	if got := res.NonResponders(); len(got) != 0 {
+		t.Errorf("nonresponders = %v, want 0", got)
+	}
+}
+
+func TestRunDeadlinePartialAndJID(t *testing.T) {
+	fastPolls(t)
+	jid := "20260627000000000002"
+	targeted := []string{"m1", "m2"}
+	// m2 never returns -> the run must hit its deadline and report partial.
+	srv := engineServer(t, jid, targeted, func(poll int) map[string]string {
+		return map[string]string{"m1": "true"}
+	})
+	defer srv.Close()
+
+	c := engineClient(t, srv)
+	res, err := c.Run(context.Background(), JobSpec{Target: "*", Fun: "test.ping"}, WithDeadline(150*time.Millisecond))
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("err = %v, want DeadlineExceeded", err)
+	}
+	// Partial result must be non-nil and carry the jid + the one responder.
+	if res == nil || len(res.Commands) == 0 {
+		t.Fatal("expected partial result, got nil")
+	}
+	if res.JIDs()[0] != jid {
+		t.Errorf("jid lost: %v", res.JIDs())
+	}
+	if got := res.Responders(); len(got) != 1 || got[0] != "m1" {
+		t.Errorf("responders = %v, want [m1]", got)
+	}
+	if got := res.NonResponders(); len(got) != 1 || got[0] != "m2" {
+		t.Errorf("nonresponders = %v, want [m2]", got)
+	}
+}
+
+func TestSubmitFireAndForget(t *testing.T) {
+	jid := "20260627000000000003"
+	srv := engineServer(t, jid, []string{"m1"}, func(int) map[string]string { return nil })
+	defer srv.Close()
+	c := engineClient(t, srv)
+
+	sub, err := c.Submit(context.Background(), JobSpec{Target: "*", Fun: "state.highstate"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(sub.JIDs()) != 1 || sub.JIDs()[0] != jid {
+		t.Errorf("submit jids = %v, want [%s]", sub.JIDs(), jid)
+	}
+}
+
+func TestWatchReturnsImmediatelyIfDone(t *testing.T) {
+	fastPolls(t)
+	jid := "20260627000000000004"
+	targeted := []string{"m1", "m2"}
+	// Already complete on the very first /jobs snapshot.
+	srv := engineServer(t, jid, targeted, func(int) map[string]string {
+		return map[string]string{"m1": "true", "m2": "true"}
+	})
+	defer srv.Close()
+	c := engineClient(t, srv)
+
+	start := time.Now()
+	out, err := c.Watch(context.Background(), []string{jid}, WatchAllReturned, WithDeadline(5*time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if time.Since(start) > time.Second {
+		t.Errorf("watch on a done job should return promptly, took %v", time.Since(start))
+	}
+	if r := out[jid]; r == nil || len(r.Responders()) != 2 {
+		t.Errorf("watch result = %+v, want 2 responders", out[jid])
+	}
+}
