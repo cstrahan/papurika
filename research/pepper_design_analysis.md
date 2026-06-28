@@ -42,7 +42,8 @@ formatter-coupled output) drive most of the findings below.
 - **Always sends `full_return: true`** (for non-wheel clients). This normalizes
   `local`/`runner` into the same `{…, "return": <value>, "retcode"/"success": …}`
   envelope `wheel` already uses, and surfaces `retcode` for exit-code mapping.
-  (See "full_return" in `cherrypy_learnings.md`.)
+  (See "full_return" in `cherrypy_learnings.md`.) Caveat: it does **not** reconcile
+  batch vs non-batch shapes — see §2.12.
 - **Targeting parity with the `salt` CLI**: the full set of target selectors
   (glob / PCRE / list / grain / grain-PCRE / pillar / pillar-PCRE / range /
   compound / nodegroup) maps to the right `tgt_type`. Familiar, low friction.
@@ -157,6 +158,50 @@ for one profile is read back for another, against the wrong master. (Upstream
 entry, or a single store indexed by an endpoint key. Never share one token across
 endpoints.
 
+### 2.12 Batch vs non-batch response shapes diverge — and `full_return` doesn't fix it
+A recurring prod papercut (the ops skill carries warnings and a shim for it). Two
+structural divergences between a batched and a non-batched run of the *same*
+command:
+1. **Array fan-out.** Non-batch returns all minions in one map —
+   `return: [{m1: r1, m2: r2}]`. `local_batch` returns **one `return[]` element per
+   batch chunk** — `return: [{m2: r2}, {m1: r1}]` — so minions are scattered across
+   array entries by chunk.
+2. **Envelope splice.** With `full_return`, non-batch wraps each minion's value
+   under a `ret` key (alongside `retcode`/`jid`/…); `local_batch` omits the wrapper
+   and splices the raw return at top level next to `retcode`.
+
+`full_return` (§1) therefore does **not** make batched output match non-batched
+output, and any "read only the first result entry" exit-code logic (§2.5) silently
+ignores every minion outside the first chunk.
+
+**Normalize the shape in the client — regardless of how you batch.** That's the
+actual fix, and it's honesty-preserving:
+- **Fan-out is losslessly mergeable** — minion ids are unique keys, so merge the
+  per-chunk maps into one `{minion: result}`; nothing meaningful is lost.
+- **Unwrap the envelope** to the `ret`-wrapped form: use `ret` if present, else
+  treat the dict minus injected metadata (`retcode`) as the return. Minor caveat:
+  the batch splice merges return with metadata in one dict, so it's *technically*
+  ambiguous if a return key could collide with `retcode` (pathological in practice —
+  state ids and scalar returns don't). Produce one internal result model so callers
+  never see the divergence.
+
+**Where to batch — server-side `local_batch` vs client-side — is a separate
+decision; choose it on operational grounds, not to fix the shape:**
+- **Default to server-side `local_batch` when batching is needed.** The master
+  orchestrates, so the run **survives client disconnect**; it's **one JID** (clean
+  job history); the master **resolves the target natively** (no stale minion list);
+  and it's **one** API request + auth (no N× overhead / self-DDoS risk).
+- **Client-side batching** (resolve target → static list → chunk → fan out per chunk
+  → merge) is a legitimate alternative for **interactive use on moderate fleets**:
+  predictable shapes for free, plus fine-grained flow control (adaptive sizing,
+  fail-fast thresholds, operator pauses) and accurate progress UX. Costs: a two-step
+  target resolution with a **staleness window**, **JID fan-out**, the **client
+  becomes the orchestrator** (the run dies with the process), and **N× API/auth
+  load**. It's also the only option on the module with no server-side batching (§3.1).
+- **Bottom line:** server-side for durability/CI/large fleets, client-side when
+  interactive control/UX matters on a moderate fleet — and **normalize the response
+  shape in the client either way**.
+
 ---
 
 ## 3. Wrong, but uncertain
@@ -224,21 +269,22 @@ decision isn't.
 | 3 | `/run` uses eauth token, not session token | ✅ right | keep |
 | 4 | Set-diff liveness (in poll path) | ✅ right | generalize |
 | 5 | Secure token-cache file permissions | ✅ right | keep |
-| 6 | Flexible exit-code policies | ✅ right | keep (fix scope, #10) |
+| 6 | Flexible exit-code policies | ✅ right | keep (fix scope, #12–13) |
 | 7 | Tests both netapi modules | ✅ right | keep |
 | 8 | Never uses `/events` | 🔧 fix | async-first on event bus + `/jobs` backfill |
 | 9 | Sync-by-default; waiting opt-in | 🔧 fix | default to async; never trust sync long-cmd result |
 | 10 | Normalization in the output layer | 🔧 fix | one normalized result model in a transport layer |
 | 11 | "200 = success"; weak error handling | 🔧 fix | classify on status+body; re-auth on 401 |
 | 12 | Exit code reads only first command | 🔧 fix | classify every command/minion entry |
-| 13 | No connection reuse; global TLS toggle | 🔧 fix | pooled HTTP client; per-connection TLS |
-| 14 | Ctrl-C / timeout drops the JID | 🔧 fix | capture & print JID |
-| 15 | Liveness via `manage.status` (3008-broken) | 🔧 fix | targeted − returned everywhere |
-| 16 | Password plaintext in config | 🔧 fix | exec-based `password command` helper |
-| 17 | Config/cache ignore XDG | 🔧 fix | `$XDG_CONFIG_HOME` / `$XDG_CACHE_HOME` |
-| 18 | Token cache not keyed by profile (#205) | 🔧 fix | key cache by profile/endpoint |
-| 19 | cherrypy vs tornado portability | ❓ uncertain | capability matrix vs cherrypy-only |
-| 20 | Timeout semantics (no wall-clock bound) | ❓ uncertain | coherent client timeout model |
-| 21 | `/events` lossy (gap/heartbeat/restart) | ❓ uncertain | hybrid stream + `/jobs` reconcile |
-| 22 | GPG-pillar cold-cache storms | ❓ uncertain | how much client-side politeness |
-| 23 | Output formatting fidelity vs dependency | ❓ uncertain | which outputters to reimplement natively |
+| 13 | Batch vs non-batch shapes diverge (full_return doesn't fix) | 🔧 fix | normalize in client (merge fan-out + unwrap); batch location is a separate trade-off (default server-side) |
+| 14 | No connection reuse; global TLS toggle | 🔧 fix | pooled HTTP client; per-connection TLS |
+| 15 | Ctrl-C / timeout drops the JID | 🔧 fix | capture & print JID |
+| 16 | Liveness via `manage.status` (3008-broken) | 🔧 fix | targeted − returned everywhere |
+| 17 | Password plaintext in config | 🔧 fix | exec-based `password command` helper |
+| 18 | Config/cache ignore XDG | 🔧 fix | `$XDG_CONFIG_HOME` / `$XDG_CACHE_HOME` |
+| 19 | Token cache not keyed by profile (#205) | 🔧 fix | key cache by profile/endpoint |
+| 20 | cherrypy vs tornado portability | ❓ uncertain | capability matrix vs cherrypy-only |
+| 21 | Timeout semantics (no wall-clock bound) | ❓ uncertain | coherent client timeout model |
+| 22 | `/events` lossy (gap/heartbeat/restart) | ❓ uncertain | hybrid stream + `/jobs` reconcile |
+| 23 | GPG-pillar cold-cache storms | ❓ uncertain | how much client-side politeness |
+| 24 | Output formatting fidelity vs dependency | ❓ uncertain | which outputters to reimplement natively |

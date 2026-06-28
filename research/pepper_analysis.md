@@ -50,7 +50,8 @@ Python-2 compatibility shims (`cli.py:22-42`).
   (`cli.py:823-825`). This is exactly right: it normalizes `local`/`runner` into
   the same `{…, "ret"/"return": <value>, "retcode"/"success": …}` envelope that
   `wheel` already uses, and — crucially — surfaces `retcode` for exit-code
-  mapping. (See "full_return" in `cherrypy_learnings.md`.)
+  mapping. (See "full_return" in `cherrypy_learnings.md`.) Caveat: it does **not**
+  reconcile batch vs non-batch shapes — see §2.12.
 - **Targeting-flag parity with the `salt` CLI**: `-E/-L/-G/--grain-pcre/-I/
   --pillar-pcre/-R/-C/-N` all map to the right `tgt_type` (`cli.py:260-337`).
   Familiar to anyone who knows `salt`; low friction.
@@ -205,7 +206,63 @@ one profile is read back for another, against the wrong master. This is upstream
 per-profile file under the XDG cache dir, or a single store indexed by a
 profile/endpoint key. Never share one token blob across endpoints.
 
-### 2.12 Smaller, clearly-fixable items
+### 2.12 Batch vs non-batch response shapes diverge — and `full_return` doesn't fix it
+Two structural divergences, both of which bite repeatedly in prod — the ops skill
+(`the internal ops runbook`) carries explicit warnings and a
+`pepper_state_results.py` shim to paper over them:
+1. **Array fan-out.** Non-batch `local` returns all minions in one dict —
+   `return: [{m1: r1, m2: r2}]` (capture `out/17a_aggregate_test_ping.json`).
+   `local_batch` returns **one `return[]` element per batch chunk** —
+   `return: [{m2: r2}, {m1: r1}]` (capture `out/17b_local_batch_two_minions.json`).
+2. **Envelope splice.** With `full_return: true`, non-batch wraps each minion's
+   value under `ret` (alongside `retcode`/`jid`/`fun`/`out`):
+   `{m1: {"ret": <retval>, "retcode": 0, …}}`. `local_batch` omits the `ret`
+   wrapper and splices the raw return at top level next to `retcode`:
+   `{m1: {"retcode": 0, <state_id>: {…}}}` — exactly what the skill's
+   `parse_state_results` detects by presence/absence of a `ret` key.
+
+So pepper's headline normalization (`full_return`, §1) does **not** make batched
+output look like non-batched output. This also compounds §2.5: pepper's retcode
+validation reads only `result[0]`, which for a batched run is just the **first
+chunk** — every minion outside the first batch is silently excluded from the exit
+code.
+
+**Normalize the shape in the client — regardless of how you batch.** This is the
+actual fix for the prod papercut, and it's honesty-preserving:
+- **Fan-out (#1) is losslessly mergeable.** Minion ids are unique keys, so merge
+  every `return[]` chunk into one `{minion: result}` map. The only thing dropped
+  is "which chunk a minion landed in," which the sync response doesn't meaningfully
+  convey anyway.
+- **Envelope (#2): unwrap to the `ret`-wrapped form.** If a `ret` key is present
+  use it; otherwise treat the dict minus injected metadata (`retcode`) as the
+  return. Minor honesty caveat: the batch top-level splice merges the function's
+  return with `retcode` in one dict, so it's *technically* ambiguous if a return
+  key could collide with `retcode` — pathological in practice (state ids and scalar
+  returns don't collide), but the client should normalize defensively. Either way,
+  produce one internal result model (ties to §2.3) so callers never see the
+  divergence.
+
+**Where to batch — server-side `local_batch` vs client-side — is a separate
+decision; pick it on operational grounds, not to fix the shape:**
+- **Default to server-side `local_batch` when batching is needed.** The master
+  orchestrates, so the run **survives client disconnect** (close the laptop, drop
+  VPN — it keeps going); it's **one JID** (clean job history, not N fragments); the
+  master **resolves the target natively** (no stale static minion list); and it's
+  **one** API request + auth (no N× overhead / self-DDoS against your own API).
+- **Client-side batching is a legitimate alternative** for interactive use on
+  moderate fleets: resolve the target to a static list, chunk it, fan out
+  `local`/`local_async` per chunk, merge. You get predictable shapes for free, plus
+  fine-grained flow control (adaptive batch sizing, fail-fast thresholds, operator
+  pauses) and accurate progress UX. Costs: a two-step target resolution with a
+  **staleness window**, **JID fan-out** (N jids per logical run), the **client
+  becomes the orchestrator** (the run dies with the process), and **N× API/auth
+  load**. It also happens to be the only option on tornado, which has no
+  `local_batch` (`tornado_learnings.md`).
+- **Bottom line:** prefer server-side `local_batch` for durability/CI/large fleets,
+  reach for client-side when interactive control/UX matters and the fleet is
+  moderate — and **normalize the response shape in the client in both cases**.
+
+### 2.13 Smaller, clearly-fixable items
 - **Broken error message**: `PepperArgumentsException("Cannot open file: %s",
   self.options.json_file)` passes two args, so `%s` is never interpolated — the
   user sees a stringified tuple (`cli.py:635`). → use an f-string.
@@ -288,21 +345,22 @@ maintenance.
 | 3 | `/run` uses eauth token, not session token | ✅ right | keep |
 | 4 | Set-diff liveness (in poll path) | ✅ right | generalize |
 | 5 | Token cache 0600, no password stored | ✅ right | keep |
-| 6 | Flexible exit-code policies | ✅ right | keep (fix scope, #12) |
+| 6 | Flexible exit-code policies | ✅ right | keep (fix scope, #11–12) |
 | 7 | Never uses `/events` (dead SSE code) | 🔧 fix | async-first on event bus + `/jobs` backfill |
 | 8 | Sync-by-default; polling behind a flag | 🔧 fix | default to async; never trust sync long-cmd result |
 | 9 | Shape-sniffing in the output layer | 🔧 fix | one normalized result model in the lib |
 | 10 | "200 = success"; weak error classification | 🔧 fix | classifier on status+body; re-auth on 401 |
 | 11 | Retcode reads only `result[0]` | 🔧 fix | classify every command/minion entry |
-| 12 | No connection reuse; dual HTTP + SSL monkeypatch | 🔧 fix | single `requests.Session` |
-| 13 | Ctrl-C drops the JID | 🔧 fix | capture & print JID |
-| 14 | Liveness via `manage.status` (3008-broken) | 🔧 fix | targeted − returned everywhere |
-| 15 | Password stored plaintext in config | 🔧 fix | exec-based `password command` helper |
-| 16 | Config/cache ignore XDG | 🔧 fix | `$XDG_CONFIG_HOME` / `$XDG_CACHE_HOME` |
-| 17 | Token cache not keyed by profile (#205) | 🔧 fix | key cache by profile/endpoint |
-| 18 | `cli.py:635` format bug, optparse, py2 shims | 🔧 fix | f-string, argparse, delete |
-| 19 | cherrypy vs tornado portability | ❓ uncertain | capability matrix vs cherrypy-only |
-| 20 | Timeout semantics (no wall-clock bound) | ❓ uncertain | coherent client timeout model |
-| 21 | `/events` lossy (gap/heartbeat/restart) | ❓ uncertain | hybrid stream + `/jobs` reconcile |
-| 22 | GPG-pillar cold-cache storms | ❓ uncertain | how much client-side politeness |
-| 23 | Output depends on Salt being installed | ❓ uncertain | native vs Salt-dep vs minimal+bridge |
+| 12 | Batch vs non-batch shapes diverge (full_return doesn't fix) | 🔧 fix | normalize in client (merge fan-out + unwrap); batch location is a separate trade-off (default server-side) |
+| 13 | No connection reuse; dual HTTP + SSL monkeypatch | 🔧 fix | single `requests.Session` |
+| 14 | Ctrl-C drops the JID | 🔧 fix | capture & print JID |
+| 15 | Liveness via `manage.status` (3008-broken) | 🔧 fix | targeted − returned everywhere |
+| 16 | Password stored plaintext in config | 🔧 fix | exec-based `password command` helper |
+| 17 | Config/cache ignore XDG | 🔧 fix | `$XDG_CONFIG_HOME` / `$XDG_CACHE_HOME` |
+| 18 | Token cache not keyed by profile (#205) | 🔧 fix | key cache by profile/endpoint |
+| 19 | `cli.py:635` format bug, optparse, py2 shims | 🔧 fix | f-string, argparse, delete |
+| 20 | cherrypy vs tornado portability | ❓ uncertain | capability matrix vs cherrypy-only |
+| 21 | Timeout semantics (no wall-clock bound) | ❓ uncertain | coherent client timeout model |
+| 22 | `/events` lossy (gap/heartbeat/restart) | ❓ uncertain | hybrid stream + `/jobs` reconcile |
+| 23 | GPG-pillar cold-cache storms | ❓ uncertain | how much client-side politeness |
+| 24 | Output depends on Salt being installed | ❓ uncertain | native vs Salt-dep vs minimal+bridge |
