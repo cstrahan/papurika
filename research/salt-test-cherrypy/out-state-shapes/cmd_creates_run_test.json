@@ -1,0 +1,53 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "local",
+        "tgt": "builtin.minion",
+        "fun": "state.apply",
+        "arg": [
+          "shapes.cmd_creates"
+        ],
+        "kwarg": {
+          "test": true
+        }
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Content-Type": "application/json",
+    "Server": "CherryPy/18.10.0",
+    "Date": "Thu, 09 Jul 2026 23:24:28 GMT",
+    "Allow": "GET, HEAD, POST",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "GET, POST",
+    "Access-Control-Allow-Credentials": "true",
+    "Cache-Control": "private",
+    "Vary": "Accept-Encoding",
+    "Content-Length": "458",
+    "Set-Cookie": "session_id=f26df17da9b33d813b673d29667308f4dc9b1ddc; expires=Fri, 10 Jul 2026 09:24:28 GMT; Max-Age=36000; Path=/"
+  },
+  "response_body": {
+    "return": [
+      {
+        "builtin.minion": {
+          "cmd_|-shapes_cmd_creates_|-echo made > /tmp/shapes/sentinel.txt_|-run": {
+            "name": "echo made > /tmp/shapes/sentinel.txt",
+            "changes": {
+              "cmd": "echo made > /tmp/shapes/sentinel.txt"
+            },
+            "result": null,
+            "comment": "Command \"echo made > /tmp/shapes/sentinel.txt\" would have been executed",
+            "__sls__": "shapes.cmd_creates",
+            "__run_num__": 0,
+            "start_time": "23:24:28.443446",
+            "duration": 842.937,
+            "__id__": "shapes_cmd_creates"
+          }
+        }
+      }
+    ]
+  }
+}

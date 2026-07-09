@@ -1,0 +1,57 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "local",
+        "tgt": "builtin.minion",
+        "fun": "state.apply",
+        "arg": [
+          "shapes.file_managed"
+        ],
+        "kwarg": {
+          "test": false
+        },
+        "full_return": true
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Content-Type": "application/json",
+    "Server": "CherryPy/18.10.0",
+    "Date": "Thu, 09 Jul 2026 23:30:28 GMT",
+    "Allow": "GET, HEAD, POST",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "GET, POST",
+    "Access-Control-Allow-Credentials": "true",
+    "Cache-Control": "private",
+    "Vary": "Accept-Encoding",
+    "Content-Length": "446",
+    "Set-Cookie": "session_id=394bfdc611a6de49e94c52f01993ef90394b3238; expires=Fri, 10 Jul 2026 09:30:28 GMT; Max-Age=36000; Path=/"
+  },
+  "response_body": {
+    "return": [
+      {
+        "builtin.minion": {
+          "ret": {
+            "file_|-shapes_file_managed_|-/tmp/shapes/managed.txt_|-managed": {
+              "changes": {},
+              "comment": "File /tmp/shapes/managed.txt is in the correct state",
+              "name": "/tmp/shapes/managed.txt",
+              "result": true,
+              "__sls__": "shapes.file_managed",
+              "__run_num__": 0,
+              "start_time": "23:30:28.836813",
+              "duration": 9.402,
+              "__id__": "shapes_file_managed"
+            }
+          },
+          "out": "highstate",
+          "retcode": 0,
+          "jid": "20260709233028352144"
+        }
+      }
+    ]
+  }
+}

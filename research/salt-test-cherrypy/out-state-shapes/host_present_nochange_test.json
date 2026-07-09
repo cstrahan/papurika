@@ -1,0 +1,51 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "local",
+        "tgt": "builtin.minion",
+        "fun": "state.apply",
+        "arg": [
+          "shapes.host_present"
+        ],
+        "kwarg": {
+          "test": true
+        }
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Content-Type": "application/json",
+    "Server": "CherryPy/18.10.0",
+    "Date": "Thu, 09 Jul 2026 23:24:35 GMT",
+    "Allow": "GET, HEAD, POST",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "GET, POST",
+    "Access-Control-Allow-Credentials": "true",
+    "Cache-Control": "private",
+    "Vary": "Accept-Encoding",
+    "Content-Length": "348",
+    "Set-Cookie": "session_id=f26df17da9b33d813b673d29667308f4dc9b1ddc; expires=Fri, 10 Jul 2026 09:24:35 GMT; Max-Age=36000; Path=/"
+  },
+  "response_body": {
+    "return": [
+      {
+        "builtin.minion": {
+          "host_|-shapes_host_present_|-matrix.example_|-present": {
+            "name": "matrix.example",
+            "changes": {},
+            "result": true,
+            "comment": "Host matrix.example (10.9.9.9) already present",
+            "__sls__": "shapes.host_present",
+            "__run_num__": 0,
+            "start_time": "23:24:35.551353",
+            "duration": 1.918,
+            "__id__": "shapes_host_present"
+          }
+        }
+      }
+    ]
+  }
+}

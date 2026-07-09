@@ -3,18 +3,22 @@
 A self-contained harness for exploring salt-api's `rest_cherrypy` netapi against
 a local Salt 3008.1 master + builtin minion (the version we run in prod).
 
-**Findings:** [`cherrypy_learnings.md`](cherrypy_learnings.md) — the write-up.
-**Captures:** `out/*.json` — verbatim, untruncated request/response pairs.
+**Findings:** [`cherrypy_learnings.md`](cherrypy_learnings.md) — the main write-up;
+[`state-apply-shapes.md`](state-apply-shapes.md) — `state.apply` return-shape
+matrix + concurrency (the state-run lock).
+**Captures:** `out/*.json` and `out-state-shapes/*.json` — verbatim, untruncated
+request/response pairs.
 
 ## Layout
 
 ```
 config/zz-papurika.conf   master overrides (netapi_enable_clients, external_auth, token_expire)
-srv/salt/                 demo states (top.sls + demo.sls: cmd.run, cmd.run_bg, file.managed, pillar)
+srv/salt/                 demo states (top.sls + demo.sls); slow.sls; shapes/*.sls (state-shape matrix)
 srv/pillar/               demo pillar
 scripts/_common.py        shared login/post/record helpers
-scripts/NN_*.py           probe scripts, runnable with `uv run`
-out/*.json                captured responses
+scripts/NN_*.py           probe scripts, runnable with `uv run` (20/21/22 = state.apply shapes)
+out/*.json                captured responses (the numbered suite; version-parallel in out-3006/)
+out-state-shapes/*.json   captured responses for the state.apply shape + concurrency probes
 up.sh                     launch the container
 apply-salt-patch.sh       apply the prod token/cache fix to the running container
 token-cache-fix.patch     the fix (saltstack 063aceb387), for reference

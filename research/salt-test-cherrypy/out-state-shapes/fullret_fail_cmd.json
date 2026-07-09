@@ -1,0 +1,62 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "local",
+        "tgt": "builtin.minion",
+        "fun": "state.apply",
+        "arg": [
+          "shapes.fail_cmd"
+        ],
+        "kwarg": {
+          "test": false
+        },
+        "full_return": true
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Content-Type": "application/json",
+    "Server": "CherryPy/18.10.0",
+    "Date": "Thu, 09 Jul 2026 23:30:28 GMT",
+    "Allow": "GET, HEAD, POST",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "GET, POST",
+    "Access-Control-Allow-Credentials": "true",
+    "Cache-Control": "private",
+    "Vary": "Accept-Encoding",
+    "Content-Length": "547",
+    "Set-Cookie": "session_id=394bfdc611a6de49e94c52f01993ef90394b3238; expires=Fri, 10 Jul 2026 09:30:28 GMT; Max-Age=36000; Path=/"
+  },
+  "response_body": {
+    "return": [
+      {
+        "builtin.minion": {
+          "ret": {
+            "cmd_|-shapes_fail_cmd_|-echo on-stdout; echo on-stderr >&2; exit 3_|-run": {
+              "name": "echo on-stdout; echo on-stderr >&2; exit 3",
+              "changes": {
+                "pid": 64920,
+                "retcode": 3,
+                "stdout": "on-stdout",
+                "stderr": "on-stderr"
+              },
+              "result": false,
+              "comment": "Command \"echo on-stdout; echo on-stderr >&2; exit 3\" run",
+              "__sls__": "shapes.fail_cmd",
+              "__run_num__": 0,
+              "start_time": "23:30:29.233209",
+              "duration": 17.131,
+              "__id__": "shapes_fail_cmd"
+            }
+          },
+          "out": "highstate",
+          "retcode": 2,
+          "jid": "20260709233028924143"
+        }
+      }
+    ]
+  }
+}

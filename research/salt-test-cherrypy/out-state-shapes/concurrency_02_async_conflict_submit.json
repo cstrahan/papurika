@@ -1,0 +1,39 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "local_async",
+        "tgt": "builtin.minion",
+        "fun": "state.apply",
+        "arg": [
+          "slow"
+        ]
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Content-Type": "application/json",
+    "Server": "CherryPy/18.10.0",
+    "Date": "Thu, 09 Jul 2026 23:26:39 GMT",
+    "Allow": "GET, HEAD, POST",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "GET, POST",
+    "Access-Control-Allow-Credentials": "true",
+    "Cache-Control": "private",
+    "Vary": "Accept-Encoding",
+    "Content-Length": "76",
+    "Set-Cookie": "session_id=5219c28bad144d7909284968244691a8e157791e; expires=Fri, 10 Jul 2026 09:26:39 GMT; Max-Age=36000; Path=/"
+  },
+  "response_body": {
+    "return": [
+      {
+        "jid": "20260709232639873158",
+        "minions": [
+          "builtin.minion"
+        ]
+      }
+    ]
+  }
+}

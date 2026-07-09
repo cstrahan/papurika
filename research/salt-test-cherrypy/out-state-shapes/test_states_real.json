@@ -1,0 +1,116 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "local",
+        "tgt": "builtin.minion",
+        "fun": "state.apply",
+        "arg": [
+          "shapes.test_states"
+        ],
+        "kwarg": {
+          "test": false
+        }
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Content-Type": "application/json",
+    "Server": "CherryPy/18.10.0",
+    "Date": "Thu, 09 Jul 2026 23:25:03 GMT",
+    "Allow": "GET, HEAD, POST",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "GET, POST",
+    "Access-Control-Allow-Credentials": "true",
+    "Cache-Control": "private",
+    "Vary": "Accept-Encoding",
+    "Content-Length": "1877",
+    "Set-Cookie": "session_id=f26df17da9b33d813b673d29667308f4dc9b1ddc; expires=Fri, 10 Jul 2026 09:25:03 GMT; Max-Age=36000; Path=/"
+  },
+  "response_body": {
+    "return": [
+      {
+        "builtin.minion": {
+          "test_|-succeed_no_changes_|-succeed_no_changes_|-succeed_without_changes": {
+            "name": "succeed_no_changes",
+            "changes": {},
+            "result": true,
+            "comment": "Success!",
+            "__sls__": "shapes.test_states",
+            "__run_num__": 0,
+            "start_time": "23:25:03.729328",
+            "duration": 1.45,
+            "__id__": "succeed_no_changes"
+          },
+          "test_|-succeed_with_changes_|-succeed_with_changes_|-succeed_with_changes": {
+            "name": "succeed_with_changes",
+            "changes": {
+              "testing": {
+                "old": "Unchanged",
+                "new": "Something pretended to change"
+              }
+            },
+            "result": true,
+            "comment": "Success!",
+            "__sls__": "shapes.test_states",
+            "__run_num__": 1,
+            "start_time": "23:25:03.730972",
+            "duration": 0.501,
+            "__id__": "succeed_with_changes"
+          },
+          "test_|-fail_no_changes_|-fail_no_changes_|-fail_without_changes": {
+            "name": "fail_no_changes",
+            "changes": {},
+            "result": false,
+            "comment": "Failure!",
+            "__sls__": "shapes.test_states",
+            "__run_num__": 2,
+            "start_time": "23:25:03.731639",
+            "duration": 0.454,
+            "__id__": "fail_no_changes"
+          },
+          "test_|-fail_with_changes_|-fail_with_changes_|-fail_with_changes": {
+            "name": "fail_with_changes",
+            "changes": {
+              "testing": {
+                "old": "Unchanged",
+                "new": "Something pretended to change"
+              }
+            },
+            "result": false,
+            "comment": "Failure!",
+            "__sls__": "shapes.test_states",
+            "__run_num__": 3,
+            "start_time": "23:25:03.732185",
+            "duration": 0.338,
+            "__id__": "fail_with_changes"
+          },
+          "test_|-a_nop_|-a_nop_|-nop": {
+            "name": "a_nop",
+            "changes": {},
+            "result": true,
+            "comment": "Success!",
+            "__sls__": "shapes.test_states",
+            "__run_num__": 4,
+            "start_time": "23:25:03.732610",
+            "duration": 0.355,
+            "__id__": "a_nop"
+          },
+          "test_|-a_notification_|-a_notification_|-show_notification": {
+            "name": "a_notification",
+            "changes": {},
+            "result": true,
+            "comment": "this is a test.show_notification message",
+            "__sls__": "shapes.test_states",
+            "__run_num__": 5,
+            "start_time": "23:25:03.733054",
+            "duration": 0.329,
+            "__id__": "a_notification"
+          }
+        }
+      }
+    ]
+  }
+}

@@ -709,6 +709,40 @@ silent w.r.t. the others (and shares the request's single `200`).
 
 ---
 
+## `state.apply` shapes & concurrency — `out-state-shapes/*.json`
+
+Full write-up + capture index in [`state-apply-shapes.md`](state-apply-shapes.md)
+(scripts `20`/`21`/`22`). The load-bearing bits:
+
+- **One state run per minion.** A minion running `state.apply`/`state.sls`/… holds
+  a lock on its whole state subsystem. A second state function — *even a different
+  SLS* — is **rejected**, not queued: the minion value is a list of one string,
+  `["The function \"state.apply\" is running as PID … with jid <jid>"]`, with
+  `retcode 1`. Sync returns it in the HTTP body; async returns a normal jid and the
+  rejection shows up in `/jobs/<jid>` (`success:false`). `queue=True` makes it wait
+  instead, but the wait blows past salt-api's gather timeout under the sync client
+  (→ the "Minion did not return" string) — so queueing is only useful async.
+- **`ret` is `dict | []string`.** With `full_return:true` each minion value is
+  `{"ret":…, "out":"highstate", "retcode":N, "jid":…}`. `ret` is a **dict of
+  states** on a normal run, but a **list of error strings** when the SLS didn't
+  compile (render error / no-matching-sls) or the run was rejected (conflict).
+  Anything assuming `map[stateID]result` breaks on the list form.
+- **Per-minion `retcode` taxonomy:** `0` = all states ok · `2` = ran but ≥1 failed
+  (`ret` = dict) · `1` = didn't compile / conflict (`ret` = list). This is the
+  cheap authoritative signal — don't scan sub-states or trust HTTP 200.
+- **Per-state entry:** keyed by the tag `<module>_|-<id>_|-<name>_|-<fun>`; fields
+  `result` (`true`/`false`/`null`), `comment`, `changes`, `__id__`, `__sls__`,
+  `__run_num__` (render order), `duration` (ms). `result:null` = test-mode "would
+  change". A **skipped** requisite stays in the dict with `__state_ran__:false` +
+  "One or more requisite failed" (distinct from ran-and-failed).
+- **`changes` has no common schema** — it differs per state module *and* per
+  test-vs-real (e.g. `file.managed` real-new → `{diff,mode}` but test-new →
+  `{newfile}`; `cmd.run` test → `{cmd}` vs real `{pid,retcode,stdout,stderr}`).
+  A renderer must recurse generically with a few special cases (`diff`,
+  `{old,new}`, cmd output), never assume keys.
+
+---
+
 ## Errors & status codes observed
 
 - `POST /minions` → **202 Accepted** (everything else → 200).

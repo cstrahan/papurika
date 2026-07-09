@@ -1,0 +1,47 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "local",
+        "tgt": "builtin.minion",
+        "fun": "state.apply",
+        "arg": [
+          "shapes.nonexistent"
+        ],
+        "kwarg": {
+          "test": false
+        },
+        "full_return": true
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Content-Type": "application/json",
+    "Server": "CherryPy/18.10.0",
+    "Date": "Thu, 09 Jul 2026 23:30:30 GMT",
+    "Allow": "GET, HEAD, POST",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "GET, POST",
+    "Access-Control-Allow-Credentials": "true",
+    "Cache-Control": "private",
+    "Vary": "Accept-Encoding",
+    "Content-Length": "172",
+    "Set-Cookie": "session_id=394bfdc611a6de49e94c52f01993ef90394b3238; expires=Fri, 10 Jul 2026 09:30:30 GMT; Max-Age=36000; Path=/"
+  },
+  "response_body": {
+    "return": [
+      {
+        "builtin.minion": {
+          "ret": [
+            "No matching sls found for 'shapes.nonexistent' in env 'base'"
+          ],
+          "out": "highstate",
+          "retcode": 1,
+          "jid": "20260709233030029192"
+        }
+      }
+    ]
+  }
+}

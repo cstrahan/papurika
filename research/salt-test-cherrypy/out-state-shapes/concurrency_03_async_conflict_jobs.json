@@ -1,0 +1,55 @@
+{
+  "request": {
+    "path": "/jobs/20260709232639873158",
+    "body": null
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Content-Type": "application/json",
+    "Server": "CherryPy/18.10.0",
+    "Date": "Thu, 09 Jul 2026 23:26:42 GMT",
+    "Allow": "GET, HEAD, POST",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "GET, POST",
+    "Access-Control-Allow-Credentials": "true",
+    "Cache-Control": "private",
+    "Vary": "Accept-Encoding",
+    "Content-Length": "637",
+    "Set-Cookie": "session_id=5219c28bad144d7909284968244691a8e157791e; expires=Fri, 10 Jul 2026 09:26:42 GMT; Max-Age=36000; Path=/"
+  },
+  "response_body": {
+    "info": [
+      {
+        "jid": "20260709232639873158",
+        "Function": "state.apply",
+        "Arguments": [
+          "slow"
+        ],
+        "Target": "builtin.minion",
+        "Target-type": "glob",
+        "User": "saltdev",
+        "Minions": [
+          "builtin.minion"
+        ],
+        "StartTime": "2026, Jul 09 23:26:39.873158",
+        "Result": {
+          "builtin.minion": {
+            "return": [
+              "The function \"state.apply\" is running as PID 64639 and was started at 2026, Jul 09 23:26:36.523925 with jid 20260709232636523925"
+            ],
+            "retcode": 1,
+            "success": false,
+            "out": "highstate"
+          }
+        }
+      }
+    ],
+    "return": [
+      {
+        "builtin.minion": [
+          "The function \"state.apply\" is running as PID 64639 and was started at 2026, Jul 09 23:26:36.523925 with jid 20260709232636523925"
+        ]
+      }
+    ]
+  }
+}

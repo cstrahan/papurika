@@ -1,0 +1,38 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "local",
+        "tgt": "builtin.minion",
+        "fun": "state.apply",
+        "arg": [
+          "demo"
+        ]
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Content-Type": "application/json",
+    "Server": "CherryPy/18.10.0",
+    "Date": "Thu, 09 Jul 2026 23:26:43 GMT",
+    "Allow": "GET, HEAD, POST",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "GET, POST",
+    "Access-Control-Allow-Credentials": "true",
+    "Cache-Control": "private",
+    "Vary": "Accept-Encoding",
+    "Content-Length": "168",
+    "Set-Cookie": "session_id=5219c28bad144d7909284968244691a8e157791e; expires=Fri, 10 Jul 2026 09:26:43 GMT; Max-Age=36000; Path=/"
+  },
+  "response_body": {
+    "return": [
+      {
+        "builtin.minion": [
+          "The function \"state.apply\" is running as PID 64639 and was started at 2026, Jul 09 23:26:36.523925 with jid 20260709232636523925"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "local",
+        "tgt": "builtin.minion",
+        "fun": "state.apply",
+        "arg": [
+          "shapes.file_directory"
+        ],
+        "kwarg": {
+          "test": false
+        }
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Content-Type": "application/json",
+    "Server": "CherryPy/18.10.0",
+    "Date": "Thu, 09 Jul 2026 23:24:22 GMT",
+    "Allow": "GET, HEAD, POST",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "GET, POST",
+    "Access-Control-Allow-Credentials": "true",
+    "Cache-Control": "private",
+    "Vary": "Accept-Encoding",
+    "Content-Length": "354",
+    "Set-Cookie": "session_id=f26df17da9b33d813b673d29667308f4dc9b1ddc; expires=Fri, 10 Jul 2026 09:24:22 GMT; Max-Age=36000; Path=/"
+  },
+  "response_body": {
+    "return": [
+      {
+        "builtin.minion": {
+          "file_|-shapes_file_directory_|-/tmp/shapes/adir_|-directory": {
+            "name": "/tmp/shapes/adir",
+            "changes": {
+              "/tmp/shapes/adir": {
+                "directory": "new"
+              }
+            },
+            "result": true,
+            "comment": "",
+            "__sls__": "shapes.file_directory",
+            "__run_num__": 0,
+            "start_time": "23:24:23.135596",
+            "duration": 4.184,
+            "__id__": "shapes_file_directory"
+          }
+        }
+      }
+    ]
+  }
+}

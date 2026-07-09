@@ -1,0 +1,47 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "local",
+        "tgt": "builtin.minion",
+        "fun": "state.apply",
+        "arg": [
+          "shapes.render_error"
+        ],
+        "kwarg": {
+          "test": false
+        },
+        "full_return": true
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Content-Type": "application/json",
+    "Server": "CherryPy/18.10.0",
+    "Date": "Thu, 09 Jul 2026 23:30:29 GMT",
+    "Allow": "GET, HEAD, POST",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "GET, POST",
+    "Access-Control-Allow-Credentials": "true",
+    "Cache-Control": "private",
+    "Vary": "Accept-Encoding",
+    "Content-Length": "1243",
+    "Set-Cookie": "session_id=394bfdc611a6de49e94c52f01993ef90394b3238; expires=Fri, 10 Jul 2026 09:30:29 GMT; Max-Age=36000; Path=/"
+  },
+  "response_body": {
+    "return": [
+      {
+        "builtin.minion": {
+          "ret": [
+            "Rendering SLS 'base:shapes.render_error' failed: Jinja error: division by zero\nTraceback (most recent call last):\n  File \"/opt/saltstack/salt/lib/python3.14/site-packages/salt/utils/templates.py\", line 484, in render_jinja_tmpl\n    output = template.render(**decoded_context)\n  File \"/opt/saltstack/salt/lib/python3.14/site-packages/jinja2/environment.py\", line 1295, in render\n    self.environment.handle_exception()\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^\n  File \"/opt/saltstack/salt/lib/python3.14/site-packages/jinja2/environment.py\", line 942, in handle_exception\n    raise rewrite_traceback_stack(source=source)\n  File \"<template>\", line 4, in top-level template code\nZeroDivisionError: division by zero\n\n; line 4\n\n---\n# A Jinja render error. This does NOT produce the per-state dict shape at all \u2014\n# salt returns the minion value as a LIST of error strings. Critical shape: any\n# normalizer that assumes state.apply returns dict-of-states will break here.\n{{ 1 / 0 }}    <======================\nplaceholder:\n  test.nop:\n    - name: placeholder\n\nTraceback (most recent call last):\n[...]\n---"
+          ],
+          "out": "highstate",
+          "retcode": 1,
+          "jid": "20260709233029674757"
+        }
+      }
+    ]
+  }
+}
