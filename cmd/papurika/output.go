@@ -371,20 +371,94 @@ func renderExecMinions(w io.Writer, c papurika.CommandResult, g glyphs) {
 		case m.Status == papurika.StatusPending:
 			fmt.Fprintf(w, "  %s %s   (pending)\n", g.dim("⋯"), id)
 			nr++
-		case m.OK():
-			if v, ok2 := structured(m.Value); ok2 {
-				fmt.Fprintf(w, "  %s %s\n", g.green("✓"), id)
-				writeTree(w, v, "      ")
-			} else {
-				fmt.Fprintf(w, "  %s %s   %s\n", g.green("✓"), id, summarize(m))
-			}
-			ok++
 		default:
-			fmt.Fprintf(w, "  %s %s   %s\n", g.red("✗"), id, summarize(m))
-			fail++
+			renderMinionValue(w, m, g)
+			if m.OK() {
+				ok++
+			} else {
+				fail++
+			}
 		}
 	}
 	fmt.Fprintf(w, "%d targeted · %d ok · %d failed · %d no-response\n\n", len(c.Minions), ok, fail, nr)
+}
+
+// renderMinionValue renders one minion's exec return in full — never truncated.
+// A structured value becomes a tree; a multi-line (or long) string becomes an
+// indented block below the header (so cmd.run stdout/stderr, incl. newlines, is
+// shown whole); short scalars render inline. Failure prefixes the retcode.
+func renderMinionValue(w io.Writer, m papurika.MinionResult, g glyphs) {
+	glyph := g.green("✓")
+	if !m.OK() {
+		glyph = g.red("✗")
+	}
+	rc := ""
+	if m.Retcode != nil && *m.Retcode != 0 {
+		rc = g.dim(fmt.Sprintf("(retcode %d)", *m.Retcode))
+	}
+	header := func(inline string) {
+		parts := []string{"  " + glyph + " " + m.ID}
+		if rc != "" {
+			parts = append(parts, rc)
+		}
+		if inline != "" {
+			parts = append(parts, inline)
+		}
+		fmt.Fprintln(w, strings.Join(parts, "   "))
+	}
+
+	var d any
+	if m.Value.Decode(&d) != nil { // undecodable: show raw bytes
+		raw := strings.TrimRight(string(m.Value.Raw()), "\n")
+		switch {
+		case raw == "":
+			header(g.dim("(no output)"))
+		case strings.Contains(raw, "\n"):
+			header("")
+			writeBlock(w, raw, "      ")
+		default:
+			header(raw)
+		}
+		return
+	}
+	if !isScalar(d) { // map / list → tree
+		header("")
+		writeTree(w, d, "      ")
+		return
+	}
+	if s, ok := d.(string); ok {
+		switch {
+		case s == "":
+			header(g.dim("(no output)"))
+		case strings.Contains(s, "\n") || len(s) > inlineMax:
+			header("")
+			writeBlock(w, s, "      ")
+		default:
+			header(s)
+		}
+		return
+	}
+	if b, ok := d.(bool); ok { // test.ping etc. — salt's True/False
+		if b {
+			header("True")
+		} else {
+			header("False")
+		}
+		return
+	}
+	header(scalarString(d)) // number / null
+}
+
+// inlineMax is the longest single-line string still shown inline after the id;
+// longer (or multi-line) strings become an indented block.
+const inlineMax = 100
+
+// writeBlock writes s verbatim (newlines preserved), each line prefixed with
+// indent. A trailing newline is trimmed so there's no dangling blank line.
+func writeBlock(w io.Writer, s, indent string) {
+	for _, line := range strings.Split(strings.TrimRight(s, "\n"), "\n") {
+		fmt.Fprintf(w, "%s%s\n", indent, line)
+	}
 }
 
 // stateEntry is one state's result inside a highstate return (see
@@ -792,11 +866,11 @@ func renderDiff(w io.Writer, d any, indent string, g glyphs) {
 func renderCmdChanges(w io.Writer, changes map[string]any, indent string, g glyphs) {
 	printed := false
 	if s := anyString(changes["stdout"]); s != "" {
-		fmt.Fprintf(w, "%sstdout: %s\n", indent, firstLine(s))
+		renderLabeled(w, "stdout", s, indent, nil)
 		printed = true
 	}
 	if s := anyString(changes["stderr"]); s != "" {
-		fmt.Fprintf(w, "%s%s\n", indent, g.red("stderr: "+firstLine(s)))
+		renderLabeled(w, "stderr", s, indent, g.red)
 		printed = true
 	}
 	if rc, ok := anyInt(changes["retcode"]); ok && rc != 0 {
@@ -982,14 +1056,21 @@ func writeTree(w io.Writer, v any, indent string) {
 	}
 }
 
-// structured decodes a RawValue and reports whether it's a map/slice (worth a
-// tree) rather than a scalar (worth a one-line summary).
-func structured(v papurika.RawValue) (any, bool) {
-	var d any
-	if v.Decode(&d) != nil {
-		return nil, false
+// renderLabeled prints a "label: value" change entry, inline when the value is a
+// single short line, else "label:" followed by the full value as an indented
+// block (newlines preserved — never truncated). colorLabel, if set, colors the
+// label (e.g. red for stderr).
+func renderLabeled(w io.Writer, label, s, indent string, colorLabel func(string) string) {
+	lbl := label + ":"
+	if colorLabel != nil {
+		lbl = colorLabel(lbl)
 	}
-	return d, !isScalar(d)
+	if strings.Contains(s, "\n") || len(s) > inlineMax {
+		fmt.Fprintf(w, "%s%s\n", indent, lbl)
+		writeBlock(w, s, indent+"  ")
+		return
+	}
+	fmt.Fprintf(w, "%s%s %s\n", indent, lbl, s)
 }
 
 func isScalar(v any) bool {
@@ -1030,27 +1111,6 @@ func sortedMinionIDs(minions map[string]papurika.MinionResult) []string {
 	}
 	sort.Strings(ids)
 	return ids
-}
-
-// summarize renders a one-line value summary for a minion.
-func summarize(m papurika.MinionResult) string {
-	if m.Retcode != nil && *m.Retcode != 0 {
-		if s, ok := m.Value.String(); ok && s != "" {
-			return fmt.Sprintf("retcode %d: %s", *m.Retcode, firstLine(s))
-		}
-		return fmt.Sprintf("retcode %d", *m.Retcode)
-	}
-	if b, ok := m.Value.Bool(); ok {
-		if b {
-			return "True"
-		}
-		return "False"
-	}
-	if s, ok := m.Value.String(); ok {
-		return firstLine(s)
-	}
-	raw := string(m.Value.Raw())
-	return firstLine(raw)
 }
 
 func firstLine(s string) string {

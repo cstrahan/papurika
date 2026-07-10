@@ -79,23 +79,51 @@ state is a **cyan `✓`**, a failed state a **red `✗`**.
 
 ## C. Exec functions (`test.ping`, `cmd.run`, `grains.*`, …)
 
-One line per minion; structured returns expand into a tree (§E) beneath a `✓`.
+One line per minion; the return value is shown **in full** — never truncated.
 
 ```
 test.ping  (jid 20260627222840835836)
-  ✓ builtin.minion        True
-  ⋯ builtin.minion2       (no response)
+  ✓ builtin.minion   True
+  ⋯ builtin.minion2   (no response)
 2 targeted · 1 ok · 0 failed · 1 no-response
 ```
 
 - `✓` (green) ok / `✗` (red) failed (non-zero retcode or error status) / `⋯` (dim)
-  no-response/pending.
-- Value: a scalar renders inline (`True`, the string, a number); a map/list
-  renders as an indented tree (§E) under the id. On failure, a one-line summary
-  (`retcode N: <first line>`).
+  no-response/pending. A non-zero retcode is noted dim after the id: `(retcode N)`.
+- **Value rendering** (`renderMinionValue`), by decoded shape:
+  - **map / list** → an indented tree (§E) under the id.
+  - **bool** → `True` / `False` inline (salt's convention).
+  - **number / null** → inline.
+  - **string** → inline **iff** it is a single line ≤ 100 chars; otherwise it
+    becomes an indented **block** below the id, with newlines preserved. This is
+    the important case for `cmd.run`: stdout/stderr is shown whole, not clipped to
+    the first line. An empty string renders `(no output)` (dim).
+- Failure renders identically — same block, same fidelity — so a command's stderr
+  and non-zero exit are fully visible.
 - Footer: `<targeted> targeted · <ok> ok · <fail> failed · <nr> no-response`.
 
-(Unchanged from the current renderer; documented here for completeness.)
+`run '*' cmd.run $'echo tada; echo foobar'` — multi-line output, in full:
+```
+cmd.run  (jid 20260710025621291825)
+  ✓ web-01
+      tada
+      foobar
+1 targeted · 1 ok · 0 failed · 0 no-response
+```
+
+`run web1 cmd.run 'exit 7'` (failed, with stderr):
+```
+cmd.run  (jid …)
+  ✗ web1   (retcode 7)
+      bash: line 1: nope: command not found
+1 targeted · 0 ok · 1 failed · 0 no-response
+```
+
+> **No truncation in pretty.** Pretty shows the whole value; if that is too much,
+> pipe to `--output json`/`raw` or filter downstream. (The one place we still
+> abbreviate is a per-state *comment* in the highstate renderer — `firstLine` — not
+> command output.) The same full-vs-block rule applies to `cmd.run` **inside a
+> highstate** (§D.2 command changes render `stdout:`/`stderr:` in full).
 
 ---
 

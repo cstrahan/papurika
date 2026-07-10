@@ -486,3 +486,61 @@ func TestConsolidateChangesNoOp(t *testing.T) {
 		t.Errorf("diff changes altered: %+v", got)
 	}
 }
+
+// --- exec value rendering (design/cli-output-format.md §C) ---
+
+func execMinion(id string, rc int, jsonValue string) papurika.MinionResult {
+	return papurika.MinionResult{ID: id, Status: papurika.StatusResponded, Retcode: intp(rc),
+		Value: papurika.NewRawValue(json.RawMessage(jsonValue))}
+}
+
+func jsonStr(s string) string { b, _ := json.Marshal(s); return string(b) }
+
+func execCmd(m papurika.MinionResult) papurika.CommandResult {
+	return papurika.CommandResult{Client: papurika.ClientLocal, Fun: "cmd.run", JID: "1",
+		Minions: map[string]papurika.MinionResult{m.ID: m}}
+}
+
+func TestRenderExecMultilineFull(t *testing.T) {
+	out := renderCmdStr(execCmd(execMinion("m1", 0, jsonStr("tada\nfoobar"))), renderOpts{})
+	// Full output, not truncated, as an indented block.
+	if strings.Contains(out, "…") {
+		t.Errorf("output must not be truncated\n%s", out)
+	}
+	for _, want := range []string{"✓ m1", "      tada", "      foobar"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q\n---\n%s", want, out)
+		}
+	}
+}
+
+func TestRenderExecFailedFull(t *testing.T) {
+	out := renderCmdStr(execCmd(execMinion("m1", 7, jsonStr("line1\nline2 boom"))), renderOpts{})
+	for _, want := range []string{"✗ m1", "(retcode 7)", "line1", "line2 boom", "1 failed"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q\n---\n%s", want, out)
+		}
+	}
+}
+
+func TestRenderExecShortInline(t *testing.T) {
+	out := renderCmdStr(execCmd(execMinion("m1", 0, jsonStr("one-line"))), renderOpts{})
+	if !strings.Contains(out, "✓ m1   one-line") {
+		t.Errorf("short single-line value should be inline\n%s", out)
+	}
+}
+
+func TestRenderExecBoolAndTree(t *testing.T) {
+	// test.ping-style bool → True inline.
+	out := renderCmdStr(execCmd(execMinion("m1", 0, "true")), renderOpts{})
+	if !strings.Contains(out, "✓ m1   True") {
+		t.Errorf("bool should render as True inline\n%s", out)
+	}
+	// grains-style map → tree.
+	out = renderCmdStr(execCmd(execMinion("m1", 0, `{"os":"Ubuntu","num_cpus":4}`)), renderOpts{})
+	for _, want := range []string{"✓ m1", "      num_cpus: 4", "      os: Ubuntu"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q\n---\n%s", want, out)
+		}
+	}
+}
