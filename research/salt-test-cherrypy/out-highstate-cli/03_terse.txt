@@ -1,0 +1,14 @@
+local:
+  Name: mixed_clean - Function: test.succeed_without_changes - Result: Clean - Started: 00:18:18.321852 - Duration: 0.644 ms
+  Name: mixed_changed - Function: test.succeed_with_changes - Result: Changed - Started: 00:18:18.322589 - Duration: 0.284 ms
+  Name: mixed_failed - Function: test.fail_without_changes - Result: Failed - Started: 00:18:18.322936 - Duration: 0.498 ms
+  Name: /tmp/shapes/mixed.txt - Function: file.managed - Result: Changed - Started: 00:18:18.325442 - Duration: 15.128 ms
+  Name: echo running the mixed command - Function: cmd.run - Result: Changed - Started: 00:18:18.341448 - Duration: 3.598 ms
+
+Summary for local
+------------
+Succeeded: 4 (changed=3)
+Failed:    1
+------------
+Total states run:     5
+Total run time:  20.152 ms

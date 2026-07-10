@@ -1,0 +1,58 @@
+local:
+----------
+          ID: mixed_clean
+    Function: test.succeed_without_changes
+      Result: True
+     Comment: Success!
+     Changes:   
+----------
+          ID: mixed_changed
+    Function: test.succeed_with_changes
+      Result: True
+     Comment: Success!
+     Changes:   
+              ----------
+              testing:
+                  ----------
+                  new:
+                      Something pretended to change
+                  old:
+                      Unchanged
+----------
+          ID: mixed_failed
+    Function: test.fail_without_changes
+      Result: False
+     Comment: Failure!
+     Changes:   
+----------
+          ID: mixed_file
+    Function: file.managed
+        Name: /tmp/shapes/mixed.txt
+      Result: True
+     Comment: File /tmp/shapes/mixed.txt updated
+     Changes:   
+              ----------
+              diff:
+                  New file
+----------
+          ID: mixed_command
+    Function: cmd.run
+        Name: echo running the mixed command
+      Result: True
+     Comment: Command "echo running the mixed command" run
+     Changes:   
+              ----------
+              pid:
+                  66325
+              retcode:
+                  0
+              stderr:
+              stdout:
+                  running the mixed command
+
+Summary for local
+------------
+Succeeded: 4 (changed=3)
+Failed:    1
+------------
+Total states run:     5

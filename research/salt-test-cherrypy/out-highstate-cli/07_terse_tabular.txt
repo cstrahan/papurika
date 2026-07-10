@@ -1,0 +1,14 @@
+local:
+00:18:28.388341 [  1.127 ms]       test.succeed_without_changes Clean     Name: mixed_clean
+00:18:28.389594 [   0.52 ms]       test.succeed_with_changes Changed   Name: mixed_changed
+00:18:28.390205 [  0.302 ms]       test.fail_without_changes Failed    Name: mixed_failed
+00:18:28.408221 [ 85.667 ms]       file.managed    Changed   Name: /tmp/shapes/mixed.txt
+00:18:28.498680 [ 16.032 ms]        cmd.run        Changed   Name: echo running the mixed command
+
+Summary for local
+------------
+Succeeded: 4 (changed=3)
+Failed:    1
+------------
+Total states run:     5
+Total run time: 103.648 ms

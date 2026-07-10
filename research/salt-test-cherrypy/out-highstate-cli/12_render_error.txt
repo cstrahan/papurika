@@ -1,0 +1,29 @@
+local:
+    Data failed to compile:
+----------
+    Rendering SLS 'base:shapes.render_error' failed: Jinja error: division by zero
+Traceback (most recent call last):
+  File "/opt/saltstack/salt/lib/python3.14/site-packages/salt/utils/templates.py", line 484, in render_jinja_tmpl
+    output = template.render(**decoded_context)
+  File "/opt/saltstack/salt/lib/python3.14/site-packages/jinja2/environment.py", line 1295, in render
+    self.environment.handle_exception()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/opt/saltstack/salt/lib/python3.14/site-packages/jinja2/environment.py", line 942, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "<template>", line 4, in top-level template code
+ZeroDivisionError: division by zero
+
+; line 4
+
+---
+# A Jinja render error. This does NOT produce the per-state dict shape at all —
+# salt returns the minion value as a LIST of error strings. Critical shape: any
+# normalizer that assumes state.apply returns dict-of-states will break here.
+{{ 1 / 0 }}    <======================
+placeholder:
+  test.nop:
+    - name: placeholder
+
+Traceback (most recent call last):
+[...]
+---

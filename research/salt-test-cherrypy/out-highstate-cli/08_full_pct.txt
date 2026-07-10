@@ -1,0 +1,71 @@
+local:
+----------
+          ID: mixed_clean
+    Function: test.succeed_without_changes
+      Result: True
+     Comment: Success!
+     Started: 00:18:29.845964
+    Duration: 1.202 ms
+     Changes:   
+----------
+          ID: mixed_changed
+    Function: test.succeed_with_changes
+      Result: True
+     Comment: Success!
+     Started: 00:18:29.847399
+    Duration: 0.436 ms
+     Changes:   
+              ----------
+              testing:
+                  ----------
+                  new:
+                      Something pretended to change
+                  old:
+                      Unchanged
+----------
+          ID: mixed_failed
+    Function: test.fail_without_changes
+      Result: False
+     Comment: Failure!
+     Started: 00:18:29.847998
+    Duration: 0.649 ms
+     Changes:   
+----------
+          ID: mixed_file
+    Function: file.managed
+        Name: /tmp/shapes/mixed.txt
+      Result: True
+     Comment: File /tmp/shapes/mixed.txt updated
+     Started: 00:18:29.851520
+    Duration: 12.831 ms
+     Changes:   
+              ----------
+              diff:
+                  New file
+----------
+          ID: mixed_command
+    Function: cmd.run
+        Name: echo running the mixed command
+      Result: True
+     Comment: Command "echo running the mixed command" run
+     Started: 00:18:29.865309
+    Duration: 4.659 ms
+     Changes:   
+              ----------
+              pid:
+                  66292
+              retcode:
+                  0
+              stderr:
+              stdout:
+                  running the mixed command
+
+Summary for local
+------------
+Succeeded: 4 (changed=3)
+Failed:    1
+Success %: 80.0
+Failure %: 20.0
+------------
+Total states run:     5
+Total run time:  19.777 ms

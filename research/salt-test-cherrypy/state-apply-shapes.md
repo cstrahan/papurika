@@ -263,7 +263,9 @@ run|skip|would|install>_<test|real>.json`).
   a failed `Status`. Don't infer success from HTTP 200 or from the presence of a
   dict.
 - **Highstate renderer** (`renderStateMinions` / `looksHighstate` in
-  `cmd/papurika/output.go`; design in `design/cli.md`)**:**
+  `cmd/papurika/output.go`; design in `design/cli.md`; layout/color/mode ideas
+  mined from salt's own formatter in
+  [`highstate-formatter.md`](highstate-formatter.md))**:**
   - Sort states by `__run_num__`.
   - Derive `(module, id, name, fun)` from the tag + `__id__`/`__sls__`/`name`.
   - Map `result` → glyph: `true`→ok, `false`→fail, `null`→"would change" (test).

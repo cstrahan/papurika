@@ -1,0 +1,34 @@
+local:
+----------
+          ID: prereq_fails
+    Function: cmd.run
+        Name: exit 1
+      Result: False
+     Comment: Command "exit 1" run
+     Started: 00:18:33.954221
+    Duration: 7.346 ms
+     Changes:   
+              ----------
+              pid:
+                  66391
+              retcode:
+                  1
+              stderr:
+              stdout:
+----------
+          ID: depends_on_prereq
+    Function: cmd.run
+        Name: echo should-not-run
+      Result: False
+     Comment: One or more requisite failed: shapes.fail_requisite.prereq_fails
+     Started: 00:18:33.961869
+    Duration: 0.004 ms
+     Changes:   
+
+Summary for local
+------------
+Succeeded: 0 (changed=1)
+Failed:    2
+------------
+Total states run:     2
+Total run time:   7.350 ms

@@ -1,0 +1,69 @@
+[0;31mlocal:[0;0m
+[0;32m----------[0;0m
+    [0;32m      ID: mixed_clean[0;0m
+    [0;32mFunction: test.succeed_without_changes[0;0m
+    [0;32m  Result: True[0;0m
+    [0;32m Comment: Success![0;0m
+    [0;32m Started: 00:18:36.470425[0;0m
+    [0;32mDuration: 0.592 ms[0;0m
+[0;32m     Changes:   [0;0m
+[0;36m----------[0;0m
+    [0;36m      ID: mixed_changed[0;0m
+    [0;36mFunction: test.succeed_with_changes[0;0m
+    [0;36m  Result: True[0;0m
+    [0;36m Comment: Success![0;0m
+    [0;36m Started: 00:18:36.471116[0;0m
+    [0;36mDuration: 0.31 ms[0;0m
+[0;36m     Changes:   
+              [0;36m----------[0;0m
+              [0;36mtesting[0;0m:
+                  [0;36m----------[0;0m
+                  [0;36mnew[0;0m:
+                      [0;32mSomething pretended to change[0;0m
+                  [0;36mold[0;0m:
+                      [0;32mUnchanged[0;0m[0;0m
+[0;31m----------[0;0m
+    [0;31m      ID: mixed_failed[0;0m
+    [0;31mFunction: test.fail_without_changes[0;0m
+    [0;31m  Result: False[0;0m
+    [0;31m Comment: Failure![0;0m
+    [0;31m Started: 00:18:36.471490[0;0m
+    [0;31mDuration: 0.245 ms[0;0m
+[0;31m     Changes:   [0;0m
+[0;36m----------[0;0m
+    [0;36m      ID: mixed_file[0;0m
+    [0;36mFunction: file.managed[0;0m
+    [0;36m    Name: /tmp/shapes/mixed.txt[0;0m
+    [0;36m  Result: True[0;0m
+    [0;36m Comment: File /tmp/shapes/mixed.txt updated[0;0m
+    [0;36m Started: 00:18:36.474441[0;0m
+    [0;36mDuration: 12.045 ms[0;0m
+[0;36m     Changes:   
+              [0;36m----------[0;0m
+              [0;36mdiff[0;0m:
+                  [0;32mNew file[0;0m[0;0m
+[0;36m----------[0;0m
+    [0;36m      ID: mixed_command[0;0m
+    [0;36mFunction: cmd.run[0;0m
+    [0;36m    Name: echo running the mixed command[0;0m
+    [0;36m  Result: True[0;0m
+    [0;36m Comment: Command "echo running the mixed command" run[0;0m
+    [0;36m Started: 00:18:36.487426[0;0m
+    [0;36mDuration: 6.033 ms[0;0m
+[0;36m     Changes:   
+              [0;36m----------[0;0m
+              [0;36mpid[0;0m:
+                  [0;1;33m66456[0;0m
+              [0;36mretcode[0;0m:
+                  [0;1;33m0[0;0m
+              [0;36mstderr[0;0m:
+              [0;36mstdout[0;0m:
+                  [0;32mrunning the mixed command[0;0m[0;0m
+[0;36m
+Summary for local
+------------[0;0m
+[0;32mSucceeded: 4[0;0m ([0;32mchanged=3[0;0m)
+[0;31mFailed:    1[0;0m
+[0;36m------------
+Total states run:     5[0;0m
+[0;36mTotal run time:  19.225 ms[0;0m

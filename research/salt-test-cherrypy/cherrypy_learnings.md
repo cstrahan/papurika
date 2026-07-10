@@ -712,7 +712,9 @@ silent w.r.t. the others (and shares the request's single `200`).
 ## `state.apply` shapes & concurrency — `out-state-shapes/*.json`
 
 Full write-up + capture index in [`state-apply-shapes.md`](state-apply-shapes.md)
-(scripts `20`/`21`/`22`). The load-bearing bits:
+(scripts `20`/`21`/`22`); how salt's own `highstate` outputter renders these
+(layout/color/modes, script `23`) in
+[`highstate-formatter.md`](highstate-formatter.md). The load-bearing bits:
 
 - **One state run per minion.** A minion running `state.apply`/`state.sls`/… holds
   a lock on its whole state subsystem. A second state function — *even a different
