@@ -139,6 +139,13 @@ already merged into one `minions[]` by the library before rendering.
 
 ### Pretty (native renderers, selected off `fun`/`out`)
 
+The pretty renderer is specified in full in its own companion doc,
+**[cli-output-format.md](cli-output-format.md)** — the shared frame (glyphs, the
+green/cyan/red/yellow color semantics, indentation), every per-shape renderer, and
+the **highstate-aware** state renderer (compact schema-aware change/diff rendering,
+the three failure flavors, the `--changes-only` knob). The examples below are a
+digest.
+
 `run '*' test.ping` (partial — minion2 down):
 ```
 test.ping  (jid 20260627222840835836)
@@ -155,16 +162,21 @@ cmd.run 'exit 7'  (jid 20260627222843908511)
 2 targeted · 0 ok · 2 failed
 ```
 
-`state.apply` (highstate renderer):
+`state.apply` (highstate renderer — see [cli-output-format.md](cli-output-format.md) §D):
 ```
-state.apply nginx  (jid 20260627222840835836)
-  builtin.minion        retcode 0
-    ✓ pkg_|-nginx                installed                         (612ms)
-    ✓ service_|-nginx            running                           (44ms)
-  builtin.minion2       retcode 2
-    ✗ file_|-/etc/nginx/nginx.conf   permission denied             (8ms)
-Summary: 2 minions · 3/4 states ok · 1 failed
+state.apply  (jid 20260627222840835836)
+  ● web1        retcode 0
+    ✓ nginx_pkg          pkg.installed
+    ✓ nginx_conf         file.managed  /etc/nginx/nginx.conf
+        + new file
+    ✓ nginx_svc          service.running                          [312ms]
+  ● web2        retcode 2
+    ✗ nginx_conf         Unable to manage file: Source file salt://… not found
+    ⊘ nginx_svc          requisite failed: nginx.nginx_conf
+  2 minions · 4 states · 3 ok (1 changed) · 1 failed · 1 skipped
 ```
+(cyan `✓` = changed, green `✓` = clean, red `✗` = failed, `⊘` = skipped; the `●`
+minion header is colored by that minion's worst state.)
 
 `runner manage.up`:
 ```
@@ -310,6 +322,7 @@ again on interrupt, and `watch <jid>` resumes.
 | `--allow-noresponse` | non-responders count as ok | — |
 | `--kill-on-cancel` | kill the job on Ctrl-C/cancel (default: keep running) | — |
 | `--no-color` (also honors `NO_COLOR`, non-TTY) | disable ANSI | — |
+| `--changes-only` | highstate pretty: hide clean (ok, unchanged) states ([cli-output-format.md](cli-output-format.md) §D.6) | — |
 | `-v, -vv` | verbosity → stderr (request bodies at `-vv`) | — |
 | `--insecure` / `--cacert PATH` | per-client TLS | — |
 | `arg` positionals, `k=v` | function args/kwargs | `arg`, `kwarg` |

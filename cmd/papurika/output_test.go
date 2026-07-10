@@ -147,7 +147,7 @@ func TestRenderPrettyShapes(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			var buf bytes.Buffer
-			renderCommand(&buf, tc.cmd, glyphs{color: false})
+			renderCommand(&buf, tc.cmd, renderOpts{}, glyphs{color: false})
 			out := buf.String()
 			for _, w := range tc.want {
 				if !strings.Contains(out, w) {
@@ -161,7 +161,7 @@ func TestRenderPrettyShapes(t *testing.T) {
 func TestRenderYAML(t *testing.T) {
 	var buf bytes.Buffer
 	r := res(map[string]papurika.MinionResult{"a": mr("a", papurika.StatusResponded, intp(0))}, "a")
-	if err := render(&buf, r, outputYAML, false); err != nil {
+	if err := render(&buf, r, outputYAML, renderOpts{}); err != nil {
 		t.Fatal(err)
 	}
 	out := buf.String()
@@ -281,7 +281,7 @@ func TestNDJSONStreamerSubmittedFirstAndBackfill(t *testing.T) {
 func TestRenderJSONSchema(t *testing.T) {
 	var buf bytes.Buffer
 	r := res(map[string]papurika.MinionResult{"a": mr("a", papurika.StatusResponded, intp(0))}, "a")
-	if err := render(&buf, r, outputJSON, false); err != nil {
+	if err := render(&buf, r, outputJSON, renderOpts{}); err != nil {
 		t.Fatal(err)
 	}
 	var v resultView
@@ -293,5 +293,138 @@ func TestRenderJSONSchema(t *testing.T) {
 	}
 	if v.Summary.Outcome != "ok" || v.Summary.Succeeded != 1 {
 		t.Errorf("summary = %+v", v.Summary)
+	}
+}
+
+// --- highstate renderer (design/cli-output-format.md §D) ---
+
+func hsMinion(id string, rc int, value string) papurika.MinionResult {
+	return papurika.MinionResult{
+		ID: id, Status: papurika.StatusResponded, Retcode: intp(rc),
+		Value: papurika.NewRawValue(json.RawMessage(value)),
+	}
+}
+
+func renderCmdStr(c papurika.CommandResult, opts renderOpts) string {
+	var buf bytes.Buffer
+	renderCommand(&buf, c, opts, glyphs{color: false})
+	return buf.String()
+}
+
+// A mixed highstate: clean, changed (old→new), failed, file (New file diff), cmd.
+const mixedHighstate = `{
+ "test_|-mixed_clean_|-mixed_clean_|-succeed_without_changes":{"name":"mixed_clean","result":true,"comment":"Success!","changes":{},"__run_num__":0,"__id__":"mixed_clean","duration":0.6},
+ "test_|-mixed_changed_|-mixed_changed_|-succeed_with_changes":{"name":"mixed_changed","result":true,"comment":"Success!","changes":{"testing":{"old":"Unchanged","new":"Something pretended to change"}},"__run_num__":1,"__id__":"mixed_changed","duration":0.3},
+ "test_|-mixed_failed_|-mixed_failed_|-fail_without_changes":{"name":"mixed_failed","result":false,"comment":"Failure!","changes":{},"__run_num__":2,"__id__":"mixed_failed","duration":0.2},
+ "file_|-mixed_file_|-/tmp/shapes/mixed.txt_|-managed":{"name":"/tmp/shapes/mixed.txt","result":true,"comment":"File /tmp/shapes/mixed.txt updated","changes":{"diff":"New file","mode":"0644"},"__run_num__":3,"__id__":"mixed_file","duration":14},
+ "cmd_|-mixed_command_|-echo hi_|-run":{"name":"echo hi","result":true,"comment":"Command run","changes":{"pid":661,"retcode":0,"stdout":"running the mixed command","stderr":""},"__run_num__":4,"__id__":"mixed_command","duration":5}
+}`
+
+func TestRenderHighstateMixed(t *testing.T) {
+	c := papurika.CommandResult{Client: papurika.ClientLocal, Fun: "state.apply", JID: "1",
+		Minions: map[string]papurika.MinionResult{"m1": hsMinion("m1", 2, mixedHighstate)}}
+	out := renderCmdStr(c, renderOpts{})
+
+	for _, want := range []string{
+		"✓ mixed_clean", "test.succeed_without_changes",
+		"✓ mixed_changed", "testing: Unchanged → Something pretended to change",
+		"✗ mixed_failed", "Failure!",
+		"✓ mixed_file", "+ new file", "mode: 0644",
+		"✓ mixed_command", "stdout: running the mixed command",
+		"5 states", "4 ok (3 changed)", "1 failed",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q\n---\n%s", want, out)
+		}
+	}
+	// Ordering follows __run_num__: clean before command.
+	if strings.Index(out, "mixed_clean") > strings.Index(out, "mixed_command") {
+		t.Errorf("states not ordered by __run_num__\n%s", out)
+	}
+	// A failed state must not be counted as "changed".
+	if strings.Contains(out, "4 changed") || strings.Contains(out, "(4 changed)") {
+		t.Errorf("failed-with-changes should not inflate changed count\n%s", out)
+	}
+}
+
+func TestRenderHighstateChangesOnly(t *testing.T) {
+	c := papurika.CommandResult{Client: papurika.ClientLocal, Fun: "state.apply", JID: "1",
+		Minions: map[string]papurika.MinionResult{"m1": hsMinion("m1", 2, mixedHighstate)}}
+	out := renderCmdStr(c, renderOpts{changesOnly: true})
+	if strings.Contains(out, "mixed_clean") {
+		t.Errorf("--changes-only should hide the clean state\n%s", out)
+	}
+	for _, want := range []string{"mixed_changed", "mixed_failed", "mixed_file"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("--changes-only dropped a non-clean state %q\n%s", want, out)
+		}
+	}
+	// Footer counts still reflect every state.
+	if !strings.Contains(out, "5 states") {
+		t.Errorf("footer should still count all states\n%s", out)
+	}
+}
+
+func TestRenderHighstateSkippedRequisite(t *testing.T) {
+	const v = `{
+	 "cmd_|-prereq_fails_|-exit 1_|-run":{"name":"exit 1","result":false,"comment":"Command run","changes":{"pid":1,"retcode":1,"stdout":"","stderr":""},"__run_num__":0,"__id__":"prereq_fails","duration":7},
+	 "cmd_|-depends_|-echo x_|-run":{"name":"echo x","result":false,"comment":"One or more requisite failed: shapes.fail_requisite.prereq_fails","changes":{},"__run_num__":1,"__id__":"depends","__state_ran__":false,"duration":0.004}
+	}`
+	c := papurika.CommandResult{Client: papurika.ClientLocal, Fun: "state.apply", JID: "1",
+		Minions: map[string]papurika.MinionResult{"m1": hsMinion("m1", 2, v)}}
+	out := renderCmdStr(c, renderOpts{})
+	for _, want := range []string{
+		"✗ prereq_fails", "exit 1",
+		"⊘ depends", "requisite failed: shapes.fail_requisite.prereq_fails",
+		"1 failed", "1 skipped",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q\n---\n%s", want, out)
+		}
+	}
+}
+
+func TestRenderHighstateCompileError(t *testing.T) {
+	// A state.* command whose minion value is a list still dispatches to the
+	// highstate renderer (via the fun prefix), even with no dict to sniff.
+	c := papurika.CommandResult{Client: papurika.ClientLocal, Fun: "state.apply", JID: "1",
+		Minions: map[string]papurika.MinionResult{
+			"m1": hsMinion("m1", 1, `["No matching sls found for 'nope' in env 'base'"]`)}}
+	out := renderCmdStr(c, renderOpts{})
+	for _, want := range []string{"did not compile", "No matching sls found for 'nope'", "1 did not compile"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q\n---\n%s", want, out)
+		}
+	}
+}
+
+func TestRenderHighstateConflict(t *testing.T) {
+	c := papurika.CommandResult{Client: papurika.ClientLocal, Fun: "state.apply", JID: "1",
+		Minions: map[string]papurika.MinionResult{
+			"m1": hsMinion("m1", 1, `["The function \"state.apply\" is running as PID 63027 and was started at 2026, Jul 09 23:17:30.801316 with jid 20260709231730801316"]`)}}
+	out := renderCmdStr(c, renderOpts{})
+	for _, want := range []string{
+		"a state run is already in progress",
+		"20260709231730801316",
+		"papurika watch 20260709231730801316",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q\n---\n%s", want, out)
+		}
+	}
+}
+
+func TestRenderHighstateWouldChange(t *testing.T) {
+	// test=True: result null with a pending diff. Glyph ~, counted as would-change.
+	const v = `{
+	 "file_|-f_|-/tmp/x_|-managed":{"name":"/tmp/x","result":null,"comment":"The file /tmp/x is set to be changed","changes":{"diff":"New file"},"__run_num__":0,"__id__":"f","duration":1}
+	}`
+	c := papurika.CommandResult{Client: papurika.ClientLocal, Fun: "state.apply", JID: "1",
+		Minions: map[string]papurika.MinionResult{"m1": hsMinion("m1", 0, v)}}
+	out := renderCmdStr(c, renderOpts{})
+	for _, want := range []string{"~ f", "+ new file", "1 would-change"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q\n---\n%s", want, out)
+		}
 	}
 }

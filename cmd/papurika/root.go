@@ -13,21 +13,22 @@ import (
 
 // global flags
 var (
-	flagConfig   string
-	flagProfile  string
-	flagURL      string
-	flagUser     string
-	flagEauth    string
-	flagOutput   string
-	flagTimeout  time.Duration
-	flagInsecure bool
-	flagNoColor  bool
-	flagVerbose  int
-	flagFail     string
-	flagAllowNR  bool
-	flagCACert   string
-	flagSaltTO   time.Duration
-	flagGatherTO time.Duration
+	flagConfig      string
+	flagProfile     string
+	flagURL         string
+	flagUser        string
+	flagEauth       string
+	flagOutput      string
+	flagTimeout     time.Duration
+	flagInsecure    bool
+	flagNoColor     bool
+	flagVerbose     int
+	flagFail        string
+	flagAllowNR     bool
+	flagCACert      string
+	flagSaltTO      time.Duration
+	flagGatherTO    time.Duration
+	flagChangesOnly bool
 )
 
 func newRootCmd() *cobra.Command {
@@ -50,6 +51,7 @@ func newRootCmd() *cobra.Command {
 	pf.BoolVar(&flagInsecure, "insecure", false, "skip TLS certificate verification")
 	pf.StringVar(&flagCACert, "cacert", "", "PEM file of trusted CA certs")
 	pf.BoolVar(&flagNoColor, "no-color", false, "disable ANSI color (also honors NO_COLOR)")
+	pf.BoolVar(&flagChangesOnly, "changes-only", false, "highstate pretty: hide clean (ok, unchanged) states")
 	pf.CountVarP(&flagVerbose, "verbose", "v", "increase stderr verbosity (repeatable)")
 	pf.StringVar(&flagFail, "fail", "any", "exit-code policy: any|all|none")
 	pf.BoolVar(&flagAllowNR, "allow-noresponse", false, "non-responders do not count as failure")
@@ -269,7 +271,11 @@ func emit(res *papurika.Result, err error) error {
 		return &exitErr{code: exitCode(res, err, policy(), flagAllowNR)}
 	}
 	if res != nil {
-		_ = render(os.Stdout, res, resolveOutput(), useColor())
+		_ = render(os.Stdout, res, resolveOutput(), renderOpts{
+			color:       useColor(),
+			changesOnly: flagChangesOnly,
+			verbose:     flagVerbose > 0,
+		})
 	}
 	if err == nil && isNoMatch(res) {
 		fmt.Fprintln(os.Stderr, "papurika: no minions matched the target")
