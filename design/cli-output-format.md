@@ -177,6 +177,21 @@ schemas catalogued in `state-apply-shapes.md` §2.4, falling back to a tree:
   `{fun:ret}`, `user.present` `{gid,uid,…}`): the compact tree (§E) — scalars
   inline, nested maps indented.
 
+**Clean-removal consolidation.** `file.directory` with `clean:True` returns each
+removed path **twice** — once as a per-path entry `{"<path>":{"removed":"Removed
+due to clean"}}` and once in an aggregate `"removed":[<paths>]` list (verified
+against salt source + 3008.1; in `test=True` mode salt emits *only* the per-path
+entries). The pretty renderer folds both forms into a single `removed:` list:
+```
+    ✓ Remove Service Descriptors   file.directory  /etc/coronerd/services.d/
+        removed:
+          - /etc/coronerd/services.d/notification.json
+```
+This is a **presentation** fold, confined to pretty; `json`/`raw` keep salt's
+verbatim (redundant) bytes, so the honesty invariant holds. It is the only such
+special-case fold; other change keys pass through untouched (`file.absent`'s
+scalar `{"removed":"<path>"}`, a `mode` change, etc. are left as-is).
+
 Change detail is shown for **changed and failed** states by default. Clean states
 show none. `~` would-change states show their would-change detail (the same
 schema, e.g. the pending diff), since that is the whole point of a dry run.

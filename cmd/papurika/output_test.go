@@ -428,3 +428,61 @@ func TestRenderHighstateWouldChange(t *testing.T) {
 		}
 	}
 }
+
+func TestRenderHighstateCleanRemovalDedup(t *testing.T) {
+	// file.directory clean:True — salt returns each path both per-path and in an
+	// aggregate list; the formatter consolidates to one removed: list.
+	const real = `{
+	 "file_|-clean_|-/etc/coronerd/services.d/_|-directory":{"name":"/etc/coronerd/services.d/","result":true,"comment":"Files cleaned","changes":{
+	   "/etc/coronerd/services.d/notification.json":{"removed":"Removed due to clean"},
+	   "removed":["/etc/coronerd/services.d/notification.json"]},"__run_num__":0,"__id__":"clean","duration":3}
+	}`
+	c := papurika.CommandResult{Client: papurika.ClientLocal, Fun: "state.apply", JID: "1",
+		Minions: map[string]papurika.MinionResult{"m1": hsMinion("m1", 0, real)}}
+	out := renderCmdStr(c, renderOpts{})
+	// The consolidated list is present exactly once...
+	if strings.Count(out, "/etc/coronerd/services.d/notification.json") != 1 {
+		t.Errorf("path should appear exactly once (deduped)\n---\n%s", out)
+	}
+	// ...and the noisy per-path marker is gone.
+	if strings.Contains(out, "Removed due to clean") {
+		t.Errorf("per-path 'Removed due to clean' marker should be dropped\n---\n%s", out)
+	}
+	if !strings.Contains(out, "removed:") {
+		t.Errorf("consolidated removed: list missing\n---\n%s", out)
+	}
+}
+
+func TestRenderHighstateCleanRemovalTestMode(t *testing.T) {
+	// test=True: only per-path entries, no aggregate list — still consolidate.
+	const tm = `{
+	 "file_|-clean_|-/d/_|-directory":{"name":"/d/","result":null,"comment":"would change","changes":{
+	   "/d/a.json":{"removed":"Removed due to clean"},
+	   "/d/b.json":{"removed":"Removed due to clean"}},"__run_num__":0,"__id__":"clean","duration":1}
+	}`
+	c := papurika.CommandResult{Client: papurika.ClientLocal, Fun: "state.apply", JID: "1",
+		Minions: map[string]papurika.MinionResult{"m1": hsMinion("m1", 0, tm)}}
+	out := renderCmdStr(c, renderOpts{})
+	if strings.Contains(out, "Removed due to clean") {
+		t.Errorf("test-mode per-path marker should be consolidated too\n---\n%s", out)
+	}
+	for _, want := range []string{"removed:", "- /d/a.json", "- /d/b.json"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q\n---\n%s", want, out)
+		}
+	}
+}
+
+func TestConsolidateChangesNoOp(t *testing.T) {
+	// file.absent's {removed: "<path>"} (string value) and ordinary changes are
+	// left untouched.
+	absent := map[string]any{"removed": "/tmp/goner.txt"}
+	if got := consolidateChanges(absent); len(got) != 1 || got["removed"] != "/tmp/goner.txt" {
+		t.Errorf("file.absent changes altered: %+v", got)
+	}
+	diff := map[string]any{"diff": "New file", "mode": "0644"}
+	got := consolidateChanges(diff)
+	if got["diff"] != "New file" || got["mode"] != "0644" || len(got) != 2 {
+		t.Errorf("diff changes altered: %+v", got)
+	}
+}

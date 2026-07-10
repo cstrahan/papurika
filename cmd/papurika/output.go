@@ -658,6 +658,7 @@ func renderChanges(w io.Writer, changes map[string]any, indent string, g glyphs)
 	if len(changes) == 0 {
 		return
 	}
+	changes = consolidateChanges(changes)
 	if d, ok := changes["diff"]; ok {
 		renderDiff(w, d, indent, g)
 		if len(changes) > 1 {
@@ -678,6 +679,60 @@ func renderChanges(w io.Writer, changes map[string]any, indent string, g glyphs)
 		}
 	}
 	renderChangeTree(w, changes, indent)
+}
+
+// consolidateChanges folds salt's redundant "clean removal" shape into one list.
+// file.directory with clean:True returns each removed path BOTH as a per-path
+// entry {path:{removed:"Removed due to clean"}} AND in an aggregate removed:[paths]
+// list (verified against salt source + 3008.1; test mode emits only the per-path
+// entries). We render a single removed:[paths] list. Pretty-only — json/raw keep
+// salt's verbatim bytes.
+func consolidateChanges(changes map[string]any) map[string]any {
+	removed := map[string]bool{}
+	if lst, ok := changes["removed"].([]any); ok {
+		for _, p := range lst {
+			if s, ok := p.(string); ok {
+				removed[s] = true
+			}
+		}
+	}
+	isRemovedEntry := func(v any) bool {
+		mp, ok := v.(map[string]any)
+		if !ok || len(mp) != 1 {
+			return false
+		}
+		_, ok = mp["removed"]
+		return ok
+	}
+	for k, v := range changes {
+		if k != "removed" && isRemovedEntry(v) {
+			removed[k] = true
+		}
+	}
+	if len(removed) == 0 {
+		return changes
+	}
+	out := make(map[string]any, len(changes))
+	for k, v := range changes {
+		if k == "removed" {
+			continue
+		}
+		if removed[k] && isRemovedEntry(v) {
+			continue // drop the per-path duplicate
+		}
+		out[k] = v
+	}
+	paths := make([]string, 0, len(removed))
+	for p := range removed {
+		paths = append(paths, p)
+	}
+	sort.Strings(paths)
+	lst := make([]any, len(paths))
+	for i, p := range paths {
+		lst[i] = p
+	}
+	out["removed"] = lst
+	return out
 }
 
 func renderChangeTree(w io.Writer, changes map[string]any, indent string) {
