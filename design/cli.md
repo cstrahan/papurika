@@ -335,6 +335,7 @@ result keeps normal-path output far less noisy. Worth it.
 | `--gather-timeout DUR` | settle window: quiet period (extended per return) before settling non-responders → exit per `--fail` | — |
 | `--batch N\|N%` | batching | `batch` (+ `local_batch`) |
 | `--batch-mode server\|client` | server-side `local_batch` vs client-side fan-out | selects path |
+| `--batch-concurrency N` | max client-batch chunks gathered at once (client-batch only; default 8) | — |
 | `--subset N` | subset targeting | `local_subset` |
 | `--async` / `--detach` | fire-and-forget on any verb (= `submit`) | `*_async` |
 | `--fail-any\|--fail-all\|--fail-none` | exit policy (§D) | — |

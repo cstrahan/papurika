@@ -58,14 +58,14 @@ func (s *Submission) JIDs() []string {
 }
 
 type runConfig struct {
-	deadline      time.Duration
-	saltTimeout   time.Duration
-	gatherTimeout time.Duration
-	onUpdate      func(Update)
-	onSubmit      func(Job)
-	killOnCancel  bool
-	clientBatch   string // non-empty => client-side batching at this size
-	maxInflight   int
+	deadline         time.Duration
+	saltTimeout      time.Duration
+	gatherTimeout    time.Duration
+	onUpdate         func(Update)
+	onSubmit         func(Job)
+	killOnCancel     bool
+	clientBatch      string // non-empty => client-side batching at this size
+	batchConcurrency int    // max client-batch chunks gathered concurrently
 }
 
 // defaultRunConfig imposes no timeouts. There is no default hard deadline
@@ -75,7 +75,7 @@ type runConfig struct {
 // case): it re-probes stragglers with saltutil.find_job rather than giving up, so
 // nothing here silently bounds a healthy run.
 func defaultRunConfig() runConfig {
-	return runConfig{maxInflight: 8}
+	return runConfig{batchConcurrency: 8}
 }
 
 // RunOption configures Run/Submit/Watch.
@@ -85,8 +85,10 @@ type RunOption func(*runConfig)
 // setting a deadline on ctx). The job keeps running on the master past it.
 func WithDeadline(d time.Duration) RunOption { return func(c *runConfig) { c.deadline = d } }
 
-// WithSaltTimeout / WithGatherTimeout set the floors passed to salt's own gather
-// (never the authoritative bound — that is the context).
+// WithSaltTimeout / WithGatherTimeout size the client-side settle window — the
+// quiet period after which gather runs its saltutil.find_job liveness re-check
+// (not a give-up timeout; see gather). Neither is the authoritative bound — that
+// is the context / WithDeadline.
 func WithSaltTimeout(d time.Duration) RunOption   { return func(c *runConfig) { c.saltTimeout = d } }
 func WithGatherTimeout(d time.Duration) RunOption { return func(c *runConfig) { c.gatherTimeout = d } }
 
@@ -107,6 +109,14 @@ func WithKillOnCancel(v bool) RunOption { return func(c *runConfig) { c.killOnCa
 // WithClientBatch switches to client-side batching at the given size ("10",
 // "25%"): resolve the target, chunk it, fan out async per chunk, merge.
 func WithClientBatch(size string) RunOption { return func(c *runConfig) { c.clientBatch = size } }
+
+// WithBatchConcurrency caps how many client-side-batch chunks are gathered at
+// once (default 8; n < 1 is treated as 1). It applies to WithClientBatch only:
+// server-side local_batch has no separate concurrency knob — there the batch
+// size IS the concurrency (the master serializes the waves), so tune that with
+// the batch size instead. Lower it to be gentle on the master (e.g. GPG-pillar
+// render load); raise it to drain a large fleet faster.
+func WithBatchConcurrency(n int) RunOption { return func(c *runConfig) { c.batchConcurrency = n } }
 
 func buildRunConfig(opts []RunOption) runConfig {
 	c := defaultRunConfig()
@@ -528,7 +538,7 @@ func (c *Client) runClientBatch(ctx context.Context, spec JobSpec, cfg runConfig
 	chunks := chunkTargets(targets, cfg.clientBatch)
 	merged := CommandResult{Client: ClientLocal, Fun: spec.Fun, Minions: map[string]MinionResult{}}
 	var mu sync.Mutex
-	sem := make(chan struct{}, max(1, cfg.maxInflight))
+	sem := make(chan struct{}, max(1, cfg.batchConcurrency))
 	var wg sync.WaitGroup
 	var canceled bool
 

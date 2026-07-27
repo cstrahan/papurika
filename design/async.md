@@ -306,12 +306,14 @@ fragility (dies with the process), and N× API load (`pepper_design_analysis.md`
 §2.12 / §3.1). It's also the only batch option if we ever support tornado.
 
 ```go
-func WithClientBatch(size string, opts ...BatchOption) RunOption
-type BatchOption func(*batchConfig)
-func WithMaxInflight(n int) BatchOption       // concurrency cap (also GPG-pillar politeness)
-func WithFailFast(threshold float64) BatchOption
-func WithPauseBetween(d time.Duration) BatchOption
+func WithClientBatch(size string) RunOption      // chunk the target, fan out async per chunk
+func WithBatchConcurrency(n int) RunOption        // cap chunks gathered at once (default 8; GPG-pillar politeness)
+// not yet implemented: fail-fast threshold, inter-chunk pause.
 ```
+
+`WithBatchConcurrency` is **client-side only** — server-side `local_batch` has no
+separate concurrency knob (the batch size *is* the concurrency; the master
+serializes the waves), so there it's tuned via the batch size, not this option.
 
 **Progress to the CLI:** the **non-batch** and **client-side-batch** paths feed the
 `WithOnUpdate` / `WithOnSubmit` stream (each per-minion return is one `Update`;

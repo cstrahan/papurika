@@ -15,6 +15,20 @@ type targeting struct {
 	list, pcre, grain, grainPCRE, pillar, pillarPCRE, rng, compound, nodegroup bool
 	batch                                                                      string
 	clientBatch                                                                bool
+	batchConcurrency                                                           int
+}
+
+// batchOpts returns the client-side-batch RunOptions implied by the flags — empty
+// unless --client-batch is set with a --batch size.
+func (t *targeting) batchOpts() []papurika.RunOption {
+	if !t.clientBatch || t.batch == "" {
+		return nil
+	}
+	opts := []papurika.RunOption{papurika.WithClientBatch(t.batch)}
+	if t.batchConcurrency > 0 {
+		opts = append(opts, papurika.WithBatchConcurrency(t.batchConcurrency))
+	}
+	return opts
 }
 
 func (t *targeting) register(c *cobra.Command) {
@@ -30,6 +44,7 @@ func (t *targeting) register(c *cobra.Command) {
 	f.BoolVarP(&t.nodegroup, "nodegroup", "N", false, "target type: nodegroup")
 	f.StringVar(&t.batch, "batch", "", "batch size (e.g. 10 or 25%)")
 	f.BoolVar(&t.clientBatch, "client-batch", false, "batch client-side (chunk + fan out) instead of server-side local_batch")
+	f.IntVar(&t.batchConcurrency, "batch-concurrency", 0, "max --client-batch chunks gathered at once (default 8; client-batch only)")
 }
 
 func (t *targeting) tgtType() (papurika.TgtType, error) {
@@ -118,10 +133,7 @@ func newRunCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			var extra []papurika.RunOption
-			if tg.clientBatch && tg.batch != "" {
-				extra = append(extra, papurika.WithClientBatch(tg.batch))
-			}
+			extra := tg.batchOpts()
 			return runSpec(cmd, cl, spec, extra...)
 		},
 	}
@@ -144,10 +156,7 @@ func newSubmitCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			var opts []papurika.RunOption
-			if tg.clientBatch && tg.batch != "" {
-				opts = append(opts, papurika.WithClientBatch(tg.batch))
-			}
+			opts := tg.batchOpts()
 			sub, err := cl.Submit(cmd.Context(), spec, opts...)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "papurika: %v\n", err)
@@ -430,10 +439,7 @@ func newStateCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			var extra []papurika.RunOption
-			if tg.clientBatch && tg.batch != "" {
-				extra = append(extra, papurika.WithClientBatch(tg.batch))
-			}
+			extra := tg.batchOpts()
 			return runSpec(cmd, cl, spec, extra...)
 		},
 	}
