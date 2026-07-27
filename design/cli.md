@@ -84,9 +84,10 @@ papurika lowstate -f burst.json --output json    # hand-built multi-command lows
 papurika job 20260627222843908511                # recover a job after a dropped Ctrl-C
 ```
 
-`run` = `submit` + `watch` glued, with the jid printed to stderr the instant it
-exists. `watch`/`run` are **return-immediately-if-already-there** (async.md §E): a
-jid already in its target state renders and exits without blocking.
+`run` = `submit` + `watch` glued, with the jid carried out on the rendered result
+(§C/§E), not a stderr echo. `watch`/`run` are
+**return-immediately-if-already-there** (async.md §E): a jid already in its target
+state renders and exits without blocking.
 
 ---
 
@@ -206,11 +207,18 @@ same data, same `status` values.
 Strict separation so `--output json | jq` is always clean:
 
 - **stdout** — *results only*: the rendered result (pretty or JSON), `submit`'s
-  jid(s), `watch`'s final state, the `events` stream. Nothing else.
-- **stderr** — *everything else*: progress, per-minion streaming ticks, the
-  in-flight jid banner, warnings (deprecated flag, version skew), auth/connection
-  errors, and the human summary line **when `--output json`** (so stdout stays one
-  pure JSON document; in pretty mode the summary footer is part of the stdout render).
+  jid(s), `watch`'s final state, the `events` stream. **This is where the jid(s)
+  live** — the pretty `(jid …)` header (with `· PARTIAL` and a `resume: papurika
+  watch <jid>` line when a run is cut short), `summary.jids` in json/yaml, the
+  ndjson `submitted` line. Nothing else on stdout.
+- **stderr** — *everything else*: progress, per-minion streaming ticks, warnings
+  (deprecated flag, version skew), auth/connection errors, and the human summary
+  line **when `--output json`** (so stdout stays one pure JSON document; in pretty
+  mode the summary footer is part of the stdout render). On interrupt/deadline it
+  gets **one terse line** — jid-free in pretty (the jid is already on stdout,
+  human-readable), or a single `resume: papurika watch <jid>` in the machine
+  formats (where a human can't eyeball stdout). No multi-line jid banner, no
+  per-submit jid echo — the result carries the jid (§E).
 - **Progress / streaming** → stderr, and **only when stderr is a TTY**. Piped or
   `--output json`, progress is suppressed unless `-v`. So
   `papurika run '*' fun --output json > out.json` yields a clean parseable file
@@ -276,29 +284,40 @@ reported `noresponse`, and the exit code follows `--fail` (1 by default). Exit
 ## E. Interrupt UX
 
 The library yields partial results + jid on cancel (async.md §C); the CLI consumes
-it. On SIGINT papurika does **not** abandon the job:
+it. On SIGINT / deadline papurika does **not** abandon the job:
 
-1. Print the in-flight jid(s) to **stderr** immediately (also printed at submit time).
-2. Drain what the engine gathered and **render the partial result** (respecting
-   `--output`; un-returned minions shown `pending`/`noresponse`).
-3. Exit **130**.
+1. Drain what the engine gathered and **render the partial result to stdout**
+   (respecting `--output`; un-returned minions shown `pending`/`noresponse`). The
+   command is marked `· PARTIAL` and the jid + a `resume: papurika watch <jid>`
+   line are part of that stdout render — **the jid rides out on the result**.
+2. Emit **one terse stderr line**: jid-free in pretty (`papurika: interrupted —
+   partial result above; jid(s) recoverable`), since the jid is already visible on
+   stdout; or a single `papurika: interrupted — resume: papurika watch <jid>` in
+   the machine formats, where a human can't eyeball stdout.
+3. Exit **130** (SIGINT) or **124** (deadline).
 
-`papurika run '*' state.highstate`, Ctrl-C mid-run:
+`papurika run '*' state.highstate`, Ctrl-C mid-run (pretty):
 ```
-^C
-papurika: interrupted — job still running on the master
-papurika: jid 20260627222843908511  (resume: papurika watch 20260627222843908511)
-papurika: gathered 1 of 2 minions
+                                    ← stdout ↓
+state.highstate  (jid 20260627222843908511)  · PARTIAL
+  ● builtin.minion    retcode 0
+    ✓ … 12 states ok
+  ⋯ builtin.minion2   (pending)
+2 minion(s) · 12 states · 12 ok
 
-state.highstate  (jid 20260627222843908511, PARTIAL)
-  ✓ builtin.minion        12 states ok
-  ⋯ builtin.minion2        (pending — not yet returned)
-1 of 2 returned · interrupted
+  resume: papurika watch 20260627222843908511
+                                    ← stderr ↓
+papurika: interrupted — partial result above; jid(s) recoverable
 ```
-(Banner lines on stderr, result block on stdout per §C; with `--output json` only
-the JSON hits stdout.) A second Ctrl-C exits 130 immediately without draining. This
-is the central fix for "Ctrl-C drops the jid": it's on stderr before any work and
-again on interrupt, and `watch <jid>` resumes.
+With `--output json`, only the JSON (carrying `summary.jids`) hits stdout, and the
+single stderr line becomes `papurika: interrupted — resume: papurika watch
+20260627222843908511`. A second Ctrl-C exits 130 immediately without draining.
+
+**The compromise.** We rely on flushing stdout at interrupt rather than pre-echoing
+the jid to stderr "just in case". A `SIGKILL` before that flush loses the jid — but
+so could a kill between a stderr pre-echo and its flush; there is no absolute
+guarantee short of the master's `master_job_cache`, and pushing the jid onto the
+result keeps normal-path output far less noisy. Worth it.
 
 ---
 

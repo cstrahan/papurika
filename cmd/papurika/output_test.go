@@ -544,3 +544,53 @@ func TestRenderExecBoolAndTree(t *testing.T) {
 		}
 	}
 }
+
+// --- jid on stdout (never-lose-a-jid via the result, not stderr) ---
+
+func TestJSONSummaryCarriesJIDs(t *testing.T) {
+	var buf bytes.Buffer
+	r := &papurika.Result{Commands: []papurika.CommandResult{{
+		Client: papurika.ClientLocal, Fun: "test.ping", JID: "20260710X",
+		Targeted: []string{"a"}, Minions: map[string]papurika.MinionResult{
+			"a": mr("a", papurika.StatusResponded, intp(0))},
+	}}}
+	if err := render(&buf, r, outputJSON, renderOpts{}); err != nil {
+		t.Fatal(err)
+	}
+	var v resultView
+	if err := json.Unmarshal(buf.Bytes(), &v); err != nil {
+		t.Fatal(err)
+	}
+	if len(v.Summary.JIDs) != 1 || v.Summary.JIDs[0] != "20260710X" {
+		t.Errorf("summary.jids = %v, want [20260710X]", v.Summary.JIDs)
+	}
+}
+
+func TestPrettyPartialShowsJIDAndResume(t *testing.T) {
+	// An interrupted command (Reason=Canceled) must carry its jid on stdout and a
+	// resume hint — the recovery affordance lives here, not on stderr.
+	c := papurika.CommandResult{
+		Client: papurika.ClientLocal, Fun: "state.highstate", JID: "20260710Z",
+		Targeted: []string{"a", "b"}, Reason: papurika.ReasonCanceled,
+		Minions: map[string]papurika.MinionResult{
+			"a": mr("a", papurika.StatusResponded, intp(0)),
+			"b": {ID: "b", Status: papurika.StatusPending},
+		},
+	}
+	out := renderCmdStr(c, renderOpts{})
+	for _, want := range []string{"(jid 20260710Z)", "PARTIAL", "resume: papurika watch 20260710Z"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q\n---\n%s", want, out)
+		}
+	}
+}
+
+func TestPrettyCompleteHasNoPartial(t *testing.T) {
+	// A normal sync command (Reason=None) must NOT be labeled PARTIAL.
+	c := papurika.CommandResult{Client: papurika.ClientLocal, Fun: "test.ping", JID: "1",
+		Minions: map[string]papurika.MinionResult{"a": mr("a", papurika.StatusResponded, intp(0))}}
+	out := renderCmdStr(c, renderOpts{})
+	if strings.Contains(out, "PARTIAL") || strings.Contains(out, "resume:") {
+		t.Errorf("completed command should not show PARTIAL/resume\n%s", out)
+	}
+}

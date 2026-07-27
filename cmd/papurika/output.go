@@ -62,12 +62,16 @@ type resultView struct {
 }
 
 type summaryView struct {
-	Outcome    string `json:"outcome"`
-	Targeted   int    `json:"targeted"`
-	Returned   int    `json:"returned"`
-	Succeeded  int    `json:"succeeded"`
-	Failed     int    `json:"failed"`
-	NoResponse int    `json:"noresponse"`
+	Outcome string `json:"outcome"`
+	// JIDs carries every jid the run touched, so stdout (json/yaml) always holds
+	// the recoverable jid(s) — the "never lose a jid" guarantee on the machine
+	// path, mirroring the pretty per-command (jid …) header.
+	JIDs       []string `json:"jids,omitempty"`
+	Targeted   int      `json:"targeted"`
+	Returned   int      `json:"returned"`
+	Succeeded  int      `json:"succeeded"`
+	Failed     int      `json:"failed"`
+	NoResponse int      `json:"noresponse"`
 }
 
 type commandView struct {
@@ -123,6 +127,7 @@ func toView(res *papurika.Result, okPred func(papurika.MinionResult) bool) resul
 		v.Commands = append(v.Commands, cv)
 	}
 	v.Summary.Outcome = outcome(res, v.Summary)
+	v.Summary.JIDs = res.JIDs()
 	return v
 }
 
@@ -226,9 +231,8 @@ type ndjsonValue struct {
 }
 
 type ndjsonSummary struct {
-	Type string   `json:"type"` // "summary"
-	JIDs []string `json:"jids,omitempty"`
-	summaryView
+	Type        string `json:"type"` // "summary"
+	summaryView        // carries jids (see summaryView.JIDs)
 }
 
 type ndjsonError struct {
@@ -265,7 +269,7 @@ func writeNDJSON(w io.Writer, res *papurika.Result) error {
 		}
 	}
 	v := toView(res, defaultOK)
-	return enc.Encode(ndjsonSummary{Type: "summary", JIDs: res.JIDs(), summaryView: v.Summary})
+	return enc.Encode(ndjsonSummary{Type: "summary", summaryView: v.Summary})
 }
 
 // ndjsonStreamer drives the streaming NDJSON path for run/state/ping. It emits a
@@ -315,7 +319,7 @@ func (s *ndjsonStreamer) finish(res *papurika.Result, err error) {
 		_ = s.enc.Encode(ndjsonError{Type: "error", Error: err.Error()})
 	}
 	v := toView(res, defaultOK)
-	_ = s.enc.Encode(ndjsonSummary{Type: "summary", JIDs: res.JIDs(), summaryView: v.Summary})
+	_ = s.enc.Encode(ndjsonSummary{Type: "summary", summaryView: v.Summary})
 }
 
 func renderPretty(w io.Writer, res *papurika.Result, opts renderOpts) error {
@@ -327,9 +331,19 @@ func renderPretty(w io.Writer, res *papurika.Result, opts renderOpts) error {
 }
 
 func renderCommand(w io.Writer, c papurika.CommandResult, opts renderOpts, g glyphs) {
+	// A command cut short (Ctrl-C / deadline / fatal stream error) is PARTIAL: its
+	// jid stays on stdout (in this header) so the run is recoverable without
+	// relying on stderr. Reason is None for a normal sync command, so this never
+	// mislabels a completed one.
+	incomplete := c.Reason == papurika.ReasonCanceled ||
+		c.Reason == papurika.ReasonDeadline ||
+		c.Reason == papurika.ReasonStreamFatal
 	head := c.Fun
 	if c.JID != "" {
 		head = fmt.Sprintf("%s  (jid %s)", c.Fun, c.JID)
+	}
+	if incomplete {
+		head += "  · " + g.yellow("PARTIAL")
 	}
 	fmt.Fprintln(w, head)
 
@@ -357,6 +371,11 @@ func renderCommand(w io.Writer, c papurika.CommandResult, opts renderOpts, g gly
 		}
 	default:
 		fmt.Fprintf(w, "  %s\n\n", g.dim("(no minions matched)"))
+	}
+
+	// The recovery affordance lives on stdout (the result), not stderr.
+	if incomplete && c.JID != "" {
+		fmt.Fprintf(w, "  %s\n\n", g.dim("resume: papurika watch "+c.JID))
 	}
 }
 

@@ -45,7 +45,10 @@ The gather loop:
    `EventStream` **before** POSTing the async job — the documented ordering, which
    avoids the race where a fast minion returns before we're listening.
 2. **Submit.** `POST /` with `client: local_async`; capture `{jid, minions}` into
-   `Job`. From this instant the jid is recoverable, even on a crash (§C).
+   `Job`. From this instant the master retains the job (its `master_job_cache`), so
+   the run is recoverable by jid — which the CLI surfaces on stdout (§C/§E); if the
+   process dies before that, the job still exists on the master (find it via
+   `jobs.list_jobs`).
 3. **Seed.** Every targeted minion starts `StatusPending`. When the
    `salt/job/<jid>/new` event's `missing` list arrives, mark those `StatusNoResponse`
    immediately (`SourceMissing`) — don't wait the whole deadline for minions the
@@ -193,9 +196,12 @@ signal on interrupt.
 
 **CLI mapping** ([cli.md](cli.md) §E): the CLI uses `signal.NotifyContext` for
 SIGINT; first `Ctrl-C` cancels ctx → `Run` returns partial `Result` + error → the
-CLI prints the partial table plus a stderr footer naming the jid and the
-`papurika watch <jid>` recovery command. The jid is also logged to stderr the
-instant submit returns, so even a `kill -9` leaves it in scrollback.
+CLI renders the partial result **to stdout** with the jid in the `(jid …)` header
+(pretty) / `summary.jids` (json), a `· PARTIAL` marker, and a `resume: papurika
+watch <jid>` line — the jid rides out on the result. stderr gets just one terse
+line (§C/§E). We accept that a `SIGKILL` before the stdout flush loses the jid: a
+pre-echo to stderr is no more crash-proof, and keeping the happy path quiet is
+worth it.
 
 ---
 

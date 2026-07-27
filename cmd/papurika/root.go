@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -280,12 +282,23 @@ func emit(res *papurika.Result, err error) error {
 	if err == nil && isNoMatch(res) {
 		fmt.Fprintln(os.Stderr, "papurika: no minions matched the target")
 	}
-	// Partial results (interrupt/deadline) that DID gather something: keep the jid
-	// recoverable.
-	if err != nil {
-		if jids := res.JIDs(); len(jids) > 0 {
-			fmt.Fprintf(os.Stderr, "papurika: interrupted/incomplete — jid(s): %v\n", jids)
-			fmt.Fprintf(os.Stderr, "papurika: resume with: papurika watch %s\n", joinJIDs(jids))
+	// Interrupt / deadline: the jid(s) are already on stdout (pretty header or
+	// json summary.jids), so stderr stays terse — one line, and no jid at all when
+	// stdout is human-readable (pretty). Only the machine formats, where a human
+	// can't eyeball the jid, get the resume command on stderr.
+	if err != nil && res != nil {
+		what := "interrupted"
+		if errors.Is(err, context.DeadlineExceeded) {
+			what = "timed out"
+		}
+		jids := res.JIDs()
+		switch {
+		case len(jids) == 0:
+			// nothing to recover
+		case resolveOutput() == outputPretty:
+			fmt.Fprintf(os.Stderr, "papurika: %s — partial result above; jid(s) recoverable\n", what)
+		default:
+			fmt.Fprintf(os.Stderr, "papurika: %s — resume: papurika watch %s\n", what, joinJIDs(jids))
 		}
 	}
 	return &exitErr{code: exitCode(res, err, policy(), flagAllowNR)}

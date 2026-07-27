@@ -32,8 +32,10 @@ The header is the salt **function** (`CommandResult.Fun`, e.g. `state.apply`); t
 positional args (the sls name, the command string) live in the request, not the
 result model, so they are not echoed in the header.
 
-- **stdout carries only the render** (per cli.md §C). Banners, progress, the
-  interrupt jid, and — in `--output json` — the summary go to **stderr**.
+- **stdout carries only the render** (per cli.md §C) — including the jid(s): the
+  `(jid …)` header, and on an interrupted run a `· PARTIAL` marker plus a
+  `resume: papurika watch <jid>` line (§H). Progress, warnings, and — in
+  `--output json` — the summary and a single terse interrupt line go to **stderr**.
 - **Indentation** is 2 spaces per level: minion lines at 2, state lines at 4,
   detail (changes/diffs) at 8.
 - **Glyphs** (ASCII-safe, already used across the CLI): `✓` ok, `✗` fail, `⋯`
@@ -341,7 +343,9 @@ state.highstate  (jid 20260627222843908511)
   stdout; `papurika: <err>` on stderr; exit per the error (cli.md §D). Handled in
   `emit`, upstream of the renderer.
 - **Interrupt / partial** (cli.md §E): the gathered result renders normally;
-  un-returned minions show `⋯ pending`; the jid banner is on stderr.
+  un-returned minions show `⋯ pending`; the command header gains `· PARTIAL` and a
+  `resume: papurika watch <jid>` line — the jid rides out on **stdout**. stderr
+  gets one terse line (jid-free in pretty; the resume command in json/yaml).
 - **No minions matched**: `(no minions matched)` (dim) + `papurika: no minions
   matched the target` on stderr; exit 2.
 

@@ -109,7 +109,10 @@ of the public library — no privileged access, which keeps the library honest.
   in the output layer. See [library.md](library.md).
 - **Never lose a jid.** Once a job is submitted, every return path — success,
   deadline, `Ctrl-C`, `context.Canceled` — yields the jid(s) and whatever partial
-  results were gathered. See [async.md](async.md) and [cli.md](cli.md).
+  results were gathered. The CLI carries the jid(s) **on stdout** (the rendered
+  result: the pretty `(jid …)` header, `summary.jids` in json, the ndjson
+  `submitted` line) rather than leaning on a stderr banner — so a job stays
+  recoverable from the result itself. See [async.md](async.md) and [cli.md](cli.md).
 - **Compute liveness ourselves.** Non-responders = targeted − returned (folding
   salt's three "no response" surfacings into one status). Never `manage.status`.
 
