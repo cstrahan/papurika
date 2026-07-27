@@ -68,8 +68,14 @@ type runConfig struct {
 	maxInflight   int
 }
 
+// defaultRunConfig imposes no timeouts. There is no default hard deadline
+// (WithDeadline) and no default settle window (WithSaltTimeout/WithGatherTimeout)
+// — a caller opts into any wall-clock bound explicitly. When the settle knobs are
+// unset, gather() uses an internal liveness-check cadence (see the settleTimer
+// case): it re-probes stragglers with saltutil.find_job rather than giving up, so
+// nothing here silently bounds a healthy run.
 func defaultRunConfig() runConfig {
-	return runConfig{saltTimeout: 5 * time.Second, gatherTimeout: 10 * time.Second, maxInflight: 8}
+	return runConfig{maxInflight: 8}
 }
 
 // RunOption configures Run/Submit/Watch.
