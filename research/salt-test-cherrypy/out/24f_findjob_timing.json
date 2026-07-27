@@ -1,0 +1,28 @@
+{
+  "note": "find_job to a dead minion blocks the master's timeout+gather_job_timeout (~15s) unless BOTH are passed; salt-api honors them for the local client.",
+  "timings": [
+    {
+      "variant": "default",
+      "extra": {},
+      "seconds": 15.2,
+      "down_value_is_no_response_string": true
+    },
+    {
+      "variant": "timeout=2",
+      "extra": {
+        "timeout": 2
+      },
+      "seconds": 12.2,
+      "down_value_is_no_response_string": true
+    },
+    {
+      "variant": "timeout=2,gather_job_timeout=2",
+      "extra": {
+        "timeout": 2,
+        "gather_job_timeout": 2
+      },
+      "seconds": 4.2,
+      "down_value_is_no_response_string": true
+    }
+  ]
+}

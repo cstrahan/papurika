@@ -1,0 +1,36 @@
+{
+  "note": "/jobs/<jid> over ~6s \u2014 the down-but-accepted minion never returns and is never flagged; only the client's find_job re-check can classify it",
+  "jid": "20260727223628575535",
+  "polls": [
+    {
+      "t": 2,
+      "returned": [
+        "builtin.minion"
+      ],
+      "targeted": [
+        "builtin.minion",
+        "builtin.minion2"
+      ]
+    },
+    {
+      "t": 4,
+      "returned": [
+        "builtin.minion"
+      ],
+      "targeted": [
+        "builtin.minion",
+        "builtin.minion2"
+      ]
+    },
+    {
+      "t": 6,
+      "returned": [
+        "builtin.minion"
+      ],
+      "targeted": [
+        "builtin.minion",
+        "builtin.minion2"
+      ]
+    }
+  ]
+}

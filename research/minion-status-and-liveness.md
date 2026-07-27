@@ -232,5 +232,13 @@ key-accepted but its process dead:
 **Client design (see `design/async.md` §B):** when the settle window goes quiet,
 re-probe the still-pending minions with `find_job`; keep waiting on the ones still
 running the job, settle the rest as `NoResponse`. This is why a *slow-but-alive*
-minion is never mislabeled — the whole point of the gather. Captured probes:
-`scripts`-style one-offs (not kept); shapes confirmed inline above.
+minion is never mislabeled — the whole point of the gather.
+
+**Captured evidence:** `research/salt-test-cherrypy/scripts/24_async_liveness_findjob.py`
+→ `out/24a`–`24f`: the empty `missing` list (`24a`), the down minion never
+appearing in `/jobs` (`24b`), the `find_job` shapes raw and under `full_return`
+(`24c`/`24d`/`24e`), and the timing ladder — default ~15.2s, `timeout=2` ~12.2s,
+`timeout=2,gather_job_timeout=2` ~4.2s (`24f`). Note the `full_return` trap in
+`24d`: a dead minion is a non-empty *wrapper* map `{out,ret,retcode}`; it's the
+inner `ret` (a string, not a map) that marks it down — which is what the client's
+`ret`-unwrap keys off.

@@ -1,0 +1,63 @@
+{
+  "request": {
+    "path": "/",
+    "body": [
+      {
+        "client": "local",
+        "tgt": "builtin.minion,builtin.minion2",
+        "tgt_type": "list",
+        "fun": "saltutil.find_job",
+        "arg": [
+          "20260727223640193227"
+        ],
+        "full_return": true,
+        "timeout": 2,
+        "gather_job_timeout": 2
+      }
+    ]
+  },
+  "status_code": 200,
+  "response_headers": {
+    "Content-Type": "application/json",
+    "Server": "CherryPy/18.10.0",
+    "Date": "Mon, 27 Jul 2026 22:36:47 GMT",
+    "Allow": "GET, HEAD, POST",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "GET, POST",
+    "Access-Control-Allow-Credentials": "true",
+    "Cache-Control": "private",
+    "Vary": "Accept-Encoding",
+    "Content-Length": "654",
+    "Set-Cookie": "session_id=68a9cb3d4d26dfe2909561d262540193e46258fa; expires=Tue, 28 Jul 2026 08:36:47 GMT; Max-Age=36000; Path=/"
+  },
+  "response_body": {
+    "return": [
+      {
+        "builtin.minion": {
+          "ret": {
+            "pid": 2860,
+            "fun": "cmd.run",
+            "arg": [
+              "sleep 30"
+            ],
+            "tgt": "builtin.minion",
+            "jid": "20260727223640193227",
+            "ret": "",
+            "tgt_type": "glob",
+            "user": "saltdev",
+            "resource_targets": [],
+            "pure_resource_target": false,
+            "minion_is_target": true
+          },
+          "retcode": 0,
+          "jid": "20260727223647457531"
+        },
+        "builtin.minion2": {
+          "out": "no_return",
+          "ret": "Minion did not return. [No response]\nThe minions may not have all finished running and any remaining minions will return upon completion. To look up the return data for this job later, run the following command:\n\nsalt-run jobs.lookup_jid 20260727223647457531",
+          "retcode": 1
+        }
+      }
+    ]
+  }
+}

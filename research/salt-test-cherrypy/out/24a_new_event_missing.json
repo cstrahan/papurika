@@ -1,0 +1,38 @@
+{
+  "note": "async local_async test.ping to '*' with builtin.minion2 down-but-accepted",
+  "submit_return": {
+    "jid": "20260727223628575535",
+    "minions": [
+      "builtin.minion",
+      "builtin.minion2"
+    ]
+  },
+  "new_event": {
+    "tag": "salt/job/20260727223628575535/new",
+    "data": {
+      "data": {
+        "jid": "20260727223628575535",
+        "tgt_type": "glob",
+        "tgt": "*",
+        "user": "saltdev",
+        "fun": "test.ping",
+        "arg": [],
+        "minions": [
+          "builtin.minion",
+          "builtin.minion2"
+        ],
+        "missing": [],
+        "_stamp": "2026-07-27T22:36:28.577591+00:00"
+      },
+      "tag": "salt/job/20260727223628575535/new"
+    }
+  },
+  "finding": {
+    "matched_minions": [
+      "builtin.minion",
+      "builtin.minion2"
+    ],
+    "missing": [],
+    "down_minion_in_missing": false
+  }
+}
