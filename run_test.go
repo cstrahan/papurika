@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -204,6 +205,54 @@ func TestRunSettlesDownMinion(t *testing.T) {
 	}
 	if got := res.NonResponders(); len(got) != 1 || got[0] != "m2" {
 		t.Errorf("nonresponders = %v, want [m2]", got)
+	}
+}
+
+func TestRunFindJobWaitsForRunningMinion(t *testing.T) {
+	fastPolls(t)
+	jid := "20260627000000000199"
+	targeted := []string{"m1", "m2"}
+	// m1 returns; m2 never returns via /jobs BUT saltutil.find_job reports it is
+	// still running the job. The gather must keep waiting on m2 (not settle it as
+	// no-response); with no returns forthcoming, the run ends only at the deadline.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Server", "CherryPy/18")
+		switch r.URL.Path {
+		case "/login":
+			io.WriteString(w, loginBody("TOK1"))
+		case "/events":
+			http.Error(w, "no sse", http.StatusNotFound)
+		case "/jobs/" + jid:
+			io.WriteString(w, jobBody(jid, targeted, map[string]string{"m1": "true"}))
+		case "/":
+			b, _ := io.ReadAll(r.Body)
+			if strings.Contains(string(b), "saltutil.find_job") {
+				io.WriteString(w, fmt.Sprintf(`{"return":[{"m2":{"jid":%q,"pid":1}}]}`, jid)) // m2 still running
+			} else {
+				fmt.Fprintf(w, `{"return":[{"jid":%q,"minions":%s}]}`, jid, jsonList(targeted))
+			}
+		default:
+			http.Error(w, "nope", http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+	c := engineClient(t, srv)
+
+	res, err := c.Run(context.Background(), JobSpec{Target: "*", Fun: "test.ping"},
+		WithSaltTimeout(20*time.Millisecond), WithGatherTimeout(20*time.Millisecond),
+		WithDeadline(300*time.Millisecond))
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("err = %v, want DeadlineExceeded (find_job should keep m2 alive, not settle it)", err)
+	}
+	cr := res.Commands[0]
+	if cr.Reason != ReasonDeadline {
+		t.Errorf("reason = %v, want Deadline (m2 must not be settled while find_job says it's running)", cr.Reason)
+	}
+	if cr.Minions["m2"].Status != StatusPending {
+		t.Errorf("m2 status = %v, want pending (alive, still running the job)", cr.Minions["m2"].Status)
+	}
+	if got := res.Responders(); len(got) != 1 || got[0] != "m1" {
+		t.Errorf("responders = %v, want [m1]", got)
 	}
 }
 

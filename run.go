@@ -25,6 +25,7 @@ const (
 	SourceEvent   Source = iota // arrived via /events SSE
 	SourcePoll                  // backfilled via /jobs polling
 	SourceMissing               // master flagged the minion absent (salt/job/<jid>/new)
+	SourceFindJob               // settled no-response after a saltutil.find_job liveness check
 )
 
 // Update is a streamed per-minion progress event (delivered to OnUpdate).
@@ -230,11 +231,12 @@ func (c *Client) gather(ctx context.Context, job Job, cfg runConfig) CommandResu
 		reconnects = stream.Reconnects()
 	}
 
-	// The gather window: how long we wait for returns before settling the
-	// leftovers as non-responders. This mirrors salt's own timeout +
-	// gather_job_timeout and is a NORMAL completion (exit per policy), distinct
-	// from the hard ctx deadline / --timeout (which is exit 124). Each new return
-	// extends the quiet period by gatherTimeout, so an active stream keeps it open.
+	// The gather window: how long returns stay quiet before we run a liveness
+	// check on the stragglers (a saltutil.find_job re-probe — see the settleTimer
+	// case). It is NOT a give-up timeout: a minion still running the job keeps
+	// being waited on. Settling a minion as a non-responder is a NORMAL completion
+	// (exit per policy), distinct from the hard ctx deadline / --timeout (exit
+	// 124). Each new return extends the quiet period by gatherTimeout.
 	settleWindow := cfg.saltTimeout + cfg.gatherTimeout
 	if settleWindow <= 0 {
 		settleWindow = 15 * time.Second
@@ -346,10 +348,36 @@ func (c *Client) gather(ctx context.Context, job Job, cfg runConfig) CommandResu
 			}
 
 		case <-settleTimer.C:
-			// Gather window elapsed with returns quiescent: do one last poll to
-			// catch anything in flight, then settle the rest as non-responders.
+			// Gather window quiescent. Poll once for stragglers, then run a
+			// saltutil.find_job liveness check on whoever is still pending — salt-api
+			// gives no "missing" signal for async gathers (verified), so this is how
+			// we tell a slow-but-alive minion (keep waiting) from a down one (settle
+			// as no-response) instead of blindly giving up on both.
 			if poll() {
 				return c.finish(&cr)
+			}
+			var pending []string
+			for id, m := range cr.Minions {
+				if m.Status == StatusPending {
+					pending = append(pending, id)
+				}
+			}
+			running := c.findRunning(ctx, job.JID, pending)
+			poll() // a minion may have finished DURING the probe; record it before judging
+			stillAlive := false
+			for _, id := range pending {
+				if cr.Minions[id].Status != StatusPending {
+					continue // it returned during the probe (poll picked it up)
+				}
+				if running[id] {
+					stillAlive = true // still running the job — keep waiting for its return
+					continue
+				}
+				setMinion(MinionResult{ID: id, Status: StatusNoResponse}, SourceFindJob)
+			}
+			if stillAlive {
+				resetSettle()
+				continue
 			}
 			return settle()
 
@@ -379,6 +407,32 @@ func (c *Client) finish(cr *CommandResult) CommandResult {
 		cr.Complete, cr.Reason = true, ReasonAllReturned
 	}
 	return *cr
+}
+
+// findRunning asks the given minions, via saltutil.find_job <jid>, which are
+// still executing the job. A minion running it returns a non-empty job-info map;
+// one that isn't returns {}; an unreachable one doesn't answer (surfaces as a
+// no-response string, i.e. a non-map value). So "still running" == a non-empty
+// map. The probe is bounded server-side (short timeout/gather_job_timeout) so a
+// dead minion in the set can't stall it for salt's ~15s default. A failed probe
+// returns the empty set (treat as none-running → settle).
+func (c *Client) findRunning(ctx context.Context, jid string, ids []string) map[string]bool {
+	out := map[string]bool{}
+	if len(ids) == 0 {
+		return out
+	}
+	cmd := Local(strings.Join(ids, ","), "saltutil.find_job", jid).WithTgtType(TgtList)
+	cmd.Extra = map[string]any{"timeout": 2, "gather_job_timeout": 2}
+	res, err := c.Exec(ctx, cmd)
+	if err != nil || res == nil || len(res.Commands) == 0 {
+		return out
+	}
+	for id, m := range res.Commands[0].Minions {
+		if mp, ok := m.Value.Map(); ok && len(mp) > 0 {
+			out[id] = true
+		}
+	}
+	return out
 }
 
 // applyEvent folds a salt event into the gather state. Returns true when the job

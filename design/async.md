@@ -120,13 +120,19 @@ reconnect trigger. (Thundering-herd note in Open Questions.)
 There are **two distinct client-side timers**, and the distinction is the whole
 point:
 
-- **The settle window** (`WithSaltTimeout` + `WithGatherTimeout`) — how long the
-  gather waits for returns before declaring the leftovers no-response. Each new
-  return **extends** the quiet period by the gather timeout, so an active stream
-  keeps it open. When it elapses, the run completes **normally** (`ReasonSettled`,
-  exit per `--fail` policy). This is how a genuinely-down minion produces a partial
-  result with exit 1 — not a timeout. It mirrors salt's own
-  `timeout + gather_job_timeout`.
+- **The settle window** (`WithSaltTimeout` + `WithGatherTimeout`) — how long
+  returns may stay quiet before we run a **liveness re-check** on the stragglers.
+  It is **not** a give-up timeout. Each new return extends the quiet period. When
+  it elapses, the gather sends **`saltutil.find_job <jid>`** to the still-pending
+  minions (bounded server-side so a dead minion can't stall it): those still
+  running the job keep being waited on; those that don't answer (or aren't running
+  it) are settled as `StatusNoResponse`. That's a **normal** completion
+  (`ReasonSettled`, exit per `--fail`), not a timeout — so a genuinely-down minion
+  is reported down while a *slow-but-alive* one is **not** mislabeled. We must
+  self-bound this way because salt-api emits **no "missing" signal** for async
+  gathers — a down-but-key-accepted minion simply never appears in `/jobs` and is
+  absent from `new.missing` (verified) — and it mirrors what salt's own CLI does
+  (`timeout + gather_job_timeout` + `find_job`).
 - **The hard deadline** (`context.Context` / `WithDeadline` / CLI `--timeout`) — the
   authoritative wall-clock bound. Hitting it is a **timeout** (`ReasonDeadline` →
   exit 124); cancel/SIGINT is `ReasonCanceled` (exit 130). Whichever timer fires
@@ -138,8 +144,8 @@ func (c *Client) Run(ctx context.Context, spec JobSpec, opts ...RunOption) (*Res
 
 type RunOption func(*runConfig)
 func WithDeadline(d time.Duration) RunOption       // hard wall-clock deadline (== a ctx deadline) -> exit 124
-func WithSaltTimeout(d time.Duration) RunOption    // settle window: initial wait (default 5s)
-func WithGatherTimeout(d time.Duration) RunOption  // settle window: quiet period extended per return (default 10s)
+func WithSaltTimeout(d time.Duration) RunOption    // settle window: initial quiet before the first find_job re-check
+func WithGatherTimeout(d time.Duration) RunOption  // settle window: quiet period (extended per return) between re-checks
 func WithOnUpdate(fn func(Update)) RunOption        // streaming progress (alt to a channel)
 func WithClientBatch(size string, o ...BatchOption) RunOption // §F
 func WithKillOnCancel(bool) RunOption              // §C; default false
@@ -340,7 +346,10 @@ func (r *Result) NonResponders() []string {
 Targeted = `Job.Targeted` (the async submit's `minions` list — authoritative).
 Returned = minions we got a terminal `Responded` for (from `ret` events or `/jobs`
 `Result` keys). **Non-responders = targeted − returned.** The `/new.missing` list
-pre-seeds `StatusNoResponse` so known-absent minions are caught before the deadline.
+pre-seeds `StatusNoResponse` *when populated*, but salt-api frequently leaves it
+empty even for a down-but-key-accepted minion (verified — such a minion never
+surfaces in `/jobs` either), so the **`saltutil.find_job` re-check (§B)** is what
+actually separates down from slow before a straggler is settled as a non-responder.
 Salt's three "no response" surfacings (sync string / async omission / missing `ret`
 event) all collapse into the one `Status` field.
 

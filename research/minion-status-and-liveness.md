@@ -202,3 +202,35 @@ and `builtin.minion2` key-accepted:
 confirmed `up → [minion]`, `down → [minion2]` in the dead case. The reverse case
 confirms we restored correct behavior rather than merely inverting the bug.
 (Patched container only; re-copy after recreating it, like the token/cache fix.)
+
+## 6. Async gather liveness — no "missing" signal; use `find_job` (2026-07-27)
+
+How the papurika client itself decides a minion is down during a `local_async`
+gather (distinct from the `manage.*` runners above). Verified against
+`papurika-salt` (3008.1) with `builtin.minion` up and `builtin.minion2`
+key-accepted but its process dead:
+
+- **salt-api gives no "missing" signal for async.** The `salt/job/<jid>/new`
+  event reports `minions: [builtin.minion, builtin.minion2]` and **`missing: []`**
+  — the dead-but-accepted minion is *not* flagged. Polling `/jobs/<jid>` over 18s,
+  its `Result` only ever lists `builtin.minion`; `builtin.minion2` never appears in
+  any form. So there is **nothing** from the server that marks a down-but-accepted
+  minion terminal — the client must self-bound.
+- **`saltutil.find_job <jid>` is the liveness oracle.** A sync `local`
+  `saltutil.find_job <jid>` targeting the pending minions returns, per minion
+  (with `full_return: true`):
+  - still running it → a **non-empty job-info map** `{"ret":{"jid":…,"pid":…,…},"retcode":0}`;
+  - up but not running it → **`{"ret":{},"retcode":0}`** (empty map);
+  - unreachable → the **`"Minion did not return. [No response]…"` string**
+    (`{"out":"no_return","ret":"…","retcode":1}`).
+  So "still running" ⇔ the return normalizes to a **non-empty map**.
+- **Bounding.** find_job on a dead minion otherwise blocks the master's full
+  `timeout + gather_job_timeout` (~15s). Passing **both** `timeout` and
+  `gather_job_timeout` (e.g. 2) as top-level lowstate fields is honored by the
+  local client and cuts it to ~4s; live minions answer in <1s.
+
+**Client design (see `design/async.md` §B):** when the settle window goes quiet,
+re-probe the still-pending minions with `find_job`; keep waiting on the ones still
+running the job, settle the rest as `NoResponse`. This is why a *slow-but-alive*
+minion is never mislabeled — the whole point of the gather. Captured probes:
+`scripts`-style one-offs (not kept); shapes confirmed inline above.
