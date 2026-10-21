@@ -1,0 +1,82 @@
+# Changelog
+
+All notable changes to papurika are documented here.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+**papurika is pre-1.0.** While the major version is `0`, the Go API (packages
+`papurika` and `config`) and the CLI surface may change in any minor release.
+Breaking changes are always called out under **Changed** / **Removed** with a
+migration note. The `papurika.dev/result/v1` JSON output schema is versioned
+separately and is intended to stay stable for scripts.
+
+## [Unreleased]
+
+<!--
+Add entries here as you go, under these headings (drop the ones you don't use):
+
+### Added       — new features
+### Changed     — changes in existing behavior (call out anything breaking)
+### Deprecated  — soon-to-be-removed features
+### Removed     — removed features
+### Fixed       — bug fixes
+### Security    — vulnerability fixes
+-->
+
+## [0.1.0] - 2026-10-21
+
+First public release. Pre-1.0: expect breaking changes while the design settles.
+
+### Added
+
+- **Go library** (`github.com/cstrahan/papurika`) — a `Client` over salt-api's
+  `rest_cherrypy` with one normalized `Result` / `MinionResult` model, so callers
+  never parse salt's per-client-type response envelopes themselves. Raw bytes are
+  preserved on every result (`RawValue`), so normalization never loses data.
+- **Async-first execution.** `Run` submits `local_async` and gathers over
+  `/events` with `/jobs` reconciliation, so a long command never pins a cherrypy
+  worker. `Submit` is fire-and-forget; `Watch` re-attaches to existing jids.
+- **Job ids are never lost.** Every return path — success, deadline, `Ctrl-C`,
+  `context.Canceled` — yields the jid(s) plus whatever partial results were
+  gathered.
+- **Honest classification.** HTTP 200 is not treated as success: request-level
+  failures are typed Go errors (`ErrAuthDenied`, `ErrJobNotFound`, …), while
+  per-minion and per-command outcomes are an explicit `Status` + `Retcode` on the
+  result rather than a parsed English string.
+- **Computed minion liveness.** Non-responders are derived as
+  `targeted − returned` and re-checked with `saltutil.find_job` before being
+  settled, rather than trusting `manage.status` (broken on Salt 3008).
+- **CLI** (`papurika`) — high-level `run`, `state`, `ping`, `submit`, `watch`,
+  `job`, `jobs`, `kill`, `events`, `key`, plus low-level one-subcommand-per-client
+  escape hatches (`local`, `local-async`, `local-batch`, `local-subset`, `runner`,
+  `runner-async`, `wheel`, `wheel-async`, `ssh`, `lowstate`).
+- **Output modes** `--output pretty|json|yaml|ndjson|raw`, defaulting to pretty on
+  a TTY and json when piped. Results go to stdout; progress and diagnostics go to
+  stderr. The json schema is the versioned `papurika.dev/result/v1`.
+- **Exit-code policy** reflecting *all* minions and commands, via
+  `--fail any|all|none` and `--allow-noresponse`.
+- **Targeting selectors** mirroring the `salt` CLI: `-L -E -G --grain-pcre -I
+  --pillar-pcre -R -C -N`, plus `--subset`.
+- **Client-side batching** (`--client-batch`) with configurable concurrency,
+  giving streaming progress and recoverable jids — unlike server-side `--batch`,
+  which salt-api buffers in full and which surfaces no jid.
+- **Config and credentials** — TOML profiles at XDG paths, precedence
+  flags > env (`PAPURIKA_*`) > config > defaults, secrets via an exec
+  `password_command` (keychain, `pass`, GPG, …) instead of a plaintext password,
+  and a session-token cache keyed by `master_url | user | eauth` so profiles
+  can't cross-contaminate.
+- **`papurika version`** (and `--version`), stamped at release time with the
+  version, commit and build date.
+
+### Fixed
+
+- A hard deadline (`--timeout` / `WithDeadline`) that expired *during* the
+  `saltutil.find_job` liveness probe was misreported: the cut-short probe was
+  read as "nobody is running the job", so still-pending minions were settled as
+  **no-response** and the run reported a normal completion instead of the
+  deadline (exit 124). An unanswered probe is no longer taken as evidence that a
+  minion is down.
+
+[Unreleased]: https://github.com/cstrahan/papurika/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/cstrahan/papurika/releases/tag/v0.1.0

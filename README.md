@@ -1,5 +1,9 @@
 # papurika
 
+[![ci](https://github.com/cstrahan/papurika/actions/workflows/ci.yml/badge.svg)](https://github.com/cstrahan/papurika/actions/workflows/ci.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/cstrahan/papurika.svg)](https://pkg.go.dev/github.com/cstrahan/papurika)
+[![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#license)
+
 A Go client — importable **library** and **CLI** (`papurika`) — for SaltStack's
 salt-api (`rest_cherrypy`). A more predictable, async-first alternative to
 `pepper`.
@@ -15,7 +19,36 @@ its sync calls can pin a server worker indefinitely. papurika hides all of that
 behind one normalized result model, an idiomatic Go error taxonomy, and an
 async-first execution engine that never loses a job id.
 
-## Install / build
+## Install
+
+**Binary release.** Grab a tarball (or a `.deb` / `.rpm`) for linux/macOS on
+amd64/arm64 from the [releases page](https://github.com/cstrahan/papurika/releases):
+
+```sh
+VERSION=0.1.0
+OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+ARCH=$(uname -m | sed -e 's/x86_64/amd64/' -e 's/aarch64/arm64/')
+
+curl -sSfL "https://github.com/cstrahan/papurika/releases/download/v${VERSION}/papurika_${VERSION}_${OS}_${ARCH}.tar.gz" \
+  | tar -xz papurika
+./papurika version
+```
+
+Each release also ships a `checksums.txt`; verify with `sha256sum -c`.
+
+**Go toolchain.**
+
+```sh
+go install github.com/cstrahan/papurika/cmd/papurika@latest
+```
+
+**As a library.**
+
+```sh
+go get github.com/cstrahan/papurika
+```
+
+**From source.**
 
 ```sh
 go build ./...                 # build library + CLI
@@ -23,7 +56,7 @@ go test ./...                  # run the test suite
 go build -o papurika ./cmd/papurika
 ```
 
-Requires Go 1.23+.
+Requires Go 1.24+.
 
 ## CLI quick start
 
@@ -54,7 +87,7 @@ default_profile = "prod"
 
 [profiles.prod]
 master_url       = "https://salt.example.com:8000"
-user             = "cstrahan"
+user             = "me"
 eauth            = "file"
 password_command = ["pass", "show", "salt/prod"]   # secret never stored in the file
 ```
@@ -96,5 +129,37 @@ for v1.
 
 ## Status
 
-v1 implementation of the design. Verified end-to-end against a live salt-api
-(3008). Not yet released.
+**v0.1.0 — pre-1.0.** The design is implemented and verified end-to-end against a
+live salt-api (Salt 3008). It is in real use, but it is early: **the Go API and
+the CLI surface may change in any 0.x minor release.** Breaking changes are called
+out in [`CHANGELOG.md`](CHANGELOG.md) with a migration note.
+
+Two things are meant to be stable sooner than the rest: the
+`papurika.dev/result/v1` JSON output schema (the contract scripts consume) and the
+exit-code policy.
+
+If you hit a salt-api shape papurika mis-normalizes, an issue with the verbatim
+request/response is the single most useful thing you can file — this client is
+built on empirically captured behavior (see [`research/`](research/)), not on the
+salt docs.
+
+## Contributing
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md). In short: `design/` is the source of
+truth, behavioral claims need evidence from a live salt-api, and bug fixes come
+with a regression test.
+
+## License
+
+Dual-licensed, at your option, under either of:
+
+- Apache License, Version 2.0 ([`LICENSE-APACHE`](LICENSE-APACHE) or
+  <http://www.apache.org/licenses/LICENSE-2.0>)
+- MIT license ([`LICENSE-MIT`](LICENSE-MIT) or
+  <http://opensource.org/licenses/MIT>)
+
+`SPDX-License-Identifier: MIT OR Apache-2.0`
+
+Unless you explicitly state otherwise, any contribution intentionally submitted
+for inclusion in papurika by you, as defined in the Apache-2.0 license, shall be
+dual licensed as above, without any additional terms or conditions.

@@ -1,0 +1,83 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        # 1.24 is the floor declared in go.mod — test it, don't just claim it.
+        # "stable" catches breakage on current Go.
+        os: [ubuntu-latest]
+        go: ["1.24", "stable"]
+        include:
+          - os: macos-latest
+            go: "stable"
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go }}
+
+      - name: Build
+        run: go build ./...
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test ./...
+
+      # The event stream and the gather loop are concurrent; they get the race
+      # detector, repeated, so a flaky one fails here and not in someone's shell.
+      - name: Test (race)
+        run: go test -race -count=2 ./...
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: gofmt
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then
+            echo "These files need gofmt -w:" >&2
+            echo "$unformatted" >&2
+            exit 1
+          fi
+
+      - name: go mod tidy is clean
+        run: |
+          go mod tidy
+          if ! git diff --exit-code -- go.mod go.sum; then
+            echo "go.mod/go.sum are not tidy — run 'go mod tidy' and commit." >&2
+            exit 1
+          fi
+
+  # Prove the release pipeline builds before a tag depends on it.
+  release-dry-run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          version: "~> v2"
+          args: release --snapshot --clean --skip=publish

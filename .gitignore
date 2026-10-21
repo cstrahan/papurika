@@ -9,5 +9,14 @@ __pycache__/
 # developer-specific, non-tracked storage
 local
 
+# GoReleaser output
+dist/
+
+# locally built binary
+/papurika
+
 !.claude/
 !.claude/**
+
+# machine-local Claude Code settings
+.claude/settings.local.json

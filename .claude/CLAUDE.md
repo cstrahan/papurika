@@ -3,7 +3,7 @@
 **papurika** is a Go client for SaltStack's `salt-api`: an importable **library**
 (`github.com/cstrahan/papurika`) plus a **CLI** (`cmd/papurika`). It's a more
 predictable, async-first replacement for `pepper`. Targets `rest_cherrypy` (what
-prod runs). Go 1.26.
+prod runs). Go 1.24+ (the floor declared in `go.mod`; CI tests 1.24 and stable).
 
 salt-api is full of traps — HTTP 200 for outright failures, wildly different
 response envelopes per client type, "no response" surfacing three different ways,
@@ -58,6 +58,27 @@ Also valuable: `research/pepper_design_analysis.md` (what we're improving on) an
   `--output json|ndjson` on stdout must stay clean and parseable.
 - **cherrypy-first.** Model tornado's shapes cheaply where free; do **not** add
   tornado-only workarounds without an explicit decision.
+
+## Release / distribution
+
+Public repo, dual-licensed **MIT OR Apache-2.0** (`LICENSE-MIT`,
+`LICENSE-APACHE`; `LICENSE` is the pointer + contribution clause). Consumed both
+as a Go library and as a binary.
+
+- **Tagging `v*` cuts a release** via `.github/workflows/release.yml` →
+  GoReleaser (`.goreleaser.yaml`): tarballs for linux/darwin × amd64/arm64, deb +
+  rpm for linux, `checksums.txt`. Dry-run locally with
+  `goreleaser release --snapshot --clean --skip=publish`.
+- **The build stamps** `main.version/commit/date` (see `cmd/papurika/version.go`,
+  `papurika version` / `--version`). Don't rename those vars without updating the
+  ldflags.
+- **`CHANGELOG.md` is curated by hand** (Keep a Changelog). Every behavior change
+  gets an entry under `## [Unreleased]`; it is *not* generated from commits.
+- **Pre-1.0:** the Go API and CLI may break in a 0.x minor — say so in the
+  changelog with a migration note. The `papurika.dev/result/v1` JSON schema and
+  the exit-code policy are the parts meant to stay stable.
+- CI (`.github/workflows/ci.yml`) gates on build/vet/test/`-race`/gofmt/`go mod
+  tidy` cleanliness plus a GoReleaser snapshot.
 
 ## Policies to uphold
 

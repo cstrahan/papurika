@@ -2,7 +2,8 @@
 
 **papurika** is a Go client for SaltStack's salt-api: an importable **library**
 plus a **CLI** (`papurika`), built to replace `pepper`. This is the design that
-settles shape and behavior before implementation. No Go exists yet.
+settles shape and behavior — the source of truth for what papurika is meant to
+do. The implementation exists and is kept in lockstep with these docs.
 
 This is the index. The detail lives in:
 

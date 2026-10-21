@@ -1,0 +1,88 @@
+# GoReleaser configuration. Docs: https://goreleaser.com
+# Local dry run:  goreleaser release --snapshot --clean
+version: 2
+
+project_name: papurika
+
+builds:
+  - id: papurika
+    main: ./cmd/papurika
+    binary: papurika
+    # Pure-Go static binary (no libc dependency) — runs on any Linux, including
+    # the minimal images people keep on bastions/salt masters.
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X main.version={{ .Version }}
+      - -X main.commit={{ .FullCommit }}
+      - -X main.date={{ .CommitDate }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - id: papurika
+    formats: [tar.gz]
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+    files:
+      - README.md
+      - CHANGELOG.md
+      - LICENSE
+      - LICENSE-MIT
+      - LICENSE-APACHE
+
+nfpms:
+  - id: packages
+    package_name: papurika
+    formats:
+      - deb
+      - rpm
+    maintainer: Charles Strahan <charles@cstrahan.com>
+    description: |-
+      Async-first command-line client for SaltStack's salt-api.
+      A more predictable replacement for pepper.
+    homepage: https://github.com/cstrahan/papurika
+    license: MIT OR Apache-2.0
+    bindir: /usr/bin
+    file_name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+    contents:
+      - src: LICENSE
+        dst: /usr/share/doc/papurika/LICENSE
+      - src: LICENSE-MIT
+        dst: /usr/share/doc/papurika/LICENSE-MIT
+      - src: LICENSE-APACHE
+        dst: /usr/share/doc/papurika/LICENSE-APACHE
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  # The curated history lives in CHANGELOG.md; this is the per-release
+  # commit list GitHub renders on the Release page.
+  use: github
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "^research"
+
+release:
+  github:
+    owner: cstrahan
+    name: papurika
+  # 0.x: the API and CLI are still moving. Say so on every release page.
+  footer: |
+    ---
+    papurika is pre-1.0 — the Go API and CLI surface may change between
+    minor versions. See CHANGELOG.md for what moved.
