@@ -24,6 +24,22 @@ Add entries here as you go, under these headings (drop the ones you don't use):
 ### Security    — vulnerability fixes
 -->
 
+### Added
+
+- **`state` package** — a typed decoder for `state.apply` / highstate returns:
+  `state.ParseMinion(m)` (or `state.Parse(v)`) yields per-state entries in salt's
+  execution order, each classified as clean / changed / failed / skipped /
+  would-change. A run that never started is reported as a typed
+  `*state.ConflictError` (another state run holds the minion's lock, with its
+  jid) or `*state.CompileError` — never as an empty result, which is what makes
+  a refused run look like a successful one. `Result.OK()` prefers the minion's
+  retcode, salt's own verdict, over re-deriving one by scanning sub-states.
+
+### Changed
+
+- The CLI's highstate renderer now consumes the public `state` package instead of
+  keeping a private copy of the model. Rendering is unchanged.
+
 ## [0.1.0] - 2026-10-21
 
 First public release. Pre-1.0: expect breaking changes while the design settles.

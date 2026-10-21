@@ -26,6 +26,7 @@ github.com/cstrahan/papurika
 ├── envelope.go      (unexported) per-client-type wire decoders -> unified model
 ├── transport.go     (unexported) pooled *http.Client, retry, classify, re-auth
 ├── config/          PUBLIC  Config, Profile, Load, Resolve, SecretSource
+├── state/           PUBLIC  typed decoder for state.apply returns (§B.1)
 └── internal/
     ├── sse/         shared /events stream (fan-out, reconnect)  (async.md)
     └── tokencache/  0600 file store keyed by endpoint
@@ -33,7 +34,14 @@ github.com/cstrahan/papurika
 
 **Public** is the third-party import contract — keep it small and stable: the
 `Client`, the `Result` model, the error taxonomy, the `Command`/`JobSpec` builders,
-and `config`.
+`config`, and `state`.
+
+`state` is a **separate package, and the dependency is one-way** (`state` imports
+`papurika`, never the reverse). That keeps the root import contract small and
+avoids a cycle, at the cost of there being no `RawValue.AsStates()` convenience
+method — decoding is always the explicit `state.ParseMinion(m)`. That is the
+intended ergonomics: most jobs are not state runs, and a highstate model on the
+core `Result` would tax every caller for a shape only some of them ever see.
 
 > **Implementation note — envelope/transport live in the root package, not
 > `internal/`.** An earlier draft put the wire decoders and the HTTP transport in
@@ -241,6 +249,44 @@ non-wheel command; wheel is already wrapped). It gives a uniform per-minion
 
 The three ways "no response" surfaces (sync string / async omission / missing `ret`
 event) all fold into `StatusNoResponse` — callers never pattern-match English.
+
+### B.1 State returns (`state/`)
+
+A `state.apply` return is the one minion value the core model deliberately does
+**not** fold in: it is a map of per-state results whose `changes` payload has no
+common schema (it differs per state module *and* per test-vs-real run — see
+`state-apply-shapes.md`). Putting that on `MinionResult` would tax every caller
+for a shape only some of them ever see. So `MinionResult.Value` keeps the raw
+bytes and package `state` decodes them on request:
+
+```go
+sr, err := state.ParseMinion(m)      // or state.Parse(m.Value) without a retcode
+```
+
+This is still **normalization in the library, not the formatter** — the rule the
+CLI's renderer previously broke by keeping this model unexported in
+`cmd/papurika/output.go`. The renderer now consumes `state` like any other
+caller.
+
+What it folds:
+
+| Observed wire shape | Decoded as |
+|---|---|
+| map of `<module>_|-<id>_|-<name>_|-<fun>` → entry | `Result.Entries`, sorted by `__run_num__` (salt's execution order) |
+| `result: true` / `false` / `null` | `Changed`/`Clean` · `Failed` · `WouldChange` — three outcomes, not a bool |
+| `result:false` + `__state_ran__:false` | `Skipped` (a failed requisite, *not* a failed state) |
+| **list** of strings + `"is running as PID … with jid <jid>"` | `*ConflictError{JID}` |
+| **list** of strings otherwise (render error, missing SLS) | `*CompileError{Messages}` |
+
+The list form is the trap: a run that was refused or never compiled returns a
+JSON array, not a map. Decoding it into an empty map — which is what a naive
+`map[string]entry` unmarshal does — turns a refused run into a clean one. It is
+reported as a typed error, never an empty `Result`.
+
+`Result.OK()` prefers the minion's **retcode** (`0` = all ok, `2` = ran with
+failures; `1` = never ran, which surfaces as one of the errors above). That is
+salt's own verdict and is cheaper and more trustworthy than re-deriving one by
+scanning sub-states.
 
 ---
 

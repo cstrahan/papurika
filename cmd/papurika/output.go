@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	"github.com/cstrahan/papurika"
+	"github.com/cstrahan/papurika/state"
 	sigsyaml "sigs.k8s.io/yaml"
 )
 
@@ -480,85 +481,21 @@ func writeBlock(w io.Writer, s, indent string) {
 	}
 }
 
-// stateEntry is one state's result inside a highstate return (see
-// research/salt-test-cherrypy/state-apply-shapes.md for the wire shapes).
-type stateEntry struct {
-	Name     string         `json:"name"`
-	Result   *bool          `json:"result"` // true=ok, false=fail, null=test/would-change
-	Comment  string         `json:"comment"`
-	Changes  map[string]any `json:"changes"`
-	Duration float64        `json:"duration"` // ms
-	RunNum   int            `json:"__run_num__"`
-	ID       string         `json:"__id__"`
-	StateRan *bool          `json:"__state_ran__"` // present & false only when skipped
-}
-
-// stateCat classifies a per-state outcome for glyph/color/count purposes.
-type stateCat int
-
-const (
-	catClean   stateCat = iota // result true, no changes
-	catChanged                 // result true, with changes
-	catFailed                  // result false, ran
-	catSkipped                 // result false, __state_ran__ false (requisite)
-	catWould                   // result null (test would-change)
-)
-
-func classify(e stateEntry) stateCat {
-	switch {
-	case e.Result == nil:
-		return catWould
-	case !*e.Result:
-		if e.StateRan != nil && !*e.StateRan {
-			return catSkipped
-		}
-		return catFailed
-	default:
-		if len(e.Changes) > 0 {
-			return catChanged
-		}
-		return catClean
-	}
-}
-
-func anyHighstate(minions map[string]papurika.MinionResult) bool {
-	for _, m := range minions {
-		if m.Status == papurika.StatusResponded && looksHighstate(m.Value) {
-			return true
-		}
-	}
-	return false
-}
-
-func looksHighstate(v papurika.RawValue) bool {
-	var m map[string]json.RawMessage
-	if json.Unmarshal(v.Raw(), &m) != nil || len(m) == 0 {
-		return false
-	}
-	for _, e := range m {
-		var probe struct {
-			RunNum *int `json:"__run_num__"`
-		}
-		if json.Unmarshal(e, &probe) == nil && probe.RunNum != nil {
-			return true
-		}
-	}
-	return false
-}
-
 // useHighstate reports whether a command's per-minion results should render with
-// the highstate renderer: any minion looks like a highstate dict, or it's a
-// state.* function and some minion value is a list (the compile-error / conflict
-// shape — which no longer looks like a dict, so we key off the function too).
+// the highstate renderer: any minion value looks like a state return (a states
+// map or the compile-error/conflict list), or the function itself is state.*.
 func useHighstate(c papurika.CommandResult) bool {
-	if anyHighstate(c.Minions) {
-		return true
-	}
-	if strings.HasPrefix(c.Fun, "state.") {
-		for _, m := range c.Minions {
-			if m.Status == papurika.StatusResponded && isJSONArray(m.Value.Raw()) {
-				return true
-			}
+	for _, m := range c.Minions {
+		if m.Status != papurika.StatusResponded {
+			continue
+		}
+		if state.Looks(m.Value) {
+			return true
+		}
+		// A state.* job whose value is a list is the didn't-run shape; key off
+		// the function too, since that list carries no state-ish marker.
+		if strings.HasPrefix(c.Fun, "state.") && isJSONArray(m.Value.Raw()) {
+			return true
 		}
 	}
 	return false
@@ -578,57 +515,52 @@ func renderStateMinions(w io.Writer, c papurika.CommandResult, opts renderOpts, 
 			rc = *m.Retcode
 		}
 
-		// Compile error / concurrency conflict: the minion value is a list of
-		// error strings, not a states dict.
-		if isJSONArray(m.Value.Raw()) {
-			var errs []string
-			_ = m.Value.Decode(&errs)
-			fmt.Fprintf(w, "  %s %s   retcode %d\n", g.red("●"), id, rc)
-			renderCompileError(w, errs, g)
-			compileErr++
+		sr, err := state.ParseMinion(m)
+		if err != nil {
+			// The run never started. A conflict is actionable (the competing run
+			// has a jid); a compile failure is not.
+			var conflict *state.ConflictError
+			var compile *state.CompileError
+			switch {
+			case errors.As(err, &conflict):
+				fmt.Fprintf(w, "  %s %s   retcode %d\n", g.red("●"), id, rc)
+				renderConflict(w, conflict, g)
+				compileErr++
+			case errors.As(err, &compile):
+				fmt.Fprintf(w, "  %s %s   retcode %d\n", g.red("●"), id, rc)
+				renderCompileError(w, compile.Messages, g)
+				compileErr++
+			default:
+				fmt.Fprintf(w, "  %s %s   retcode %d\n", g.dim("●"), id, rc)
+				fmt.Fprintf(w, "    %s\n", g.dim("(unparseable state return)"))
+			}
 			continue
 		}
-
-		var states map[string]stateEntry
-		if m.Value.Decode(&states) != nil {
-			fmt.Fprintf(w, "  %s %s   retcode %d\n", g.dim("●"), id, rc)
-			fmt.Fprintf(w, "    %s\n", g.dim("(unparseable state return)"))
-			continue
-		}
-
-		type row struct {
-			tag string
-			e   stateEntry
-		}
-		rows := make([]row, 0, len(states))
-		for tag, e := range states {
-			rows = append(rows, row{tag, e})
-		}
-		sort.Slice(rows, func(i, j int) bool { return rows[i].e.RunNum < rows[j].e.RunNum })
+		rows := sr.Entries // already in salt's execution order
 
 		// Pre-pass: per-minion counts + worst category (for the header color).
 		var nOK, nChanged, nFailed, nSkipped, nWould int
-		worst := catClean
-		for _, r := range rows {
-			switch classify(r.e) {
-			case catClean:
+		worst := state.Clean
+		for _, e := range rows {
+			switch e.Outcome() {
+			case state.Clean:
 				nOK++
-			case catChanged:
+			case state.Changed:
 				nOK++
 				nChanged++
-				if worst == catClean {
-					worst = catChanged
+				if worst == state.Clean {
+					worst = state.Changed
 				}
-			case catFailed:
+			case state.Failed:
 				nFailed++
-				worst = catFailed
-			case catSkipped:
+				worst = state.Failed
+			case state.Skipped:
 				nSkipped++
-				worst = catFailed // a skip implies an upstream failure
-			case catWould:
+				worst = state.Failed // a skip implies an upstream failure
+			case state.WouldChange:
 				nWould++
-				if worst == catClean {
-					worst = catChanged
+				if worst == state.Clean {
+					worst = state.Changed
 				}
 			}
 		}
@@ -641,9 +573,9 @@ func renderStateMinions(w io.Writer, c papurika.CommandResult, opts renderOpts, 
 
 		hdr := g.green("●")
 		switch worst {
-		case catChanged:
+		case state.Changed:
 			hdr = g.cyan("●")
-		case catFailed:
+		case state.Failed:
 			hdr = g.red("●")
 		}
 
@@ -655,46 +587,46 @@ func renderStateMinions(w io.Writer, c papurika.CommandResult, opts renderOpts, 
 		}
 		fmt.Fprintf(w, "  %s %s   retcode %d\n", hdr, id, rc)
 
-		for _, r := range rows {
-			cat := classify(r.e)
-			if opts.changesOnly && cat == catClean {
+		for _, e := range rows {
+			cat := e.Outcome()
+			if opts.changesOnly && cat == state.Clean {
 				continue
 			}
-			mod, sid, name, fun := parseTag(r.tag, r.e)
+			sid, name := e.StateID(), e.TargetName()
 			var glyph string
 			switch cat {
-			case catClean:
+			case state.Clean:
 				glyph = g.green("✓")
-			case catChanged:
+			case state.Changed:
 				glyph = g.cyan("✓")
-			case catFailed:
+			case state.Failed:
 				glyph = g.red("✗")
-			case catSkipped:
+			case state.Skipped:
 				glyph = g.dim("⊘")
-			case catWould:
+			case state.WouldChange:
 				glyph = g.yellow("~")
 			}
 			line := fmt.Sprintf("    %s %s", glyph, sid)
 			switch cat {
-			case catClean, catChanged:
-				sec := g.dim(mod + "." + fun)
+			case state.Clean, state.Changed:
+				sec := g.dim(e.Module() + "." + e.Function())
 				if name != "" && name != sid {
 					sec += "  " + g.dim(name)
 				}
 				line += "   " + sec
-			case catSkipped:
-				line += "   " + g.dim(skippedText(r.e.Comment))
+			case state.Skipped:
+				line += "   " + g.dim(skippedText(e.Comment))
 			default: // failed / would-change: the comment is the reason
-				if r.e.Comment != "" {
-					line += "   " + firstLine(r.e.Comment)
+				if e.Comment != "" {
+					line += "   " + firstLine(e.Comment)
 				}
 			}
-			if r.e.Duration > 0 && (r.e.Duration >= 100 || opts.verbose) {
-				line += "   " + g.dim(fmt.Sprintf("[%.0fms]", r.e.Duration))
+			if e.Duration > 0 && (e.Duration >= 100 || opts.verbose) {
+				line += "   " + g.dim(fmt.Sprintf("[%.0fms]", e.Duration))
 			}
 			fmt.Fprintln(w, line)
-			if cat == catChanged || cat == catFailed || cat == catWould {
-				renderChanges(w, r.e.Changes, "        ", g)
+			if cat == state.Changed || cat == state.Failed || cat == state.WouldChange {
+				renderChanges(w, e.Changes, "        ", g)
 			}
 		}
 	}
@@ -727,16 +659,20 @@ func renderStateMinions(w io.Writer, c papurika.CommandResult, opts renderOpts, 
 	fmt.Fprintf(w, "%s\n\n", strings.Join(parts, " · "))
 }
 
-// renderCompileError renders a list-valued (didn't-compile) minion return. The
-// concurrency-conflict variant gets a friendlier, actionable line + jid.
-func renderCompileError(w io.Writer, errs []string, g glyphs) {
-	for _, e := range errs {
-		if jid, ok := conflictJID(e); ok {
-			fmt.Fprintf(w, "    %s a state run is already in progress (jid %s)\n", g.red("✗"), jid)
-			fmt.Fprintf(w, "        %s\n", g.dim("run `papurika watch "+jid+"` to follow it"))
-			return
-		}
+// renderConflict renders a run refused because one is already in progress. The
+// competing run has a jid, so the work is followable — say so.
+func renderConflict(w io.Writer, e *state.ConflictError, g glyphs) {
+	if e.JID == "" {
+		fmt.Fprintf(w, "    %s %s\n", g.red("✗"), e.Error())
+		return
 	}
+	fmt.Fprintf(w, "    %s a state run is already in progress (jid %s)\n", g.red("✗"), e.JID)
+	fmt.Fprintf(w, "        %s\n", g.dim("run `papurika watch "+e.JID+"` to follow it"))
+}
+
+// renderCompileError renders a run that never started because the SLS could not
+// be rendered or resolved.
+func renderCompileError(w io.Writer, errs []string, g glyphs) {
 	fmt.Fprintf(w, "    %s %s\n", g.red("✗"), "did not compile")
 	for _, e := range errs {
 		for _, line := range strings.Split(strings.TrimRight(e, "\n"), "\n") {
@@ -901,22 +837,6 @@ func renderCmdChanges(w io.Writer, changes map[string]any, indent string, g glyp
 	}
 }
 
-// parseTag splits a salt state tag "<module>_|-<id>_|-<name>_|-<func>", preferring
-// the explicit __id__/name fields when present.
-func parseTag(tag string, e stateEntry) (mod, id, name, fun string) {
-	comps := strings.SplitN(tag, "_|-", 4)
-	if len(comps) == 4 {
-		mod, id, name, fun = comps[0], comps[1], comps[2], comps[3]
-	}
-	if e.ID != "" {
-		id = e.ID
-	}
-	if e.Name != "" {
-		name = e.Name
-	}
-	return mod, id, name, fun
-}
-
 func skippedText(comment string) string {
 	c := firstLine(comment)
 	const p = "One or more requisite failed:"
@@ -924,21 +844,6 @@ func skippedText(comment string) string {
 		return "requisite failed:" + strings.TrimPrefix(c, p)
 	}
 	return c
-}
-
-// conflictJID extracts the jid from salt's "is running as PID … with jid <jid>"
-// concurrency-conflict message.
-func conflictJID(s string) (string, bool) {
-	const marker = "with jid "
-	i := strings.Index(s, marker)
-	if i < 0 || !strings.Contains(s, "is running as PID") {
-		return "", false
-	}
-	rest := strings.TrimSpace(s[i+len(marker):])
-	if j := strings.IndexAny(rest, " \n\t\""); j >= 0 {
-		rest = rest[:j]
-	}
-	return rest, rest != ""
 }
 
 func oldNew(v any) string {

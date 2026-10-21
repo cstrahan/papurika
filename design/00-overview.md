@@ -80,13 +80,14 @@ These are stated **once here** and referenced elsewhere — not re-litigated per
 │   · envelope.go   wire-shape decoders → unified model (unexported)
 │   · transport.go  pooled *http.Client, retry, re-auth, classify (unexported)
 │ config        (PUBLIC: TOML, profiles, XDG, SecretSource)      │
+│ state         (PUBLIC: typed decoder for state.apply returns)  │
 ├─────────────────────────────────────────────────────────────┤
 │ internal/sse         shared /events stream (fan-out, reconnect)│
 │ internal/tokencache  0600 file store keyed by endpoint         │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-The **public** surface (`papurika`, `config`) is small and stable — that's the
+The **public** surface (`papurika`, `config`, `state`) is small and stable — that's the
 third-party import contract. The wire decoders and HTTP transport are **unexported
 code in the root package** (not `internal/`) because they produce the public
 `Result`/error types — a separate package would create an import cycle; lowercase
