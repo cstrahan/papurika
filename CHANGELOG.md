@@ -34,11 +34,12 @@ Add entries here as you go, under these headings (drop the ones you don't use):
   heuristic: the master writes the job-cache entry strictly before publishing to
   minions, so `ErrJobNotFound` *proves* nothing executed — such a job is re-sent
   even when it is wildly non-idempotent.
-- **`Command.Idempotent` / `JobSpec.Idempotent`** — declares that repeating the
-  command is harmless. Consulted **only** where reconciliation cannot help: a
-  client type that takes no jid (`runner`, `wheel`), or a master too unreachable
-  to ask. The zero value is the careful one: if papurika cannot tell whether a
-  command ran, it does not run it again, and the error carries the jid.
+- **`Command.ResendOnUnknown` / `JobSpec.ResendOnUnknown`** — allows papurika to
+  send a command again when it cannot determine whether the first attempt
+  executed. Consulted **only** where reconciliation cannot answer: a client type
+  that carries no jid (`runner`, `wheel`), or a master too unreachable to ask.
+  The zero value is the careful one: if papurika cannot tell whether a command
+  ran, it does not run it again, and the error carries the jid.
 - **`Command.JID`** — submit under a jid you choose. The async engine sets this
   itself; set it by hand only when tracking jids yourself. Validated against
   salt's shape (20 digits, optional `_suffix`) before sending, because nothing
@@ -72,6 +73,14 @@ default. **Two behavior changes to check before upgrading** — see *Changed*.
   `ErrMalformed` naming the missing field and never reaches the wire.
 
 ### Changed
+
+- **`WithRetryNonIdempotent()` is renamed `WithResendOnUnknown()`** (breaking).
+  Its meaning narrowed when reconciliation landed: it no longer governs
+  "ambiguous failures" broadly — most of those now get a definite answer from
+  the job cache — but specifically the residue where no answer is available.
+  The old name also read as a licence to retry anything, which it never was.
+
+  *Migration:* rename the call. Behavior is otherwise unchanged.
 
 - **Command POSTs are now retried on failures that prove salt never acted on
   them** — connection-establishment errors (DNS, `ECONNREFUSED`, host/net

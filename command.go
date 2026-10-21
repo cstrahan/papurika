@@ -72,20 +72,22 @@ type Command struct {
 	// but only best-effort — that queue is in-memory and capped.)
 	JID string
 
-	// Idempotent declares that running this command more than once is
-	// harmless, which lets papurika re-send it when it cannot prove whether the
-	// first attempt executed.
+	// ResendOnUnknown allows papurika to send this command again when it cannot
+	// determine whether the first attempt executed. Set it only for work that
+	// is harmless to run twice.
 	//
-	// It is NOT needed for the common case. On an ambiguous failure the async
-	// engine reconciles against /jobs/<jid> first, and a job it can prove never
-	// ran is re-sent regardless of this field — proving it didn't run is
-	// stronger evidence than any declaration. This field only governs what
-	// happens when reconciliation itself is impossible or inconclusive: a
-	// client type that takes no jid, or a master too unreachable to ask.
+	// Note the narrow scope — "unknown", not "failed". Most ambiguous submits
+	// never reach this question: the async engine reconciles against
+	// /jobs/<jid> and gets a definite answer, adopting a job that did land and
+	// re-sending one that provably did not. A job proven never to have run is
+	// re-sent whatever this field says, because that is not a repeat. This
+	// field decides only the residue where no answer is available: a client
+	// type that carries no jid (runner, wheel), or a master too unreachable to
+	// ask.
 	//
-	// Default (false) is therefore the careful one: if papurika cannot tell
-	// whether your command ran, it will not run it again.
-	Idempotent bool
+	// Default (false) is the careful one: if papurika cannot tell whether your
+	// command ran, it will not run it again, and the error names the jid.
+	ResendOnUnknown bool
 
 	// Extra is merged verbatim into the lowstate dict (escape hatch for fields
 	// we don't model). It does not override the structured fields above.
@@ -232,10 +234,10 @@ type JobSpec struct {
 	Kwarg   map[string]any
 	Batch   string
 
-	// Idempotent declares that running this job more than once is harmless.
-	// See Command.Idempotent — in short, it is only consulted when papurika
-	// cannot determine whether a lost submit actually reached the minions.
-	Idempotent bool
+	// ResendOnUnknown allows papurika to send this job again when it cannot
+	// determine whether a lost submit reached the minions. See
+	// Command.ResendOnUnknown.
+	ResendOnUnknown bool
 }
 
 // command converts the spec to a Command of the given client type.
@@ -249,6 +251,6 @@ func (s JobSpec) command(client ClientType) Command {
 		Kwarg:   s.Kwarg,
 		Batch:   s.Batch,
 
-		Idempotent: s.Idempotent,
+		ResendOnUnknown: s.ResendOnUnknown,
 	}
 }

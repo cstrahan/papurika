@@ -31,9 +31,9 @@ type Client struct {
 	retry  RetryPolicy
 	log    *slog.Logger
 
-	// retryNonIdempotent lets command POSTs be re-sent on any transient
-	// failure, not only on ones that prove the request never executed.
-	retryNonIdempotent bool
+	// resendOnUnknown lets command POSTs be re-sent on any transient failure,
+	// not only on ones that prove the request never executed.
+	resendOnUnknown bool
 
 	mu       sync.Mutex // guards token + single-flight login
 	token    string
@@ -52,7 +52,7 @@ type options struct {
 	retry      RetryPolicy
 	logger     *slog.Logger
 
-	retryNonIdempotent bool
+	resendOnUnknown bool
 }
 
 // Option configures a Client.
@@ -67,22 +67,19 @@ func WithTokenCache(s tokencache.Store) Option { return func(o *options) { o.sto
 func WithRetryPolicy(p RetryPolicy) Option     { return func(o *options) { o.retry = p } }
 func WithLogger(l *slog.Logger) Option         { return func(o *options) { o.logger = l } }
 
-// WithRetryNonIdempotent allows command POSTs to be re-sent on any transient
-// failure, not only on failures that prove the request never executed.
+// WithResendOnUnknown is Command.ResendOnUnknown applied to every command this
+// Client sends: when papurika cannot determine whether a command executed, it
+// may send it again.
 //
-// Use it only for a Client whose commands are all safe to run more than once —
-// read-only probes, or idempotent state applies. It is NOT safe in general:
-// salt has no idempotency key, so when a submit fails ambiguously (a 500, a 502
-// or 504 from a proxy, a read timeout) the master may already be running the
-// job. Re-sending then starts a *second* execution under a second jid, and the
-// first jid is never reported to anyone.
+// Use it only for a Client whose commands are all harmless to run twice —
+// read-only probes, or state applies you trust to be idempotent. It is not safe
+// in general: salt has no idempotency key, so where no answer is available the
+// master may already be running the job, and re-sending starts a second
+// execution.
 //
-// This is a Client-level setting rather than a per-call one on purpose: "is
-// every command I send through here safe to repeat" is a property of how the
-// Client is used. For a mix — idempotent state applies alongside a one-shot
-// reboot — use two Clients, so which one is in hand says which guarantee
-// applies.
-func WithRetryNonIdempotent() Option { return func(o *options) { o.retryNonIdempotent = true } }
+// Prefer the per-command field when the Client carries a mix of work: it puts
+// the claim next to the command it is a claim about.
+func WithResendOnUnknown() Option { return func(o *options) { o.resendOnUnknown = true } }
 
 // WithCredentials sets the username and secret source used at login.
 func WithCredentials(user string, secret config.SecretSource) Option {
@@ -127,7 +124,7 @@ func New(masterURL string, opts ...Option) (*Client, error) {
 		retry:  o.retry,
 		log:    logger,
 
-		retryNonIdempotent: o.retryNonIdempotent,
+		resendOnUnknown: o.resendOnUnknown,
 	}, nil
 }
 
@@ -294,17 +291,17 @@ func (c *Client) ExecStateless(ctx context.Context, cmds ...Command) (*Result, e
 // commandRetryClass is how a POST carrying cmds may be re-sent. By default only
 // failures that prove the request never reached salt (see retryClass). It widens
 // to any transient failure when the caller has declared the work safe to repeat
-// — either fleet-wide via WithRetryNonIdempotent or per-command via
-// Command.Idempotent.
+// when the outcome is unknown — fleet-wide via WithResendOnUnknown, or
+// per-command via Command.ResendOnUnknown.
 //
 // A multi-command POST is one indivisible request, so it is only repeatable when
 // EVERY command in it is.
 func (c *Client) commandRetryClass(cmds []Command) retryClass {
-	if c.retryNonIdempotent {
+	if c.resendOnUnknown {
 		return retryTransient
 	}
 	for _, cmd := range cmds {
-		if !cmd.Idempotent {
+		if !cmd.ResendOnUnknown {
 			return retryUnexecutedOnly
 		}
 	}

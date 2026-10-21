@@ -196,7 +196,7 @@ func (c *Client) sendJob(ctx context.Context, spec JobSpec, cmd Command) (Job, e
 //   - found      => the job exists and may be running right now. Adopt it and
 //     gather; never re-send, or we double-execute.
 //   - can't tell => the master is unreachable enough that we cannot ask. Only
-//     here does Command.Idempotent get a say.
+//     here does Command.ResendOnUnknown get a say.
 //
 // The failure that is NOT ambiguous — one that proves the request never left —
 // was already retried by the transport, so anything arriving here is either
@@ -225,13 +225,13 @@ func (c *Client) reconcileSubmit(ctx context.Context, spec JobSpec, cmd Command,
 	default:
 		// We could not ask. Without evidence, only an explicit declaration that
 		// repeating is harmless justifies sending again.
-		if !cmd.Idempotent && !c.retryNonIdempotent {
+		if !cmd.ResendOnUnknown && !c.resendOnUnknown {
 			c.log.Warn("cannot determine whether the job was submitted; not re-sending",
 				"jid", cmd.JID, "reconcile_err", err)
 			return Job{}, fmt.Errorf("%w (jid %s may or may not be running; check `papurika job %s`)",
 				subErr, cmd.JID, cmd.JID)
 		}
-		c.log.Warn("cannot reconcile, but the command is declared idempotent; re-sending",
+		c.log.Warn("cannot reconcile, but the caller allows re-sending on an unknown outcome; re-sending",
 			"jid", cmd.JID, "reconcile_err", err)
 		return c.sendJob(ctx, spec, cmd)
 	}

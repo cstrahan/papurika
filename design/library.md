@@ -441,8 +441,8 @@ watching.
   guessing, and a job proven never to have run is re-sent even if it is wildly
   non-idempotent. See [async.md](async.md) §C.1–C.2. That covers the common
   case without any opt-in.
-- Declare a command safe to repeat with **`Command.Idempotent`** /
-  **`JobSpec.Idempotent`**, or fleet-wide with **`WithRetryNonIdempotent()`**.
+- Declare a command safe to re-send with **`Command.ResendOnUnknown`** /
+  **`JobSpec.ResendOnUnknown`**, or fleet-wide with **`WithResendOnUnknown()`**.
   This is consulted **only** where reconciliation can't help: a client type that
   takes no jid (`runner`, `wheel`), or a master too unreachable to ask. The
   zero value is the careful one — if papurika cannot tell whether a command ran,
@@ -587,7 +587,7 @@ before its nominal expiry.
    an opt-in Keychain-backed `Store` on macOS? (The `Store` interface already allows it.)
 2. **Retry of `test.ping`-class reads** — should we ship a small allowlist of known
    side-effect-free functions that are retried even over `POST /`, or leave that
-   entirely to `WithRetryNonIdempotent`? *(Partly settled: `WithRetryNonIdempotent`
+   entirely to `WithResendOnUnknown`? *(Partly settled: `WithResendOnUnknown`
    is implemented, and the provably-unexecuted failures are now retried for every
    command POST without any opt-in. An allowlist is still open — and is less
    pressing now that the common transient cases are covered by default.)*

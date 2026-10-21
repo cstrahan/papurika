@@ -100,12 +100,12 @@ func TestCommandPostRetriedOn429(t *testing.T) {
 
 // Opting in says "every command through this Client is safe to repeat", which
 // widens retry to the ambiguous failures too.
-func TestWithRetryNonIdempotentRetriesAmbiguousFailures(t *testing.T) {
+func TestWithResendOnUnknownRetriesAmbiguousFailures(t *testing.T) {
 	var posts atomic.Int32
 	srv := statusServer(t, &posts, http.StatusServiceUnavailable, "busy")
 	defer srv.Close()
 
-	_, err := fastRetry(t, srv, WithRetryNonIdempotent()).Exec(context.Background(), Local("*", "test.ping"))
+	_, err := fastRetry(t, srv, WithResendOnUnknown()).Exec(context.Background(), Local("*", "test.ping"))
 	if err == nil {
 		t.Fatal("Exec succeeded, want an error")
 	}

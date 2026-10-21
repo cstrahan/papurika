@@ -176,11 +176,11 @@ func TestReconcileUnknownDoesNotResendByDefault(t *testing.T) {
 }
 
 // ...unless the caller declared the command safe to repeat.
-func TestReconcileUnknownResendsWhenDeclaredIdempotent(t *testing.T) {
+func TestReconcileUnknownResendsWhenCallerAllowsIt(t *testing.T) {
 	rs := &reconcileServer{failFirst: 1, jobStatus: 500, jobBody: "master is down"}
 	c := reconcileClient(t, rs.start(t))
 
-	_, err := c.Submit(context.Background(), JobSpec{Target: "*", Fun: "test.ping", Idempotent: true})
+	_, err := c.Submit(context.Background(), JobSpec{Target: "*", Fun: "test.ping", ResendOnUnknown: true})
 	if err != nil {
 		t.Fatalf("Submit: %v", err)
 	}
@@ -192,7 +192,7 @@ func TestReconcileUnknownResendsWhenDeclaredIdempotent(t *testing.T) {
 // The fleet-wide option is equivalent to marking every command idempotent.
 func TestReconcileUnknownResendsWithClientOption(t *testing.T) {
 	rs := &reconcileServer{failFirst: 1, jobStatus: 500, jobBody: "master is down"}
-	c := reconcileClient(t, rs.start(t), WithRetryNonIdempotent())
+	c := reconcileClient(t, rs.start(t), WithResendOnUnknown())
 
 	if _, err := c.Submit(context.Background(), JobSpec{Target: "*", Fun: "test.ping"}); err != nil {
 		t.Fatalf("Submit: %v", err)

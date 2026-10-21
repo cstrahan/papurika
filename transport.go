@@ -95,7 +95,7 @@ const (
 	retryUnexecutedOnly retryClass = iota
 	// retryTransient re-sends on any transient failure. For requests that are
 	// idempotent by construction (GETs, /login) or that the caller has declared
-	// safe to repeat (WithRetryNonIdempotent).
+	// safe to repeat (WithResendOnUnknown).
 	retryTransient
 )
 

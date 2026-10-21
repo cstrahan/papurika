@@ -213,13 +213,17 @@ so the inference runs in the direction we need:
 
 Two consequences worth stating plainly:
 
-- A job proven not to have run is re-sent **regardless of `Idempotent`**.
-  Proving it didn't run is stronger evidence than any declaration, so even
-  `system.reboot` is safe to re-send there.
-- `Command.Idempotent` / `JobSpec.Idempotent` governs **only the third row** —
-  the case where the master is too unreachable to ask. Default (false) is the
-  careful one: if papurika cannot tell whether your command ran, it will not run
-  it again, and the error names the jid so you can look yourself.
+- A job proven not to have run is re-sent **regardless of `ResendOnUnknown`** —
+  that outcome is not "unknown", so the field does not apply. Proving it didn't
+  run is stronger evidence than any declaration, so even `system.reboot` is safe
+  to re-send there.
+- `Command.ResendOnUnknown` / `JobSpec.ResendOnUnknown` governs **only the
+  third row** — the case where the master is too unreachable to ask. The name is
+  scoped on purpose: the field decides what happens when the outcome is
+  *unknown*, so the re-send in row one is visibly not something it overrides.
+  Default (false) is the careful one: if papurika cannot tell whether your
+  command ran, it will not run it again, and the error names the jid so you can
+  look yourself.
 
 Failures that are *terminal* rather than ambiguous — authz, authn, malformed,
 ctx cancellation — skip reconciliation entirely: salt understood the request and
