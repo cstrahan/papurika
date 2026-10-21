@@ -39,7 +39,9 @@ func newRootCmd() *cobra.Command {
 		Short:         "A salt-api client (a better pepper)",
 		SilenceUsage:  true,
 		SilenceErrors: true,
+		Version:       versionString(),
 	}
+	root.SetVersionTemplate("{{.Version}}\n")
 	pf := root.PersistentFlags()
 	pf.StringVarP(&flagConfig, "config", "c", "", "config file (default: $XDG_CONFIG_HOME/papurika/config.toml)")
 	pf.StringVarP(&flagProfile, "profile", "p", "", "config profile to use")
@@ -70,6 +72,7 @@ func newRootCmd() *cobra.Command {
 		newKillCmd(),
 		newEventsCmd(),
 		newKeyCmd(),
+		newVersionCmd(),
 		// low-level (one client = one subcommand)
 		newClientCmd("local <tgt> <fun> [args...]", "client=local (synchronous)", papurika.ClientLocal, false),
 		newClientCmd("local-async <tgt> <fun> [args...]", "client=local_async → jid", papurika.ClientLocalAsync, false),

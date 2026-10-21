@@ -30,6 +30,7 @@ papurika job    <jid>                     # one job's full normalized return (Cl
 papurika kill   <jid>                     # saltutil.kill_job (Client.Kill)
 papurika events [--filter <tag>]          # tail the event bus (Client.Events)
 papurika key    list|accept|reject|delete|finger <match>
+papurika version                         # version, commit and build date (also --version)
 ```
 
 ### Low-level (to-the-metal — one client = one subcommand)
