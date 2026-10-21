@@ -25,7 +25,7 @@ async-first execution engine that never loses a job id.
 amd64/arm64 from the [releases page](https://github.com/cstrahan/papurika/releases):
 
 ```sh
-VERSION=0.1.0
+VERSION=0.2.0
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')
 ARCH=$(uname -m | sed -e 's/x86_64/amd64/' -e 's/aarch64/arm64/')
 
@@ -115,6 +115,18 @@ sub, _ := c.Submit(ctx, papurika.JobSpec{Target: "*", Fun: "state.highstate"})
 c.Watch(ctx, sub.JIDs(), papurika.WatchAllReturned)
 ```
 
+State returns decode through a companion package rather than bloating the core
+model:
+
+```go
+import "github.com/cstrahan/papurika/state"
+
+sr, err := state.ParseMinion(m)      // entries in salt's execution order
+var conflict *state.ConflictError    // another run holds the minion's lock
+if errors.As(err, &conflict) { /* follow conflict.JID instead */ }
+for _, e := range sr.Failed() { /* ... */ }
+```
+
 Everything takes a `context.Context` (the authoritative wall-clock bound). On
 cancellation `Run` returns the **partial** result (with jids and gathered
 returns) alongside `ctx.Err()`. Request-level failures are typed errors
@@ -129,7 +141,7 @@ for v1.
 
 ## Status
 
-**v0.1.0 — pre-1.0.** The design is implemented and verified end-to-end against a
+**v0.2.0 — pre-1.0.** The design is implemented and verified end-to-end against a
 live salt-api (Salt 3008). It is in real use, but it is early: **the Go API and
 the CLI surface may change in any 0.x minor release.** Breaking changes are called
 out in [`CHANGELOG.md`](CHANGELOG.md) with a migration note.

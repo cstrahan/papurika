@@ -6,7 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 **papurika is pre-1.0.** While the major version is `0`, the Go API (packages
-`papurika` and `config`) and the CLI surface may change in any minor release.
+`papurika`, `config` and `state`) and the CLI surface may change in any minor
+release.
 Breaking changes are always called out under **Changed** / **Removed** with a
 migration note. The `papurika.dev/result/v1` JSON output schema is versioned
 separately and is intended to stay stable for scripts.
@@ -23,6 +24,11 @@ Add entries here as you go, under these headings (drop the ones you don't use):
 ### Fixed       — bug fixes
 ### Security    — vulnerability fixes
 -->
+
+## [0.2.0] - 2026-10-21
+
+Adds a typed decoder for state returns and makes command-POST retry safe by
+default. **Two behavior changes to check before upgrading** — see *Changed*.
 
 ### Added
 
@@ -54,8 +60,15 @@ Add entries here as you go, under these headings (drop the ones you don't use):
   salt raises it for `SaltReqTimeoutError` as well as `SaltDaemonNotRunning`, so
   a congested master is indistinguishable from an absent one and the request may
   have been published.
-- A 500 now surfaces as `ErrServerError` rather than `ErrMalformed`, and the CLI
-  exits 69 (unavailable) rather than 65 (data error) for it.
+- **Breaking:** a 500 now surfaces as `ErrServerError` rather than
+  `ErrMalformed`, and the CLI exits 69 (unavailable) rather than 65 (data error)
+  for it.
+
+  *Migration:* code matching `errors.Is(err, papurika.ErrMalformed)` to catch a
+  server failure must add (or switch to) `papurika.ErrServerError`. The two now
+  mean different things — `ErrMalformed` is "your request was wrong", and after
+  this release it is raised client-side, before sending, naming the missing
+  field. Scripts keying off the CLI's exit 65 for a 500 should expect 69.
 - The CLI's highstate renderer now consumes the public `state` package instead of
   keeping a private copy of the model. Rendering is unchanged.
 
@@ -113,5 +126,6 @@ First public release. Pre-1.0: expect breaking changes while the design settles.
   deadline (exit 124). An unanswered probe is no longer taken as evidence that a
   minion is down.
 
-[Unreleased]: https://github.com/cstrahan/papurika/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/cstrahan/papurika/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/cstrahan/papurika/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/cstrahan/papurika/releases/tag/v0.1.0
