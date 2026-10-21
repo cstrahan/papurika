@@ -294,3 +294,48 @@ func TestWatchReturnsImmediatelyIfDone(t *testing.T) {
 		t.Errorf("watch result = %+v, want 2 responders", out[jid])
 	}
 }
+
+// A deadline that expires *during* the saltutil.find_job liveness probe must be
+// reported as a deadline (exit 124), not quietly downgraded to "these minions
+// didn't respond". A probe we never got an answer to is not evidence of death.
+func TestRunDeadlineDuringFindJobIsNotSettled(t *testing.T) {
+	fastPolls(t)
+	jid := "20260627000000000200"
+	targeted := []string{"m1", "m2"}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Server", "CherryPy/18")
+		switch r.URL.Path {
+		case "/login":
+			io.WriteString(w, loginBody("TOK1"))
+		case "/events":
+			http.Error(w, "no sse", http.StatusNotFound)
+		case "/jobs/" + jid:
+			io.WriteString(w, jobBody(jid, targeted, map[string]string{"m1": "true"}))
+		case "/":
+			b, _ := io.ReadAll(r.Body)
+			if strings.Contains(string(b), "saltutil.find_job") {
+				<-r.Context().Done() // hang until the run's deadline cuts the probe off
+				return
+			}
+			fmt.Fprintf(w, `{"return":[{"jid":%q,"minions":%s}]}`, jid, jsonList(targeted))
+		default:
+			http.Error(w, "nope", http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+	c := engineClient(t, srv)
+
+	res, err := c.Run(context.Background(), JobSpec{Target: "*", Fun: "test.ping"},
+		WithSaltTimeout(20*time.Millisecond), WithGatherTimeout(20*time.Millisecond),
+		WithDeadline(300*time.Millisecond))
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("err = %v, want DeadlineExceeded (an aborted probe must not settle minions)", err)
+	}
+	cr := res.Commands[0]
+	if cr.Reason != ReasonDeadline {
+		t.Errorf("reason = %v, want Deadline", cr.Reason)
+	}
+	if cr.Minions["m2"].Status != StatusPending {
+		t.Errorf("m2 status = %v, want pending (the probe never answered)", cr.Minions["m2"].Status)
+	}
+}

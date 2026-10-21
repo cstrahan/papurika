@@ -340,18 +340,24 @@ func (c *Client) gather(ctx context.Context, job Job, cfg runConfig) CommandResu
 		return terminal() == len(cr.Targeted) && len(cr.Targeted) > 0
 	}
 
+	// stopped ends the gather because ctx died — a hard deadline (exit 124) or a
+	// cancel, never the "settled as non-responder" normal completion.
+	stopped := func() CommandResult {
+		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			cr.Reason = ReasonDeadline
+		} else {
+			cr.Reason = ReasonCanceled
+		}
+		if cfg.killOnCancel {
+			_, _ = c.Kill(context.WithoutCancel(ctx), job.JID)
+		}
+		return cr
+	}
+
 	for {
 		select {
 		case <-ctx.Done():
-			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-				cr.Reason = ReasonDeadline
-			} else {
-				cr.Reason = ReasonCanceled
-			}
-			if cfg.killOnCancel {
-				_, _ = c.Kill(context.WithoutCancel(ctx), job.JID)
-			}
-			return cr
+			return stopped()
 
 		case ev, ok := <-events:
 			if !ok {
@@ -379,6 +385,12 @@ func (c *Client) gather(ctx context.Context, job Job, cfg runConfig) CommandResu
 				}
 			}
 			running := c.findRunning(ctx, job.JID, pending)
+			if ctx.Err() != nil {
+				// The probe was cut short by the deadline/cancel, not answered. An
+				// unanswered probe is not evidence that these minions are down —
+				// report the deadline rather than settling them as non-responders.
+				return stopped()
+			}
 			poll() // a minion may have finished DURING the probe; record it before judging
 			stillAlive := false
 			for _, id := range pending {
