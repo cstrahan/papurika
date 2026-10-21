@@ -108,10 +108,13 @@ as a Go library and as a binary.
 8. **Secrets never get committed** (GPG material / `secrets.sls` are gitignored).
    Don't point commands or tests at **prod** without intent — use the throwaway
    containers below.
-9. **Commit style.** Imperative subject; body explains *why*; end with the
-   trailer `Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>`.
-   (Note: the *upstream saltstack* repo forbids AI attribution — that rule is for
-   PRs there, not for this repo. See `research/salt-test-cherrypy/` patch commits.)
+9. **Commit style.** Imperative subject; body explains *why*. Attribute AI/LLM
+   assistance with a `Co-Authored-By:` trailer naming the model that actually did
+   the work — e.g. `Co-Authored-By: Claude Opus 5 (1M context)
+   <noreply@anthropic.com>`. Don't copy a model name from an older commit; use
+   the current one. (Note: the *upstream saltstack* repo forbids AI attribution —
+   that rule is for PRs there, not for this repo. See
+   `research/salt-test-cherrypy/` patch commits.)
 
 ## Dev environment — live salt containers
 
