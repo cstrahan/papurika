@@ -431,10 +431,25 @@ func (c *Client) Ping(ctx context.Context, target, tgtType string, opts ...RunOp
 
 1. **Auto-kill on cancel** — defaulted to **off** (`WithKillOnCancel` to opt in).
    Confirm: cancel = stop waiting, work continues, jid recoverable.
-2. **One shared `EventStream` per `Client`** — simplest, matches "subscribe once",
-   but a single reconnect blip forces a backfill poll across *every* live job
-   (thundering herd on `/jobs`). Mitigation: jitter the forced polls. Acceptable, or
-   do we want a small SSE pool for isolation under heavy embedding?
+2. ~~**One shared `EventStream` per `Client`**~~ — **settled and implemented.**
+   One `/events` connection per `Client`, refcounted by in-flight gathers
+   (`acquireEvents`): opened on first use, closed when the last job finishes, so
+   an idle `Client` holds nothing. Previously each gather opened its own, so
+   connections scaled with in-flight jobs — a 50-host deploy pinned 50 cherrypy
+   worker threads, all carrying the identical unfiltered firehose.
+
+   The thundering herd this entry predicted is real and is handled: a reconnect
+   pulses every subscriber, so the `/jobs` backfill is now scheduled with
+   jitter (`reconnectBackfillMax`, 750ms) instead of fired inline.
+
+   Two consequences of sharing that a per-job stream hid, both now load-bearing:
+   a subscription or reconnect listener that a job fails to unregister leaks for
+   the life of the `Client`, not just the job — so `Reconnects()` returns an
+   unregister func (as `Subscribe` already did) and gather releases both.
+
+   Still open: an SSE *pool* for isolation under heavy embedding. One connection
+   is right for a CLI and for a deploy tool; a long-lived server multiplexing
+   many tenants might want more than one. No evidence we need it yet.
 3. **Polling defaults** (`initialPollDelay` 2s, `maxPollInterval` 10s, exp ramp) —
    per-call only, or also a `Client`-level default? Tighter for interactive CLI?
 4. **HA without shared job cache** — a jid from master A may be unresolvable on

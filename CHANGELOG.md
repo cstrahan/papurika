@@ -46,6 +46,38 @@ Add entries here as you go, under these headings (drop the ones you don't use):
   on salt's publish path validates it and a malformed jid silently degrades
   `StartTime` and jid-ordered listings.
 
+### Changed
+
+- **One `/events` connection per `Client`, not per job.** Gathers now share a
+  single refcounted SSE stream, opened on first use and closed when the last
+  in-flight job finishes. Previously every concurrent job opened its own, so a
+  50-host deploy held 50 connections — each pinning a cherrypy worker thread and
+  each carrying the same unfiltered event firehose. The `/jobs` backfill that a
+  reconnect triggers is now jittered, since one blip wakes every job at once.
+
+- **`EventStream.Reconnects()` now returns `(<-chan struct{}, func())`**
+  (breaking) — the second value unregisters the listener, matching `Subscribe`.
+
+  *Migration:* `ch := es.Reconnects()` becomes `ch, stop := es.Reconnects()`;
+  call `stop()` when done. Required now that a stream outlives the jobs using
+  it: a listener left registered leaks for the life of the `Client`.
+
+- **`WithRetryNonIdempotent()` is renamed `WithResendOnUnknown()`** (breaking).
+  Its meaning narrowed when reconciliation landed: it no longer governs
+  "ambiguous failures" broadly — most of those now get a definite answer from
+  the job cache — but specifically the residue where no answer is available.
+  The old name also read as a licence to retry anything, which it never was.
+
+  *Migration:* rename the call. Behavior is otherwise unchanged.
+
+### Fixed
+
+- `tokencache.MemStore` was not safe for concurrent use — its map was unguarded,
+  while `Client` is documented as safe for concurrent use and reaches the store
+  from every in-flight request, so concurrent `Run` calls on one `Client` could
+  race on it. Found by the shared-event-stream tests, which were the first to
+  drive concurrent jobs through a single `Client`.
+
 ## [0.2.0] - 2026-10-21
 
 Adds a typed decoder for state returns and makes command-POST retry safe by
@@ -73,14 +105,6 @@ default. **Two behavior changes to check before upgrading** — see *Changed*.
   `ErrMalformed` naming the missing field and never reaches the wire.
 
 ### Changed
-
-- **`WithRetryNonIdempotent()` is renamed `WithResendOnUnknown()`** (breaking).
-  Its meaning narrowed when reconciliation landed: it no longer governs
-  "ambiguous failures" broadly — most of those now get a definite answer from
-  the job cache — but specifically the residue where no answer is available.
-  The old name also read as a licence to retry anything, which it never was.
-
-  *Migration:* rename the call. Behavior is otherwise unchanged.
 
 - **Command POSTs are now retried on failures that prove salt never acted on
   them** — connection-establishment errors (DNS, `ECONNREFUSED`, host/net

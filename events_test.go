@@ -108,9 +108,9 @@ func TestEventStreamReconnectAllListeners(t *testing.T) {
 	es := newTestStream()
 	defer es.Close()
 
-	r1 := es.Reconnects()
-	r2 := es.Reconnects()
-	r3 := es.Reconnects()
+	r1, _ := es.Reconnects()
+	r2, _ := es.Reconnects()
+	r3, _ := es.Reconnects()
 
 	es.pulseReconnect()
 
@@ -122,7 +122,7 @@ func TestEventStreamReconnectAllListeners(t *testing.T) {
 func TestEventStreamReconnectPulseCoalesces(t *testing.T) {
 	es := newTestStream()
 	defer es.Close()
-	r := es.Reconnects()
+	r, _ := es.Reconnects()
 
 	// Multiple pulses with no intervening read collapse to (at least) one — the
 	// listener buffer is 1, and a backfill poll only needs to happen once.

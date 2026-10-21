@@ -12,6 +12,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 )
 
@@ -97,18 +98,30 @@ func (s *FileStore) Put(_ context.Context, key string, t Token) error {
 }
 
 // MemStore is an in-memory Store (useful for tests and ephemeral clients).
+//
+// Guarded by a mutex because a Client is documented as safe for concurrent use
+// and reaches its Store from every in-flight request: concurrent Run calls will
+// Get and Put here at the same time.
 type MemStore struct {
-	m map[string]Token
+	mu sync.RWMutex
+	m  map[string]Token
 }
 
 func NewMemStore() *MemStore { return &MemStore{m: map[string]Token{}} }
 
 func (s *MemStore) Get(_ context.Context, key string) (Token, bool, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	t, ok := s.m[key]
 	return t, ok, nil
 }
 
 func (s *MemStore) Put(_ context.Context, key string, t Token) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.m == nil {
+		s.m = map[string]Token{}
+	}
 	s.m[key] = t
 	return nil
 }

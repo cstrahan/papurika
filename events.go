@@ -29,7 +29,8 @@ type EventStream struct {
 	mu           sync.Mutex
 	subs         map[int]*subscription
 	nextID       int
-	recListeners []chan struct{} // one per Reconnects() caller; each gets every pulse
+	recListeners map[int]chan struct{} // one per Reconnects() caller; each gets every pulse
+	nextRecID    int
 }
 
 type subscription struct {
@@ -52,10 +53,11 @@ func (c *Client) Events(ctx context.Context) (*EventStream, error) {
 		return nil, apiError(ErrTransport, 0, "", err.Error(), ModuleUnknown)
 	}
 	es := &EventStream{
-		c:      c,
-		ctx:    sctx,
-		cancel: cancel,
-		subs:   map[int]*subscription{},
+		c:            c,
+		ctx:          sctx,
+		cancel:       cancel,
+		subs:         map[int]*subscription{},
+		recListeners: map[int]chan struct{}{},
 	}
 	go es.run(conn)
 	return es, nil
@@ -80,16 +82,30 @@ func (es *EventStream) Subscribe(tagPrefix string) (<-chan Event, func()) {
 }
 
 // Reconnects returns a channel that pulses (non-blocking) each time the
-// underlying connection is re-established after a drop. Each call registers an
-// independent listener, so every consumer of a shared stream sees every pulse —
-// important because a reconnect can drop events for all in-flight jobs, and each
-// must force its own /jobs backfill.
-func (es *EventStream) Reconnects() <-chan struct{} {
+// underlying connection is re-established after a drop, plus a func that
+// unregisters it. Each call registers an independent listener, so every
+// consumer of a shared stream sees every pulse — important because a reconnect
+// can drop events for all in-flight jobs, and each must force its own /jobs
+// backfill.
+//
+// Call the unregister func when done. A stream shared across many short-lived
+// jobs outlives all of them, so a listener that is never removed is a leak that
+// also slows every subsequent pulse.
+func (es *EventStream) Reconnects() (<-chan struct{}, func()) {
 	ch := make(chan struct{}, 1)
 	es.mu.Lock()
-	es.recListeners = append(es.recListeners, ch)
+	if es.recListeners == nil { // a zero-value EventStream is usable
+		es.recListeners = map[int]chan struct{}{}
+	}
+	id := es.nextRecID
+	es.nextRecID++
+	es.recListeners[id] = ch
 	es.mu.Unlock()
-	return ch
+	return ch, func() {
+		es.mu.Lock()
+		delete(es.recListeners, id)
+		es.mu.Unlock()
+	}
 }
 
 // Close terminates the stream and all subscriptions.
@@ -171,4 +187,59 @@ func (es *EventStream) pulseReconnect() {
 		default: // listener already has a pending pulse; one is enough
 		}
 	}
+}
+
+// acquireEvents returns the Client's shared event stream, opening it on first
+// use, together with a release func the caller must call when done.
+//
+// There is one connection per Client rather than one per job on purpose. Each
+// /events connection occupies a cherrypy worker thread for as long as it is
+// held, so a 50-host deploy that opened one per in-flight job would hold 50
+// workers hostage on a server whose worker pool is the scarce resource — while
+// every one of those connections carries the exact same firehose, since salt
+// does no server-side filtering. EventStream already fans one connection out to
+// many tag-filtered subscribers, so the connection is the only thing worth
+// sharing.
+//
+// The stream is refcounted rather than tied to a Client lifetime: it exists
+// only while jobs are in flight, so an idle Client holds no connection and no
+// Close method has to be invented. It is deliberately NOT tied to the caller's
+// context — the gather that happens to open it must not take it down when it
+// finishes while other gathers are still using it.
+//
+// Returns (nil, no-op) if the stream cannot be opened; callers fall back to
+// polling.
+func (c *Client) acquireEvents(ctx context.Context) (*EventStream, func()) {
+	c.evMu.Lock()
+	defer c.evMu.Unlock()
+
+	if c.evStream != nil && c.evStream.ctx.Err() == nil {
+		c.evRefs++
+		return c.evStream, c.releaseEvents
+	}
+	// Either first use, or the previous stream died for good; open a new one.
+	stream, err := c.Events(context.WithoutCancel(ctx))
+	if err != nil {
+		c.log.Debug("event stream unavailable; falling back to polling", "err", err)
+		return nil, func() {}
+	}
+	c.evStream = stream
+	c.evRefs = 1
+	return stream, c.releaseEvents
+}
+
+// releaseEvents drops one reference, closing the shared stream when the last
+// job using it is done.
+func (c *Client) releaseEvents() {
+	c.evMu.Lock()
+	defer c.evMu.Unlock()
+	c.evRefs--
+	if c.evRefs > 0 {
+		return
+	}
+	if c.evStream != nil {
+		c.evStream.Close()
+		c.evStream = nil
+	}
+	c.evRefs = 0
 }

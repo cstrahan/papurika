@@ -2,7 +2,9 @@ package tokencache
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"sync"
 	"testing"
 	"time"
 )
@@ -60,5 +62,36 @@ func TestTokenValid(t *testing.T) {
 	}
 	if (Token{Token: "", Expire: time.Now().Add(time.Hour)}).Valid(time.Minute) {
 		t.Error("empty token should be invalid")
+	}
+}
+
+// A Client is documented as safe for concurrent use and reaches its Store from
+// every in-flight request, so concurrent Get/Put must not race.
+func TestMemStoreConcurrentAccess(t *testing.T) {
+	s := NewMemStore()
+	ctx := context.Background()
+	var wg sync.WaitGroup
+	for i := 0; i < 16; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			key := fmt.Sprintf("endpoint-%d", i%3)
+			for j := 0; j < 50; j++ {
+				_ = s.Put(ctx, key, Token{Token: "t"})
+				_, _, _ = s.Get(ctx, key)
+			}
+		}(i)
+	}
+	wg.Wait()
+}
+
+// The zero value must be usable, not panic on first write.
+func TestMemStoreZeroValueUsable(t *testing.T) {
+	var s MemStore
+	if err := s.Put(context.Background(), "k", Token{Token: "t"}); err != nil {
+		t.Fatal(err)
+	}
+	if got, ok, _ := s.Get(context.Background(), "k"); !ok || got.Token != "t" {
+		t.Errorf("Get = %v, %v; want the stored token", got, ok)
 	}
 }

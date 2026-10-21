@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/rand/v2"
 	"strings"
 	"sync"
 	"time"
@@ -326,12 +327,21 @@ func (c *Client) gather(ctx context.Context, job Job, cfg runConfig) CommandResu
 
 	// Subscribe to this job's events before doing anything else. Best-effort: if
 	// the stream can't open, we fall back to polling only.
+	//
+	// The connection is shared across every in-flight gather on this Client
+	// (acquireEvents); this job only takes a tag-filtered subscription on it.
+	// Both the subscription and the reconnect listener MUST be released — the
+	// shared stream outlives this gather, so anything left registered is a leak
+	// for the life of the Client.
 	var events <-chan Event
 	var reconnects <-chan struct{}
-	if stream, err := c.Events(ctx); err == nil {
-		defer stream.Close()
-		events, _ = stream.Subscribe("salt/job/" + job.JID + "/")
-		reconnects = stream.Reconnects()
+	if stream, release := c.acquireEvents(ctx); stream != nil {
+		defer release()
+		var unsub, unrec func()
+		events, unsub = stream.Subscribe("salt/job/" + job.JID + "/")
+		reconnects, unrec = stream.Reconnects()
+		defer unsub()
+		defer unrec()
 	}
 
 	// The gather window: how long returns stay quiet before we run a liveness
@@ -408,6 +418,15 @@ func (c *Client) gather(ctx context.Context, job Job, cfg runConfig) CommandResu
 	defer pollTimer.Stop()
 	pollInterval := initialPollDelay
 	maxPoll := pollBackoffMax
+	resetPoll := func(d time.Duration) {
+		if !pollTimer.Stop() {
+			select {
+			case <-pollTimer.C:
+			default:
+			}
+		}
+		pollTimer.Reset(d)
+	}
 
 	poll := func() bool {
 		jr, err := c.Job(ctx, job.JID)
@@ -497,9 +516,11 @@ func (c *Client) gather(ctx context.Context, job Job, cfg runConfig) CommandResu
 			return settle()
 
 		case <-reconnects:
-			if poll() {
-				return c.finish(&cr)
-			}
+			// The stream is shared, so one blip pulses EVERY in-flight job at
+			// once and each wants a /jobs backfill. Polling inline would land
+			// all of them on the master together — exactly when it is least
+			// healthy. Schedule the backfill with jitter instead.
+			resetPoll(backfillJitter())
 
 		case <-pollTimer.C:
 			if poll() {
@@ -717,4 +738,14 @@ func parseBatchSize(size string, total int) int {
 		return n
 	}
 	return 1
+}
+
+// reconnectBackfillMax bounds the jitter applied to the /jobs backfill a
+// reconnect triggers. Small enough that recovery stays prompt, large enough to
+// smear many concurrent jobs across the window instead of stacking them.
+var reconnectBackfillMax = 750 * time.Millisecond
+
+// backfillJitter picks a random delay in (0, reconnectBackfillMax].
+func backfillJitter() time.Duration {
+	return time.Duration(rand.Int64N(int64(reconnectBackfillMax))) + time.Millisecond
 }

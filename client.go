@@ -38,6 +38,12 @@ type Client struct {
 	mu       sync.Mutex // guards token + single-flight login
 	token    string
 	loggedIn bool
+
+	// One /events connection per Client, refcounted by in-flight gathers.
+	// See acquireEvents.
+	evMu     sync.Mutex
+	evStream *EventStream
+	evRefs   int
 }
 
 type options struct {
