@@ -35,8 +35,27 @@ Add entries here as you go, under these headings (drop the ones you don't use):
   a refused run look like a successful one. `Result.OK()` prefers the minion's
   retcode, salt's own verdict, over re-deriving one by scanning sub-states.
 
+- **`WithRetryNonIdempotent()`** — opts a `Client` into retrying command POSTs on
+  *ambiguous* failures too (500/502/503/504, read timeouts). Use it only when
+  every command sent through that `Client` is safe to run more than once; for a
+  mixed workload, use two `Client`s.
+- **`ErrServerError`** — a new sentinel for HTTP 500, distinct from
+  `ErrMalformed`. papurika now validates the rendered lowstate (`client`, `fun`,
+  `tgt`) before sending, which rules out salt's own missing-field cause, so a 500
+  can honestly be attributed to the server. An invalid lowstate fails fast with
+  `ErrMalformed` naming the missing field and never reaches the wire.
+
 ### Changed
 
+- **Command POSTs are now retried on failures that prove salt never acted on
+  them** — connection-establishment errors (DNS, `ECONNREFUSED`, host/net
+  unreachable) and HTTP 429. Previously they were never retried at all. They are
+  still sent exactly once on every *ambiguous* failure, which now includes 503:
+  salt raises it for `SaltReqTimeoutError` as well as `SaltDaemonNotRunning`, so
+  a congested master is indistinguishable from an absent one and the request may
+  have been published.
+- A 500 now surfaces as `ErrServerError` rather than `ErrMalformed`, and the CLI
+  exits 69 (unavailable) rather than 65 (data error) for it.
 - The CLI's highstate renderer now consumes the public `state` package instead of
   keeping a private copy of the model. Rendering is unchanged.
 

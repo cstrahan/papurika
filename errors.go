@@ -22,9 +22,20 @@ var (
 	// ErrJobNotFound: a jid is unknown or aged out of the job cache (the explicit
 	// Error field on GET /jobs/<jid>).
 	ErrJobNotFound = errors.New("job not found")
-	// ErrMalformed: the request was rejected as malformed (400 bad JSON; or salt's
-	// "missing fun/tgt", which is a 500 on cherrypy / a 200 exception on tornado).
+	// ErrMalformed: the request was rejected as malformed (400 bad JSON, or
+	// tornado's 200-with-an-exception-string). papurika validates the lowstate
+	// before sending, so salt's own "missing fun/tgt" case cannot reach the wire.
 	ErrMalformed = errors.New("malformed request")
+	// ErrServerError: the server failed to handle an otherwise well-formed
+	// request (HTTP 500). cherrypy answers a malformed lowstate with the same
+	// opaque 500 as an internal failure ("An unexpected error occurred" either
+	// way — cherrypy_learnings.md), so the two are indistinguishable from the
+	// response alone. papurika closes that gap from the other side: it validates
+	// the lowstate client-side, so by the time a 500 comes back the request is
+	// known to have carried the fields salt requires, and the fault is the
+	// server's. Ambiguous for retry purposes — the job may or may not have
+	// started.
+	ErrServerError = errors.New("server error")
 	// ErrNoResponse: one or more targeted minions did not respond. Only returned
 	// when the caller opts into strict no-response-is-an-error handling; by default
 	// non-responders are reported via Result, not as an error.

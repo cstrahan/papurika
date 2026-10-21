@@ -9,9 +9,11 @@ import (
 	"fmt"
 	"io"
 	"math/rand/v2"
+	"net"
 	"net/http"
 	"os"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -77,11 +79,82 @@ type httpResult struct {
 	module      Module
 }
 
-// doRequest performs one HTTP request with retry of safe failures. retryable
-// controls whether THIS request may be retried (callers pass false for
-// non-idempotent command POSTs). It does not interpret salt-level semantics —
-// that is classify()'s job.
-func (c *Client) doRequest(ctx context.Context, method, path string, body []byte, token string, retryable bool) (*httpResult, error) {
+// retryClass says how aggressively a request may be re-sent.
+//
+// The useful axis is not "is this request idempotent" but "did this request
+// provably never execute". Salt has no idempotency key: a submit that actually
+// landed and then failed on the way back produces a running job, and re-sending
+// it starts a second one — a second execution, under a second jid that the first
+// caller never learns. So a command POST may only be retried on failures that
+// rule that out.
+type retryClass int
+
+const (
+	// retryUnexecutedOnly re-sends only when the request demonstrably never
+	// reached salt. The default for command POSTs.
+	retryUnexecutedOnly retryClass = iota
+	// retryTransient re-sends on any transient failure. For requests that are
+	// idempotent by construction (GETs, /login) or that the caller has declared
+	// safe to repeat (WithRetryNonIdempotent).
+	retryTransient
+)
+
+// provablyUnexecutedStatus reports whether a status proves salt never acted on
+// the request, so no job can exist.
+//
+// Only 429 qualifies, and it qualifies for a specific reason: salt-api never
+// emits one (there is no 429 anywhere in salt/netapi), so a 429 can only have
+// come from an intermediary that declined to forward the request.
+//
+// 503 is deliberately absent, which is not obvious. salt-api raises 503 for both
+// SaltDaemonNotRunning *and* SaltReqTimeoutError (rest_cherrypy/app.py). The
+// first is safe — nothing was running to receive the request — but the second
+// means a master request call did not answer within its timeout, which says
+// nothing about whether the master received it and published the job anyway.
+// Both arrive as a bare 503, so a congested master is indistinguishable from an
+// absent one, and the pair has to be treated as ambiguous.
+//
+// 502 and 504 are ambiguous for the same reason, 504 emphatically so: salt-api
+// raises it from SaltClientTimeout, which is thrown *after* the job was sent and
+// the gather timed out. The job is running.
+func provablyUnexecutedStatus(status int) bool {
+	return status == http.StatusTooManyRequests
+}
+
+// requestNeverSent reports whether a transport error happened before any bytes
+// could have reached the server, which makes re-sending safe.
+//
+// Only failures of connection establishment qualify. Anything that can happen
+// after the request was written — a read timeout, a reset mid-response, EOF —
+// is ambiguous and must not be re-sent, because the master may be executing the
+// job already.
+func requestNeverSent(err error) bool {
+	var dns *net.DNSError
+	if errors.As(err, &dns) {
+		return true
+	}
+	// The classic case: the master is restarting, so nothing is listening yet.
+	return errors.Is(err, syscall.ECONNREFUSED) ||
+		errors.Is(err, syscall.EHOSTUNREACH) ||
+		errors.Is(err, syscall.ENETUNREACH)
+}
+
+// mayRetry decides whether a failed attempt can be re-sent under class.
+// Exactly one of res / err is meaningful: res for a completed-but-failing
+// exchange, err for one that never completed.
+func mayRetry(class retryClass, res *httpResult, err error) bool {
+	if class == retryTransient {
+		return true
+	}
+	if res != nil {
+		return provablyUnexecutedStatus(res.status)
+	}
+	return requestNeverSent(err)
+}
+
+// doRequest performs one HTTP request, re-sending failures that class permits.
+// It does not interpret salt-level semantics — that is classify()'s job.
+func (c *Client) doRequest(ctx context.Context, method, path string, body []byte, token string, class retryClass) (*httpResult, error) {
 	policy := c.retry.normalized()
 	var lastErr error
 	for attempt := 1; attempt <= policy.MaxAttempts; attempt++ {
@@ -97,7 +170,7 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body []byte
 			}
 			lastErr = fmt.Errorf("%w: %v", ErrTransport, err)
 		}
-		if !retryable || attempt == policy.MaxAttempts {
+		if attempt == policy.MaxAttempts || !mayRetry(class, res, err) {
 			break
 		}
 		// Honor Retry-After on 429/503 if present, else backoff with jitter.
@@ -178,8 +251,12 @@ func classify(r *httpResult) error {
 		return apiError(ErrNotFound, r.status, r.contentType, string(r.body), r.module)
 	case http.StatusNotAcceptable, http.StatusRequestEntityTooLarge:
 		return apiError(ErrMalformed, r.status, r.contentType, string(r.body), r.module)
-	case http.StatusInternalServerError, http.StatusNotImplemented:
-		// cherrypy returns 500 for missing fun/tgt (a malformed lowstate).
+	case http.StatusInternalServerError:
+		// cherrypy also answers a malformed lowstate with a 500, with the same
+		// opaque body — but papurika validates the lowstate before sending, so
+		// a 500 reaching here is the server's fault. See ErrServerError.
+		return apiError(ErrServerError, r.status, r.contentType, string(r.body), r.module)
+	case http.StatusNotImplemented:
 		return apiError(ErrMalformed, r.status, r.contentType, string(r.body), r.module)
 	default:
 		return apiError(ErrTransport, r.status, r.contentType, string(r.body), r.module)

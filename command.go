@@ -1,5 +1,7 @@
 package papurika
 
+import "fmt"
+
 // ClientType is a salt-api netapi client. It selects which subsystem a lowstate
 // command targets (execution modules, runners, wheel, ssh) and whether it runs
 // synchronously or returns a jid immediately.
@@ -137,6 +139,51 @@ func (c Command) lowstate(fullReturn bool) map[string]any {
 		m["full_return"] = true
 	}
 	return m
+}
+
+// validateLowstate checks the fields salt requires, on the rendered lowstate
+// (not the Command), so that Extra overriding a structured field is caught too.
+//
+// This runs before the request leaves the client for a specific reason: cherrypy
+// answers a lowstate missing fun or tgt with HTTP 500 and an opaque "An
+// unexpected error occurred" — the same response it gives for an internal
+// failure (cherrypy_learnings.md). Those two are indistinguishable from the
+// outside, so papurika rules the first one out from the inside. A caller then
+// gets ErrMalformed naming the missing field, and a 500 that does come back can
+// honestly be reported as the server's fault (ErrServerError).
+func validateLowstate(m map[string]any) error {
+	nonEmpty := func(k string) bool {
+		s, ok := m[k].(string)
+		return ok && s != ""
+	}
+	if !nonEmpty("client") {
+		return fmt.Errorf("%w: client is required", ErrMalformed)
+	}
+	if !nonEmpty("fun") {
+		return fmt.Errorf("%w: fun is required", ErrMalformed)
+	}
+	// Runner and wheel act on the master and take no target; everything else
+	// (local, local_*, ssh) targets minions and must say which.
+	if _, targeted := m["tgt"]; targeted && !nonEmpty("tgt") {
+		return fmt.Errorf("%w: tgt is required for client %q", ErrMalformed, m["client"])
+	}
+	return nil
+}
+
+// lowstates renders and validates a batch of commands for the wire.
+func lowstates(cmds []Command, fullReturn bool) ([]map[string]any, error) {
+	out := make([]map[string]any, len(cmds))
+	for i, cmd := range cmds {
+		m := cmd.lowstate(fullReturn)
+		if err := validateLowstate(m); err != nil {
+			if len(cmds) > 1 {
+				return nil, fmt.Errorf("command %d: %w", i, err)
+			}
+			return nil, err
+		}
+		out[i] = m
+	}
+	return out, nil
 }
 
 // JobSpec is the convenience input to the async engine (Run/Submit/Watch). It

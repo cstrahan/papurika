@@ -304,7 +304,8 @@ var (
     ErrAuthDenied  = errors.New("papurika: authorization denied")   // valid token, missing perm (authz)
     ErrNotFound    = errors.New("papurika: not found")
     ErrJobNotFound = errors.New("papurika: job not found")          // info[0].Error on /jobs/<jid>
-    ErrMalformed   = errors.New("papurika: malformed request")      // 400 bad JSON; 500 missing fun/tgt
+    ErrMalformed   = errors.New("papurika: malformed request")      // 400 bad JSON; failed client-side lowstate validation
+    ErrServerError = errors.New("papurika: server error")           // 500 — the server failed, our request was well-formed
     ErrNoResponse  = errors.New("papurika: minion did not respond")  // only when caller opts into strict
     ErrTransport   = errors.New("papurika: transport error")        // network / TLS / ctx deadline
 )
@@ -333,7 +334,7 @@ assumes JSON on non-2xx (`cherrypy_learnings.md` failure taxonomy):
 | 401 + "Please log in" / wrong password | `ErrAuthFailure` (authn → triggers re-auth, §D) |
 | **200** + `return[]=="Failed to authenticate"` | `ErrAuthDenied` (tornado authz — a *200*) |
 | 400 (HTML or JSON) | `ErrMalformed` (bad JSON body) |
-| 500 `"An unexpected error occurred"` | `ErrMalformed` (cherrypy missing fun/tgt) |
+| 500 `"An unexpected error occurred"` | `ErrServerError` — the missing-fun/tgt cause is excluded by client-side validation before sending |
 | **200** + `return[]=="Unexpected exception while handling request…"` | `ErrMalformed` (tornado missing fun/tgt) |
 | `info[0].Error` on `/jobs/<jid>` | `ErrJobNotFound` |
 | network / TLS / `ctx` deadline | `ErrTransport` (wraps `context.DeadlineExceeded` etc.) |
@@ -346,6 +347,7 @@ res, err := c.Run(ctx, spec)
 switch {
 case errors.Is(err, papurika.ErrAuthDenied): // fix perms/eauth — re-login won't help
 case errors.Is(err, papurika.ErrMalformed):  // our request is wrong
+case errors.Is(err, papurika.ErrServerError): // the master failed, not us
 case errors.Is(err, papurika.ErrTransport):  // network — maybe retry / inspect
 case err != nil:
     var ae *papurika.APIError
@@ -405,14 +407,48 @@ type RetryPolicy struct {
 fresh connection per request). **TLS is per-client** via `WithTLSConfig` /
 `WithInsecureSkipVerify` — never the global process default.
 
-**Retry only what's safe:**
-- Retryable: network errors (where the request didn't land), `5xx`, `429`
-  (honoring `Retry-After`).
-- Retried ops: idempotent GETs (`/jobs`, `/jobs/<jid>`, `/`) and `POST /login`
-  (idempotent — mints a fresh token).
-- **Not** retried by default: bare command POSTs (`/`, `/run`) — a salt command may
-  have side effects, so silently re-POSTing risks double execution. Opt in with
-  `WithRetryNonIdempotent` when the caller knows the command is safe (e.g. read-only).
+**Retry only what's safe.** The axis is not "is this request idempotent" but
+**"did this request provably never execute"** — salt has no idempotency key, so a
+submit that landed and then failed on the way back leaves a job running, and
+re-sending starts a *second* execution under a second jid that nobody is
+watching.
+
+- **Idempotent by construction** — GETs (`/jobs`, `/jobs/<jid>`, `/`) and
+  `POST /login` (mints a fresh token): retried on any transient failure
+  (`429`, `502`, `503`, `504`, network errors).
+- **Command POSTs** (`/`, `/run`) are job submissions. They are retried **only**
+  on failures that prove salt never acted:
+  - connection-establishment failures — DNS, `ECONNREFUSED`, host/net
+    unreachable. Nothing was written, and this is the master-is-restarting case.
+  - **`429`** — and only because *salt-api never emits one* (there is no `429`
+    anywhere in `salt/netapi`), so it can only have come from an intermediary
+    that declined to forward the request.
+- **Everything else on a command POST is ambiguous** and is sent exactly once:
+  - `500` — the master may have crashed after publishing.
+  - `502` — a proxy failure says nothing about the upstream.
+  - **`503` — ambiguous, which is not obvious.** salt-api raises it for
+    `SaltDaemonNotRunning` *and* `SaltReqTimeoutError`
+    (`rest_cherrypy/app.py`). The first is safe; the second means a master
+    request call didn't answer in time, which says nothing about whether the
+    master received it and published anyway. Both arrive as a bare `503`, so a
+    congested master is indistinguishable from an absent one.
+  - **`504`** — salt raises it from `SaltClientTimeout`, thrown *after* the job
+    was sent and the gather timed out. The job is running.
+  - read timeouts, resets, EOF — all can follow a fully written request.
+- Opt in to retrying the ambiguous set with **`WithRetryNonIdempotent()`**, a
+  *Client-level* option: "every command sent through this Client is safe to
+  repeat" is a property of how the Client is used. For a mixed workload —
+  idempotent state applies alongside a one-shot reboot — use two Clients, so
+  which one is in hand says which guarantee applies.
+
+**Validate the lowstate before sending.** cherrypy answers a lowstate missing
+`fun`/`tgt` with HTTP 500 and an opaque `"An unexpected error occurred"` — byte
+for byte what it returns for an internal failure. The two are indistinguishable
+from the response, so papurika rules the first out from the inside: the rendered
+lowstate is checked for `client`/`fun`/`tgt` before the request leaves. A caller
+gets `ErrMalformed` naming the missing field, and a `500` that *does* come back
+is honestly attributable to the server (`ErrServerError`, distinct from
+`ErrMalformed`).
 
 **Automatic re-auth on authn-401** (tokens expire; unpatched 3008 evicts them —
 `cherrypy_learnings.md` token-eviction bug):
@@ -543,4 +579,14 @@ before its nominal expiry.
    an opt-in Keychain-backed `Store` on macOS? (The `Store` interface already allows it.)
 2. **Retry of `test.ping`-class reads** — should we ship a small allowlist of known
    side-effect-free functions that are retried even over `POST /`, or leave that
-   entirely to `WithRetryNonIdempotent`?
+   entirely to `WithRetryNonIdempotent`? *(Partly settled: `WithRetryNonIdempotent`
+   is implemented, and the provably-unexecuted failures are now retried for every
+   command POST without any opt-in. An allowlist is still open — and is less
+   pressing now that the common transient cases are covered by default.)*
+3. **Reconciling an ambiguous submit** — the ambiguous failures above are sent
+   once and reported, which is safe but gives up. papurika is uniquely able to do
+   better: it owns the `/jobs` client and the event stream, so after an ambiguous
+   submit failure it could look for a job matching (tgt, fun, time window) and
+   either adopt its jid or submit afresh, instead of either losing the work or
+   double-executing. Salt has no idempotency key, so any such match is heuristic
+   and racy — this needs its own design pass before it is built.

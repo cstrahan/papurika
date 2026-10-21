@@ -31,6 +31,10 @@ type Client struct {
 	retry  RetryPolicy
 	log    *slog.Logger
 
+	// retryNonIdempotent lets command POSTs be re-sent on any transient
+	// failure, not only on ones that prove the request never executed.
+	retryNonIdempotent bool
+
 	mu       sync.Mutex // guards token + single-flight login
 	token    string
 	loggedIn bool
@@ -47,6 +51,8 @@ type options struct {
 	store      tokencache.Store
 	retry      RetryPolicy
 	logger     *slog.Logger
+
+	retryNonIdempotent bool
 }
 
 // Option configures a Client.
@@ -60,6 +66,23 @@ func WithEauth(backend string) Option          { return func(o *options) { o.eau
 func WithTokenCache(s tokencache.Store) Option { return func(o *options) { o.store = s } }
 func WithRetryPolicy(p RetryPolicy) Option     { return func(o *options) { o.retry = p } }
 func WithLogger(l *slog.Logger) Option         { return func(o *options) { o.logger = l } }
+
+// WithRetryNonIdempotent allows command POSTs to be re-sent on any transient
+// failure, not only on failures that prove the request never executed.
+//
+// Use it only for a Client whose commands are all safe to run more than once —
+// read-only probes, or idempotent state applies. It is NOT safe in general:
+// salt has no idempotency key, so when a submit fails ambiguously (a 500, a 502
+// or 504 from a proxy, a read timeout) the master may already be running the
+// job. Re-sending then starts a *second* execution under a second jid, and the
+// first jid is never reported to anyone.
+//
+// This is a Client-level setting rather than a per-call one on purpose: "is
+// every command I send through here safe to repeat" is a property of how the
+// Client is used. For a mix — idempotent state applies alongside a one-shot
+// reboot — use two Clients, so which one is in hand says which guarantee
+// applies.
+func WithRetryNonIdempotent() Option { return func(o *options) { o.retryNonIdempotent = true } }
 
 // WithCredentials sets the username and secret source used at login.
 func WithCredentials(user string, secret config.SecretSource) Option {
@@ -103,6 +126,8 @@ func New(masterURL string, opts ...Option) (*Client, error) {
 		key:    tokencache.Key(base, o.user, o.eauth),
 		retry:  o.retry,
 		log:    logger,
+
+		retryNonIdempotent: o.retryNonIdempotent,
 	}, nil
 }
 
@@ -167,7 +192,7 @@ func (c *Client) login(ctx context.Context, force bool) (string, error) {
 	}
 	body, _ := json.Marshal(map[string]string{"username": c.user, "password": pw, "eauth": c.eauth})
 
-	res, err := c.doRequest(ctx, http.MethodPost, "/login", body, "", true)
+	res, err := c.doRequest(ctx, http.MethodPost, "/login", body, "", retryTransient)
 	if err != nil {
 		return "", err
 	}
@@ -221,7 +246,10 @@ func (c *Client) Exec(ctx context.Context, cmds ...Command) (*Result, error) {
 	if len(cmds) == 0 {
 		return &Result{}, nil
 	}
-	body := encodeLowstate(cmds, true)
+	body, err := encodeLowstate(cmds, true)
+	if err != nil {
+		return nil, err
+	}
 	res, err := c.authedExec(ctx, "/", body)
 	if err != nil {
 		return nil, err
@@ -243,16 +271,17 @@ func (c *Client) ExecStateless(ctx context.Context, cmds ...Command) (*Result, e
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrAuthFailure, err)
 	}
-	low := make([]map[string]any, len(cmds))
-	for i, cmd := range cmds {
-		m := cmd.lowstate(true)
+	low, err := lowstates(cmds, true)
+	if err != nil {
+		return nil, err
+	}
+	for _, m := range low {
 		m["username"] = c.user
 		m["password"] = pw
 		m["eauth"] = c.eauth
-		low[i] = m
 	}
 	body, _ := json.Marshal(low)
-	res, err := c.doRequest(ctx, http.MethodPost, "/run", body, "", false)
+	res, err := c.doRequest(ctx, http.MethodPost, "/run", body, "", c.commandRetryClass())
 	if err != nil {
 		return nil, err
 	}
@@ -262,14 +291,23 @@ func (c *Client) ExecStateless(ctx context.Context, cmds ...Command) (*Result, e
 	return decodeExecResponse(cmds, res.body)
 }
 
+// commandRetryClass is how a command POST may be re-sent. By default only
+// failures that prove the request never reached salt (see retryClass); the
+// caller can widen it to any transient failure with WithRetryNonIdempotent.
+func (c *Client) commandRetryClass() retryClass {
+	if c.retryNonIdempotent {
+		return retryTransient
+	}
+	return retryUnexecutedOnly
+}
+
 // authedExec performs an authed POST with one automatic re-auth on auth failure.
 func (c *Client) authedExec(ctx context.Context, p string, body []byte) (*httpResult, error) {
 	tok, err := c.ensureToken(ctx)
 	if err != nil {
 		return nil, err
 	}
-	// Command POSTs are not auto-retried at the transport level (non-idempotent).
-	res, err := c.doRequest(ctx, http.MethodPost, p, body, tok, false)
+	res, err := c.doRequest(ctx, http.MethodPost, p, body, tok, c.commandRetryClass())
 	if err != nil {
 		return nil, err
 	}
@@ -288,7 +326,7 @@ func (c *Client) authedExec(ctx context.Context, p string, body []byte) (*httpRe
 		if lerr != nil {
 			return nil, lerr
 		}
-		res, err = c.doRequest(ctx, http.MethodPost, p, body, tok, false)
+		res, err = c.doRequest(ctx, http.MethodPost, p, body, tok, c.commandRetryClass())
 		if err != nil {
 			return nil, err
 		}
@@ -307,7 +345,7 @@ func (c *Client) authedGet(ctx context.Context, p string) (*httpResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	res, err := c.doRequest(ctx, http.MethodGet, p, nil, tok, true)
+	res, err := c.doRequest(ctx, http.MethodGet, p, nil, tok, retryTransient)
 	if err != nil {
 		return nil, err
 	}
@@ -320,7 +358,7 @@ func (c *Client) authedGet(ctx context.Context, p string) (*httpResult, error) {
 			if lerr != nil {
 				return nil, lerr
 			}
-			res, err = c.doRequest(ctx, http.MethodGet, p, nil, tok, true)
+			res, err = c.doRequest(ctx, http.MethodGet, p, nil, tok, retryTransient)
 			if err != nil {
 				return nil, err
 			}
@@ -340,11 +378,11 @@ func asAuthFailure(err error) bool {
 }
 
 // encodeLowstate marshals commands to the POST body, injecting full_return.
-func encodeLowstate(cmds []Command, fullReturn bool) []byte {
-	low := make([]map[string]any, len(cmds))
-	for i, cmd := range cmds {
-		low[i] = cmd.lowstate(fullReturn)
+func encodeLowstate(cmds []Command, fullReturn bool) ([]byte, error) {
+	low, err := lowstates(cmds, fullReturn)
+	if err != nil {
+		return nil, err
 	}
 	b, _ := json.Marshal(low)
-	return b
+	return b, nil
 }

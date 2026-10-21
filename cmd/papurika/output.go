@@ -1073,7 +1073,9 @@ func exitCode(res *papurika.Result, err error, policy failPolicy, allowNoRespons
 			return exitAuth
 		case errors.Is(err, papurika.ErrMalformed):
 			return exitData
-		case errors.Is(err, papurika.ErrTransport):
+		// A 500 is the server failing, not our request being wrong — same
+		// bucket as a transport failure, not as bad data.
+		case errors.Is(err, papurika.ErrServerError), errors.Is(err, papurika.ErrTransport):
 			return exitUnavailable
 		case errors.Is(err, papurika.ErrJobNotFound), errors.Is(err, papurika.ErrNotFound):
 			return exitPolicyFail
