@@ -584,9 +584,15 @@ before its nominal expiry.
    command POST without any opt-in. An allowlist is still open — and is less
    pressing now that the common transient cases are covered by default.)*
 3. **Reconciling an ambiguous submit** — the ambiguous failures above are sent
-   once and reported, which is safe but gives up. papurika is uniquely able to do
-   better: it owns the `/jobs` client and the event stream, so after an ambiguous
-   submit failure it could look for a job matching (tgt, fun, time window) and
-   either adopt its jid or submit afresh, instead of either losing the work or
-   double-executing. Salt has no idempotency key, so any such match is heuristic
-   and racy — this needs its own design pass before it is built.
+   once and reported, which is safe but gives up on work that may be running.
+   **A client-supplied jid makes this exact rather than heuristic** (verified on
+   3008.1 — see `cherrypy_learnings.md`, "Client-supplied jids & submit
+   recoverability"): a lowstate may carry its own `jid` and salt-api honors it
+   verbatim, so papurika can generate the jid, submit it, and on any ambiguous
+   failure ask `/jobs/<jid>` whether the job exists — adopting it if so,
+   submitting afresh if `ErrJobNotFound`. Caveat that shapes the design: a client
+   jid is **not** an idempotency key — re-POSTing one that was already used
+   publishes a second time under the same jid. So the pattern is *reconcile, then
+   submit only if absent*, never *retry with the same jid*. Still needs a design
+   pass (jid generation and collision policy, interaction with `WithRetryNonIdempotent`,
+   what `Submit` returns when it adopts).

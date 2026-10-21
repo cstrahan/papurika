@@ -745,6 +745,64 @@ Full write-up + capture index in [`state-apply-shapes.md`](state-apply-shapes.md
 
 ---
 
+## Client-supplied jids & submit recoverability — verified 2026-10-21, 3008.1
+
+Run against `papurika-salt` (3008.1). This is the load-bearing finding for making
+an ambiguous submit recoverable.
+
+- **A lowstate may carry its own `jid`, and salt-api honors it verbatim.**
+  `salt/netapi/__init__.py` `run()` maps lowstate keys onto the client function's
+  signature via `format_call`, and `LocalClient.run_job` takes `jid=""`; the
+  master's `_prep_jid` passes it through as `passed_jid`, and `local_cache.prep_jid`
+  uses it as-is instead of generating one. Verified:
+
+  ```
+  POST /  [{"client":"local_async","tgt":"*","fun":"test.ping",
+            "jid":"20261021000000000042"}]
+  → {"return": [{"jid": "20261021000000000042", "minions": ["builtin.minion"]}]}
+  ```
+
+- **A jid the client chose is resolvable afterwards, and an unused one is
+  cleanly distinguishable.** `GET /jobs/20261021000000000042` returns the normal
+  `info[0]` with `Function`/`Target`/`Minions`; `GET /jobs/<never submitted>`
+  returns `info[0].Error = "Cannot contact returner or no job with this jid"`
+  (which papurika already maps to `ErrJobNotFound`).
+
+  ⇒ **A submit can be made exactly recoverable**: generate the jid, send it, and
+  on *any* ambiguous failure ask `/jobs/<jid>` whether the job exists. This
+  replaces heuristic (tgt, fun, time-window) matching with an exact answer.
+
+- **But a client jid is NOT an idempotency key.** Re-POSTing the same lowstate
+  with an already-used jid does **not** error and does **not** dedupe — it
+  returns the same jid and publishes again, so the command runs a second time,
+  merely recorded under one jid. So the correct use is *reconcile, then submit
+  only if absent* — never *retry with the same jid*.
+
+- **With `salt-master` stopped, salt-api does not return the 503 its code
+  intends — it hangs.** `POST /`, `POST /login` and even `GET /jobs/<jid>` all
+  hung until the client timed out (60s, 25s, 25s; no response, no status). The
+  `SaltDaemonNotRunning` → 503 path in `rest_cherrypy/app.py` was never reached.
+  Consequence: the "safe" half of the 503 ambiguity below is largely theoretical
+  in practice — a down master presents as a hang, which is itself ambiguous to
+  the client.
+
+### 503 is two different failures wearing one status
+
+`rest_cherrypy/app.py` maps **both** to 503:
+
+| exception | meaning | safe to re-send? |
+|---|---|---|
+| `SaltDaemonNotRunning` (`"Salt Master is not available."`) | the master isn't there | yes — nothing was published |
+| `SaltReqTimeoutError` (`"Salt request timed out. The master is not responding. …"`) | `channel.send()` of the publish payload did not get a reply in time | **no** — the master may have published anyway |
+
+The two *are* separable today, but only by the English prose `exc.strerror`
+embedded in CherryPy's HTML error page — exactly the kind of signal this client
+refuses to depend on. Note the asymmetry: no status-code split can fix the
+second case, because its ambiguity is inherent to a lost reply, not to the
+encoding. Client-supplied jids (above) are the real remedy.
+
+---
+
 ## Errors & status codes observed
 
 - `POST /minions` → **202 Accepted** (everything else → 200).
