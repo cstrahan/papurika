@@ -50,7 +50,8 @@ Also valuable: `research/pepper_design_analysis.md` (what we're improving on) an
   results. (NDJSON leads with a `submitted` line; the CLI prints the jid on
   interrupt.)
 - **Compute liveness ourselves** (`targeted − returned`); never trust
-  `manage.status` (broken in 3008).
+  `manage.status` (broken in 3008.0/3008.1; fixed in 3008.2, but we don't
+  depend on it either way).
 - **Normalize in the library, not the formatter.** Fold salt's divergent shapes
   into the one `Result`/`MinionResult` model; **preserve raw bytes** (`RawValue`)
   so nothing is silently lost.
@@ -88,7 +89,7 @@ as a Go library and as a binary.
    `design/high-availability.md`) rather than letting the doc imply it exists.
 2. **Reference integrity.** If you move/rename/delete a file or directory, update
    **every** reference to it — design links, doc pointers, code comments, READMEs,
-   `apply-salt-patch.sh`-style scripts. `grep -r` the old path before and after.
+   harness scripts. `grep -r` the old path before and after.
 3. **Empirical grounding over memory.** Don't assert salt-api behavior from
    training knowledge. Verify against the live containers or the `research/`
    captures, and **record new findings in the learnings docs with the evidence**
@@ -120,11 +121,11 @@ as a Go library and as a binary.
 
 Throwaway dockerized salt masters for verification (creds `saltdev`/`saltdev`,
 eauth `pam`). Recreate/patch with
-`research/salt-test-cherrypy/{up.sh,apply-salt-patch.sh,add-second-minion.sh}`:
+`research/salt-test-cherrypy/{up.sh,add-second-minion.sh}`:
 
 | container | module | endpoint | notes |
 |---|---|---|---|
-| `papurika-salt` | rest_cherrypy | `http://localhost:8000` | 3008.1 + token/batch patch (matches prod) |
+| `papurika-salt` | rest_cherrypy | `http://localhost:8000` | stock 3008.3 (no patching needed — see below) |
 | `papurika-salt-tornado` | rest_tornado | `http://localhost:8001` | for degradation checks |
 | `papurika-salt-3006` | rest_cherrypy | `https://localhost:8002` | 3006.9, **HTTPS** self-signed (use `--insecure`) |
 
@@ -146,7 +147,11 @@ manual run: a `config.toml` with a profile + `PAPURIKA_PASSWORD=saltdev`, or
 - **Server-side `--batch` can't stream and surfaces no jid** — salt-api buffers
   the whole `local_batch` response (verified). Use `--client-batch` for streaming
   progress + recoverable jids.
-- **`manage.status` reports dead minions as `up` on 3008** (a regression) and
-  unpatched 3008 **evicts tokens** within ~60s. Both are patched in prod and in
-  the `papurika-salt` container; details + the upstream fixes are in the learnings
-  doc and `research/salt-test-cherrypy/`.
+- **Two 3008.0/3008.1 regressions — both fixed upstream in 3008.2.**
+  `manage.status` reported dead minions as `up` (`79e8bb9db7`), and tokens were
+  evicted within ~60s regardless of `token_expire` (`fc21fca`). The containers
+  run stock **3008.3**, so neither needs patching any more. Note this does
+  **not** change the liveness invariant: papurika still computes
+  `targeted − returned` rather than trusting `manage.status`, because the client
+  must work against older masters too. Details in the learnings doc and
+  `research/minion-status-and-liveness.md`.

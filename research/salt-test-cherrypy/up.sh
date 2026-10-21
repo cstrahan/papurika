@@ -17,6 +17,6 @@ docker run -d \
   -e SALT_LOG_LEVEL=info \
   -v "${here}/config:/home/salt/data/config" \
   -v "${here}/srv:/home/salt/data/srv" \
-  ghcr.io/cdalvaro/docker-salt-master:3008.1
+  ghcr.io/cdalvaro/docker-salt-master:3008.3
 
 echo "started; follow logs with: docker logs -f papurika-salt"

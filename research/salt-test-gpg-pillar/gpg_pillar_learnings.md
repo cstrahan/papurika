@@ -114,7 +114,6 @@ scaling limit.
 
 ```bash
 bash up.sh                       # master+minion, cherrypy :8000 + tornado :8001
-bash apply-salt-patch.sh         # token/cache fix (needs ~/src/saltstack)
 ./gen-gpg-pillar.sh 5            # baseline; confirms decryption works
 uv run scripts/stress.py                       # sequential ratchet (Finding 1)
 uv run scripts/capture_silent_incomplete.py    # after gen-gpg-pillar.sh 2000 (Finding 2)

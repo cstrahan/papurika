@@ -149,10 +149,28 @@ Confirmed by version (release tags **and** the matching public
 | 3006.9  | `False` | correct → minion in `down` |
 | 3007.14 | `False` | correct → minion in `down` |
 | 3008.0 / 3008.1 | **`True`** | **broken → minion in `up`, `down` empty** |
+| 3008.2 / 3008.3 | **`True`** (unchanged) | correct → minion in `down` (**fixed in the runner**) |
 
 (All tested live: stop the minion via `supervisorctl stop salt-minion`, then
-`salt-run manage.status` — 3006/3007 report `down`, 3008 reports `up`, while a
-direct `salt '*' test.ping` always correctly shows no response.)
+`salt-run manage.status` — 3006/3007 report `down`, 3008.0/3008.1 report `up`,
+while a direct `salt '*' test.ping` always correctly shows no response.)
+
+**Fixed in 3008.2** by saltstack `79e8bb9db7` *"Fix manage.status reporting all
+minions as up"* (`git tag --contains` → v3008.2, v3008.3). Verified live on
+stock 3008.3: with the minion stopped, `manage.status` → `{"up": [], "down":
+["builtin.minion"]}`.
+
+Note *where* it was fixed: the `get_cli_event_returns` `expect_minions` default
+is **still `True`** — the `salt` CLI still wants its per-target timeout rows.
+The runner was fixed instead: `manage._ping` now passes `expect_minions=False`
+explicitly and additionally skips any `out == "no_return"` row that sneaks
+through. So the underlying synthesized-row behavior this doc describes is
+unchanged; only `manage.*` stopped mistaking those rows for returns.
+
+**This does not change the recommendation.** papurika still computes liveness as
+`targeted − returned`: the fix only exists on ≥3008.2, the client has to work
+against 3006/3007/3008.1 masters too, and a computed answer needs no runner call
+at all.
 
 **Introducing change:** the `expect_minions` default flipped `False → True`
 between v3007.14 and v3008.0, bundled into the 3008 "resource registry /

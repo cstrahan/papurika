@@ -23,7 +23,7 @@ scripts/_common.py             dual-base helpers (cherrypy :8000 + tornado :8001
 scripts/stress.py              sequential ratchet (N=5..4000) until wonky
 scripts/capture_silent_incomplete.py   the tornado empty-200 case
 scripts/stress_concurrent.py <N> <K>   K concurrent compiles (the minion-herd simulation)
-up.sh / apply-salt-patch.sh / token-cache-fix.patch
+up.sh
 ```
 
 GPG key material and `secrets.sls` are **gitignored** (throwaway; avoids secret

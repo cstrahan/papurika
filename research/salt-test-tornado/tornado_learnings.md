@@ -17,7 +17,8 @@ served:
 - tornado config keys differ slightly: `address` (not `host`), plus
   `disable_ssl`, `cors_origin`, `websockets`.
 - Same eauth (`pam`, `saltdev`/`saltdev`), same `netapi_enable_clients`, same
-  `token_expire`, same token/cache patch (`apply-salt-patch.sh`).
+  `token_expire`. (Runs stock 3008.3; the token/cache fix it once needed by hand
+  is upstream as of 3008.2.)
 
 ---
 

@@ -29,12 +29,14 @@ result model. Details in [Response shapes](#response-shapes-the-important-part).
 - **Config we had to supply** (image sets neither): `netapi_enable_clients`
   (Salt 3006+ denies all clients without it — post CVE-2024-22231) and
   `external_auth` (perms for the pam user). See `config/zz-papurika.conf`.
-- **Patch applied:** the prod token/cache fix (saltstack `063aceb387`) — see
-  [Token eviction bug](#token-eviction-bug-confirmed-and-fixed). Reproduce with
-  `up.sh` + `apply-salt-patch.sh`.
+- **No patching needed since 3008.2.** The token-eviction fix (saltstack
+  `fc21fca`) and the `manage.status` fix (`79e8bb9db7`) both ship in **3008.2**,
+  so the harness runs stock **3008.3**. See
+  [Token eviction bug](#token-eviction-bug-confirmed-and-fixed). Earlier captures
+  in `out/` were taken on 3008.1 with those fixes applied by hand.
 
-Reproduce: `cd research/salt-test-cherrypy && bash up.sh && bash apply-salt-patch.sh`,
-then `uv run scripts/NN_*.py`.
+Reproduce: `cd research/salt-test-cherrypy && bash up.sh`, then
+`uv run scripts/NN_*.py`.
 
 ---
 
@@ -361,15 +363,21 @@ Token '...' could not be loaded (TokenExpiredError('')); removing it from the st
 Authentication failure of type "token" occurred.
 ```
 
-This is exactly the prod bug fixed by saltstack `063aceb387` (the generic
-`Cache.clean_expired` fallback used file mtime as the expiry and swept all
-tokens every maintenance pass). We applied the fix to the container's bundled
-salt (`apply-salt-patch.sh`) and restarted the master. Confirmed fixed: a
-single token reused across ~120s (multiple maintenance sweeps) kept returning
-HTTP 200 (`08_token_longevity.py`):
+This is exactly the prod bug (the generic `Cache.clean_expired` fallback used
+file mtime as the expiry and swept all tokens every maintenance pass).
+Originally confirmed by applying the fix by hand to a 3008.1 container: a single
+token reused across ~120s (multiple maintenance sweeps) kept returning HTTP 200
+(`08_token_longevity.py`).
 
-**Root cause — introduced in 3008.0 by a single commit.** Both halves of
-`token-cache-fix.patch` trace to saltstack commit
+**Fixed upstream in 3008.2.** The fix is saltstack `fc21fca` *"Fix premature
+deletion of localfs auth tokens"* (2026-06-05); `git tag --contains fc21fca` →
+**v3007.15, v3008.2, v3008.3**. Verified on stock 3008.3: the same token still
+authenticated after 95s (several maintenance sweeps), where 3008.1 returns 401
+within ~60s. The hand-applied patch and `apply-salt-patch.sh` are therefore
+retired — running them against ≥3008.2 would overwrite newer files.
+
+**Root cause — introduced in 3008.0 by a single commit.** Both halves of the
+fix trace to saltstack commit
 **`78685e5c44`** *"Provide token storage using the salt.cache interface"*
 (Matt Phillips `<mphillips81@bloomberg.net>`, 2025-05-20), the feature commit
 that re-plumbed eauth token storage onto the generic `salt.cache` interface:
@@ -772,11 +780,62 @@ an ambiguous submit recoverable.
   on *any* ambiguous failure ask `/jobs/<jid>` whether the job exists. This
   replaces heuristic (tgt, fun, time-window) matching with an exact answer.
 
-- **But a client jid is NOT an idempotency key.** Re-POSTing the same lowstate
-  with an already-used jid does **not** error and does **not** dedupe — it
-  returns the same jid and publishes again, so the command runs a second time,
-  merely recorded under one jid. So the correct use is *reconcile, then submit
-  only if absent* — never *retry with the same jid*.
+- **The ordering in the master is what makes that sound.** `publish()` in
+  `salt/master.py` runs, in order: `_prep_jid()` (creates the jid dir) →
+  `_prep_pub()` (which calls `save_load`, making `/jobs/<jid>` resolvable) →
+  `_send_pub()` (which actually publishes to minions). So **the job cache entry
+  is written strictly before any minion can receive the job**, and the inference
+  runs in the safe direction: `/jobs/<jid>` reporting *not found* proves
+  `save_load` never ran, therefore `_send_pub` never ran, therefore **nothing
+  executed**. The converse is appropriately weak — an entry exists means
+  "published, or about to be", which is exactly when adopting rather than
+  re-sending is correct.
+
+- **Re-POSTing an already-used jid republishes — but the *minion* deduplicates.**
+  salt-api and the master accept the duplicate without complaint (`prep_jid`
+  skips `makedirs` when the jid dir exists and never regenerates a `passed_jid`),
+  so a second publish goes out under the same jid. The minion then drops it:
+  `salt/minion.py` keeps an in-memory `jid_queue` and returns early for a jid it
+  has already seen ("Don't duplicate jobs").
+
+  Measured on **3008.1 and 3008.3** by counting real executions (a `cmd.run`
+  appending to a file), with a fresh-jid control in the same run to prove the
+  counter works:
+
+  | | executions |
+  |---|---|
+  | submit jid X | 1 |
+  | re-submit **same** jid X | 1 — **deduped** |
+  | submit fresh jid (control) | 2 — ran |
+
+  **The dedup is best-effort, not a guarantee**, and must not be relied on:
+  - the queue is **in-memory per minion process** — verified: after
+    `supervisorctl restart salt-minion`, replaying jid X **ran again** (1 → 2);
+  - it is bounded by `minion_jid_queue_hwm` (**default 100**), so a jid evicted
+    by 100 later jobs would execute on replay;
+  - `resource_job` and `__ignore_process_count_max` bypass the gate entirely.
+
+  ⇒ Treat it as a backstop, not a contract. The correct use remains *reconcile,
+  then submit only if absent* — never *retry with the same jid*.
+
+- **Nothing validates a client-supplied jid.** `is_jid()` (20 digits, optionally
+  `_<suffix>`) is **not** consulted on the publish path; `prep_jid` uses
+  `passed_jid` verbatim. Verified accepted: `"123"`, `"hello-world"`,
+  `"202610211200000000019"`, `"20261021120000000001_abc123"`. An empty string is
+  the one falsy case — salt generates a jid instead. Malformed jids still
+  *work*, but `jid_to_time()` returns `""` for them, so `StartTime` degrades and
+  jid-ordered listings misbehave. **papurika should emit only conforming jids.**
+  (No path-traversal risk: `jid_dir()` sha256-hashes the jid before using it as
+  a path.)
+
+- **How salt picks a jid:** `salt/utils/jid.py` `gen_jid()` =
+  `f"{utcnow:%Y%m%d%H%M%S%f}"` — a 20-char UTC timestamp with microsecond
+  precision, **not random**. With `unique_jid: True` it appends `_<pid>`.
+  Consequence for a client generating its own: two papurika processes (or two
+  masters) can collide within the same microsecond, and a collision is *silent*
+  — the second publish lands in the first's job-cache entry. Use the
+  `<20-digit timestamp>_<random>` form, which `is_jid` accepts, rather than a
+  bare timestamp.
 
 - **With `salt-master` stopped, salt-api does not return the 503 its code
   intends — it hangs.** `POST /`, `POST /login` and even `GET /jobs/<jid>` all

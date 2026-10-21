@@ -20,7 +20,7 @@ docker run -d \
   -e SALT_LOG_LEVEL=info \
   -v "${here}/config:/home/salt/data/config" \
   -v "${here}/srv:/home/salt/data/srv" \
-  ghcr.io/cdalvaro/docker-salt-master:3008.1
+  ghcr.io/cdalvaro/docker-salt-master:3008.3
 
 echo "started papurika-salt-gpg (cherrypy :8000, tornado :8001)"
-echo "next: bash apply-salt-patch.sh && ./gen-gpg-pillar.sh 5 && uv run scripts/stress.py"
+echo "next: ./gen-gpg-pillar.sh 5 && uv run scripts/stress.py"

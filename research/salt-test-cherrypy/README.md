@@ -28,15 +28,13 @@ out/*.json                captured responses (the numbered suite; version-parall
 out-state-shapes/*.json   captured responses for the state.apply shape + concurrency probes
 out-highstate-cli/*.txt   salt's rendered highstate output across its formatting modes
 up.sh                     launch the container
-apply-salt-patch.sh       apply the prod token/cache fix to the running container
-token-cache-fix.patch     the fix (saltstack 063aceb387), for reference
+
 ```
 
 ## Run
 
 ```bash
 bash up.sh                 # start ghcr.io/cdalvaro/docker-salt-master:3008.1 (master+minion, cherrypy, :8000)
-bash apply-salt-patch.sh   # apply the token/cache fix (needs ~/src/saltstack); restarts the master
 uv run scripts/01_sync_local.py   # ... and the rest; each is independent
 docker rm -f papurika-salt        # tear down
 ```
@@ -44,10 +42,10 @@ docker rm -f papurika-salt        # tear down
 Notes:
 - API is **plain HTTP on :8000** (`SALT_API_DISABLE_SSL=True`), eauth user
   `saltdev`/`saltdev` (pam). These are throwaway local-container credentials.
-- `apply-salt-patch.sh` copies the fixed `salt/auth` + `salt/cache` from
-  `~/src/saltstack` (HEAD = v3008.1 + fix) over the container's bundled salt;
-  it's ephemeral (re-run after recreating the container). Without it, eauth
-  tokens get swept within ~60s — see the learnings doc.
+- Runs stock **3008.3**; no patching. On 3008.0/3008.1 eauth tokens were swept
+  within ~60s and `manage.status` reported dead minions as `up`; both are fixed
+  upstream in **3008.2** (`fc21fca`, `79e8bb9db7`), so the former
+  `apply-salt-patch.sh` is retired — see the learnings doc.
 - Scripts use `uv` (PEP 723 inline deps); no venv needed.
 - Override the endpoint with `SALTAPI_URL` (e.g. `SALTAPI_URL=http://127.0.0.1:8000`
   if `localhost` resolves to an IPv6 address something else is squatting on).
