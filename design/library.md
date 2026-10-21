@@ -435,11 +435,19 @@ watching.
   - **`504`** — salt raises it from `SaltClientTimeout`, thrown *after* the job
     was sent and the gather timed out. The job is running.
   - read timeouts, resets, EOF — all can follow a fully written request.
-- Opt in to retrying the ambiguous set with **`WithRetryNonIdempotent()`**, a
-  *Client-level* option: "every command sent through this Client is safe to
-  repeat" is a property of how the Client is used. For a mixed workload —
-  idempotent state applies alongside a one-shot reboot — use two Clients, so
-  which one is in hand says which guarantee applies.
+- **The async engine does better than retrying: it reconciles.** `Run`/`Submit`
+  mint the jid before sending, so on an ambiguous failure they ask
+  `/jobs/<jid>` whether the job exists and either adopt it or re-send — no
+  guessing, and a job proven never to have run is re-sent even if it is wildly
+  non-idempotent. See [async.md](async.md) §C.1–C.2. That covers the common
+  case without any opt-in.
+- Declare a command safe to repeat with **`Command.Idempotent`** /
+  **`JobSpec.Idempotent`**, or fleet-wide with **`WithRetryNonIdempotent()`**.
+  This is consulted **only** where reconciliation can't help: a client type that
+  takes no jid (`runner`, `wheel`), or a master too unreachable to ask. The
+  zero value is the careful one — if papurika cannot tell whether a command ran,
+  it does not run it again. A multi-command POST is one request, so it is
+  repeatable only when every command in it is.
 
 **Validate the lowstate before sending.** cherrypy answers a lowstate missing
 `fun`/`tgt` with HTTP 500 and an opaque `"An unexpected error occurred"` — byte
@@ -583,16 +591,9 @@ before its nominal expiry.
    is implemented, and the provably-unexecuted failures are now retried for every
    command POST without any opt-in. An allowlist is still open — and is less
    pressing now that the common transient cases are covered by default.)*
-3. **Reconciling an ambiguous submit** — the ambiguous failures above are sent
-   once and reported, which is safe but gives up on work that may be running.
-   **A client-supplied jid makes this exact rather than heuristic** (verified on
-   3008.1 — see `cherrypy_learnings.md`, "Client-supplied jids & submit
-   recoverability"): a lowstate may carry its own `jid` and salt-api honors it
-   verbatim, so papurika can generate the jid, submit it, and on any ambiguous
-   failure ask `/jobs/<jid>` whether the job exists — adopting it if so,
-   submitting afresh if `ErrJobNotFound`. Caveat that shapes the design: a client
-   jid is **not** an idempotency key — re-POSTing one that was already used
-   publishes a second time under the same jid. So the pattern is *reconcile, then
-   submit only if absent*, never *retry with the same jid*. Still needs a design
-   pass (jid generation and collision policy, interaction with `WithRetryNonIdempotent`,
-   what `Submit` returns when it adopts).
+3. ~~**Reconciling an ambiguous submit**~~ — **settled and implemented**; see
+   [async.md](async.md) §C.1–C.2. The engine mints the jid, reconciles against
+   `/jobs/<jid>`, and adopts or re-sends. Still open underneath it: `runner` and
+   `wheel` reach the master via `cmd_sync`, which takes no client jid, so those
+   paths cannot be reconciled — should they grow an equivalent, or stay
+   send-once?

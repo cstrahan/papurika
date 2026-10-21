@@ -250,7 +250,7 @@ func (c *Client) Exec(ctx context.Context, cmds ...Command) (*Result, error) {
 	if err != nil {
 		return nil, err
 	}
-	res, err := c.authedExec(ctx, "/", body)
+	res, err := c.authedExec(ctx, "/", body, c.commandRetryClass(cmds))
 	if err != nil {
 		return nil, err
 	}
@@ -281,7 +281,7 @@ func (c *Client) ExecStateless(ctx context.Context, cmds ...Command) (*Result, e
 		m["eauth"] = c.eauth
 	}
 	body, _ := json.Marshal(low)
-	res, err := c.doRequest(ctx, http.MethodPost, "/run", body, "", c.commandRetryClass())
+	res, err := c.doRequest(ctx, http.MethodPost, "/run", body, "", c.commandRetryClass(cmds))
 	if err != nil {
 		return nil, err
 	}
@@ -291,23 +291,36 @@ func (c *Client) ExecStateless(ctx context.Context, cmds ...Command) (*Result, e
 	return decodeExecResponse(cmds, res.body)
 }
 
-// commandRetryClass is how a command POST may be re-sent. By default only
-// failures that prove the request never reached salt (see retryClass); the
-// caller can widen it to any transient failure with WithRetryNonIdempotent.
-func (c *Client) commandRetryClass() retryClass {
+// commandRetryClass is how a POST carrying cmds may be re-sent. By default only
+// failures that prove the request never reached salt (see retryClass). It widens
+// to any transient failure when the caller has declared the work safe to repeat
+// — either fleet-wide via WithRetryNonIdempotent or per-command via
+// Command.Idempotent.
+//
+// A multi-command POST is one indivisible request, so it is only repeatable when
+// EVERY command in it is.
+func (c *Client) commandRetryClass(cmds []Command) retryClass {
 	if c.retryNonIdempotent {
 		return retryTransient
 	}
-	return retryUnexecutedOnly
+	for _, cmd := range cmds {
+		if !cmd.Idempotent {
+			return retryUnexecutedOnly
+		}
+	}
+	if len(cmds) == 0 {
+		return retryUnexecutedOnly
+	}
+	return retryTransient
 }
 
 // authedExec performs an authed POST with one automatic re-auth on auth failure.
-func (c *Client) authedExec(ctx context.Context, p string, body []byte) (*httpResult, error) {
+func (c *Client) authedExec(ctx context.Context, p string, body []byte, class retryClass) (*httpResult, error) {
 	tok, err := c.ensureToken(ctx)
 	if err != nil {
 		return nil, err
 	}
-	res, err := c.doRequest(ctx, http.MethodPost, p, body, tok, c.commandRetryClass())
+	res, err := c.doRequest(ctx, http.MethodPost, p, body, tok, class)
 	if err != nil {
 		return nil, err
 	}
@@ -326,7 +339,7 @@ func (c *Client) authedExec(ctx context.Context, p string, body []byte) (*httpRe
 		if lerr != nil {
 			return nil, lerr
 		}
-		res, err = c.doRequest(ctx, http.MethodPost, p, body, tok, c.commandRetryClass())
+		res, err = c.doRequest(ctx, http.MethodPost, p, body, tok, class)
 		if err != nil {
 			return nil, err
 		}

@@ -45,10 +45,13 @@ Also valuable: `research/pepper_design_analysis.md` (what we're improving on) an
 - **HTTP 200 ≠ success.** Classify on status *and* body. Per-minion / per-command
   outcomes are a `Status` + `Retcode` on the result, **not** Go errors; only
   request-level failures (auth/transport/malformed) are errors.
-- **Never lose a jid.** Once a job is submitted, every return path — success,
-  deadline, Ctrl-C, `context.Canceled` — must yield the jid(s) and partial
-  results. (NDJSON leads with a `submitted` line; the CLI prints the jid on
-  interrupt.)
+- **Never lose a jid.** The engine **mints the jid before submitting**, so even a
+  submit whose response is lost is answerable; every return path — success,
+  deadline, Ctrl-C, `context.Canceled`, ambiguous failure — yields the jid(s) and
+  partial results. (NDJSON leads with a `submitted` line; the CLI prints the jid
+  on interrupt.) On an ambiguous submit failure the engine **reconciles** against
+  `/jobs/<jid>` and adopts or re-sends rather than guessing — `design/async.md`
+  §C.1–C.2.
 - **Compute liveness ourselves** (`targeted − returned`); never trust
   `manage.status` (broken in 3008.0/3008.1; fixed in 3008.2, but we don't
   depend on it either way).

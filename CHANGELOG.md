@@ -25,6 +25,26 @@ Add entries here as you go, under these headings (drop the ones you don't use):
 ### Security    — vulnerability fixes
 -->
 
+### Added
+
+- **Submit reconciliation.** `Run`/`Submit` now mint the job id themselves and
+  submit under it, so a submit whose response is lost is still answerable. On an
+  ambiguous failure the engine asks `/jobs/<jid>` what actually happened and
+  either **adopts** the running job or **re-sends** it. This is exact, not
+  heuristic: the master writes the job-cache entry strictly before publishing to
+  minions, so `ErrJobNotFound` *proves* nothing executed — such a job is re-sent
+  even when it is wildly non-idempotent.
+- **`Command.Idempotent` / `JobSpec.Idempotent`** — declares that repeating the
+  command is harmless. Consulted **only** where reconciliation cannot help: a
+  client type that takes no jid (`runner`, `wheel`), or a master too unreachable
+  to ask. The zero value is the careful one: if papurika cannot tell whether a
+  command ran, it does not run it again, and the error carries the jid.
+- **`Command.JID`** — submit under a jid you choose. The async engine sets this
+  itself; set it by hand only when tracking jids yourself. Validated against
+  salt's shape (20 digits, optional `_suffix`) before sending, because nothing
+  on salt's publish path validates it and a malformed jid silently degrades
+  `StartTime` and jid-ordered listings.
+
 ## [0.2.0] - 2026-10-21
 
 Adds a typed decoder for state returns and makes command-POST retry safe by

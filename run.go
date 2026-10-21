@@ -149,8 +149,24 @@ func (c *Client) Submit(ctx context.Context, spec JobSpec, opts ...RunOption) (*
 var errNoMatch = errors.New("papurika: target matched no minion")
 
 // submitOne POSTs a single local_async job and returns its identity.
+//
+// It mints the jid itself rather than letting the master do it, which is what
+// makes a lost response recoverable: when the POST fails ambiguously we already
+// know the jid to ask about. See reconcileSubmit.
 func (c *Client) submitOne(ctx context.Context, spec JobSpec) (Job, error) {
 	cmd := spec.command(ClientLocalAsync)
+	if cmd.JID == "" {
+		cmd.JID = newJID()
+	}
+	job, err := c.sendJob(ctx, spec, cmd)
+	if err != nil && !errors.Is(err, errNoMatch) {
+		return c.reconcileSubmit(ctx, spec, cmd, err)
+	}
+	return job, err
+}
+
+// sendJob POSTs the job and reads its identity out of the response.
+func (c *Client) sendJob(ctx context.Context, spec JobSpec, cmd Command) (Job, error) {
 	res, err := c.Exec(ctx, cmd)
 	if err != nil {
 		return Job{}, err
@@ -164,6 +180,77 @@ func (c *Client) submitOne(ctx context.Context, spec JobSpec) (Job, error) {
 		return Job{}, apiError(ErrMalformed, 0, "", string(cr.Raw()), ModuleUnknown)
 	}
 	return Job{JID: cr.JID, Targeted: cr.Targeted, Fun: spec.Fun, Client: ClientLocalAsync}, nil
+}
+
+// reconcileSubmit decides what a failed submit means, now that we know the jid
+// it would have used.
+//
+// The master writes the job-cache entry (_prep_jid, then save_load inside
+// _prep_pub) strictly BEFORE it publishes to minions (_send_pub) — verified
+// against salt's source and live, see cherrypy_learnings.md. So the question
+// "did /jobs/<jid> resolve?" answers "did anything execute?" in the only
+// direction that matters:
+//
+//   - not found  => save_load never ran => _send_pub never ran => nothing
+//     executed, and re-sending is safe no matter what the command does.
+//   - found      => the job exists and may be running right now. Adopt it and
+//     gather; never re-send, or we double-execute.
+//   - can't tell => the master is unreachable enough that we cannot ask. Only
+//     here does Command.Idempotent get a say.
+//
+// The failure that is NOT ambiguous — one that proves the request never left —
+// was already retried by the transport, so anything arriving here is either
+// ambiguous or terminal.
+func (c *Client) reconcileSubmit(ctx context.Context, spec JobSpec, cmd Command, subErr error) (Job, error) {
+	if !isAmbiguousSubmit(subErr) || ctx.Err() != nil {
+		return Job{}, subErr
+	}
+	c.log.Warn("submit failed ambiguously; reconciling against the job cache",
+		"jid", cmd.JID, "fun", spec.Fun, "err", subErr)
+
+	jr, err := c.Job(ctx, cmd.JID)
+	switch {
+	case err == nil && jr != nil:
+		// The job exists. Adopt it rather than submitting again.
+		targeted := jr.Result.Targeted
+		c.log.Info("submit landed after all; adopting the existing job", "jid", cmd.JID)
+		return Job{JID: cmd.JID, Targeted: targeted, Fun: spec.Fun, Client: ClientLocalAsync}, nil
+
+	case errors.Is(err, ErrJobNotFound):
+		// Proven never published. Re-send under the same jid: it stays
+		// recoverable, and a stale duplicate would be dropped by the minion.
+		c.log.Info("submit never reached salt; re-sending", "jid", cmd.JID)
+		return c.sendJob(ctx, spec, cmd)
+
+	default:
+		// We could not ask. Without evidence, only an explicit declaration that
+		// repeating is harmless justifies sending again.
+		if !cmd.Idempotent && !c.retryNonIdempotent {
+			c.log.Warn("cannot determine whether the job was submitted; not re-sending",
+				"jid", cmd.JID, "reconcile_err", err)
+			return Job{}, fmt.Errorf("%w (jid %s may or may not be running; check `papurika job %s`)",
+				subErr, cmd.JID, cmd.JID)
+		}
+		c.log.Warn("cannot reconcile, but the command is declared idempotent; re-sending",
+			"jid", cmd.JID, "reconcile_err", err)
+		return c.sendJob(ctx, spec, cmd)
+	}
+}
+
+// isAmbiguousSubmit reports whether err leaves it unknown whether the master
+// acted on the request. Auth, authz and malformed-request failures are
+// terminal: the request was understood and rejected, so nothing was published
+// and there is nothing to reconcile.
+func isAmbiguousSubmit(err error) bool {
+	switch {
+	case errors.Is(err, ErrAuthDenied), errors.Is(err, ErrAuthFailure),
+		errors.Is(err, ErrMalformed), errors.Is(err, ErrUnsupported),
+		errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):
+		return false
+	case errors.Is(err, ErrServerError), errors.Is(err, ErrTransport):
+		return true
+	}
+	return false
 }
 
 // noMatchResult is the empty-but-valid result for a target that matched nothing.

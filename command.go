@@ -61,6 +61,32 @@ type Command struct {
 	Batch   string         // "10" | "25%" — local_batch
 	Subset  int            // local_subset
 
+	// JID, when set, is submitted as the job's id instead of letting the master
+	// mint one. salt-api honors it verbatim. The async engine sets this itself
+	// so that a submit whose response is lost is still recoverable; set it by
+	// hand only if you are tracking jids yourself. Must have salt's shape —
+	// 20 digits, optionally followed by "_" and a suffix.
+	//
+	// Reusing a jid does NOT dedupe at the master: it republishes into the
+	// existing job-cache entry. (The *minion* drops a jid it has already run,
+	// but only best-effort — that queue is in-memory and capped.)
+	JID string
+
+	// Idempotent declares that running this command more than once is
+	// harmless, which lets papurika re-send it when it cannot prove whether the
+	// first attempt executed.
+	//
+	// It is NOT needed for the common case. On an ambiguous failure the async
+	// engine reconciles against /jobs/<jid> first, and a job it can prove never
+	// ran is re-sent regardless of this field — proving it didn't run is
+	// stronger evidence than any declaration. This field only governs what
+	// happens when reconciliation itself is impossible or inconclusive: a
+	// client type that takes no jid, or a master too unreachable to ask.
+	//
+	// Default (false) is therefore the careful one: if papurika cannot tell
+	// whether your command ran, it will not run it again.
+	Idempotent bool
+
 	// Extra is merged verbatim into the lowstate dict (escape hatch for fields
 	// we don't model). It does not override the structured fields above.
 	Extra map[string]any
@@ -135,6 +161,9 @@ func (c Command) lowstate(fullReturn bool) map[string]any {
 			m["subset"] = c.Subset
 		}
 	}
+	if c.JID != "" {
+		m["jid"] = c.JID
+	}
 	if fullReturn && c.Client != ClientWheel && c.Client != ClientWheelAsync {
 		m["full_return"] = true
 	}
@@ -167,6 +196,12 @@ func validateLowstate(m map[string]any) error {
 	if _, targeted := m["tgt"]; targeted && !nonEmpty("tgt") {
 		return fmt.Errorf("%w: tgt is required for client %q", ErrMalformed, m["client"])
 	}
+	// Nothing on salt's publish path validates a jid, so a malformed one is
+	// accepted and then silently degrades StartTime and jid-ordered listings.
+	// Catch it here instead.
+	if j, ok := m["jid"].(string); ok && j != "" && !looksLikeJID(j) {
+		return fmt.Errorf("%w: jid %q is not a salt jid (want 20 digits, optionally _suffix)", ErrMalformed, j)
+	}
 	return nil
 }
 
@@ -196,6 +231,11 @@ type JobSpec struct {
 	Arg     []any
 	Kwarg   map[string]any
 	Batch   string
+
+	// Idempotent declares that running this job more than once is harmless.
+	// See Command.Idempotent — in short, it is only consulted when papurika
+	// cannot determine whether a lost submit actually reached the minions.
+	Idempotent bool
 }
 
 // command converts the spec to a Command of the given client type.
@@ -208,5 +248,7 @@ func (s JobSpec) command(client ClientType) Command {
 		Arg:     s.Arg,
 		Kwarg:   s.Kwarg,
 		Batch:   s.Batch,
+
+		Idempotent: s.Idempotent,
 	}
 }

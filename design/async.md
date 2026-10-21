@@ -174,6 +174,64 @@ which minions completed (with results), which didn't, and the **jid(s)** to foll
 up. Go lets us return *both* a value and an error — so we return the partial
 `Result` **alongside** the error, never instead of it.
 
+### C.1 The jid is ours before the request leaves
+
+The engine **mints the jid itself** and submits under it, rather than reading one
+out of the response. salt-api honors a `jid` in the lowstate (verified — see
+`cherrypy_learnings.md`). This closes the one hole in "never lose a jid": a
+submit whose *response* is lost previously left a job running under an id nobody
+could name.
+
+Format: salt's 20-digit UTC timestamp, then `_` and random hex (the shape salt's
+own `unique_jid` uses, and what `is_jid`/`jid_to_time` accept). The random
+suffix is load-bearing — `gen_jid` is a bare timestamp, so two papurika
+processes submitting in the same microsecond would mint the same jid, and a jid
+collision is **silent**: the master reuses the existing job-cache entry instead
+of erroring. Cost to be aware of: the timestamp is the *client's* clock where
+salt would have used the master's, so a skewed client writes jobs whose
+`StartTime` is off by the skew.
+
+### C.2 Reconciling an ambiguous submit
+
+Knowing the jid up front turns "did this run?" from a guess into a lookup,
+because of the ordering inside `salt/master.py`'s `publish()`:
+
+```
+_prep_jid   → jid dir created
+_prep_pub   → save_load   ⇒ GET /jobs/<jid> resolves from here on
+_send_pub   → minions actually receive the job
+```
+
+The cache entry is written **strictly before** any minion can receive anything,
+so the inference runs in the direction we need:
+
+| `GET /jobs/<jid>` | what it proves | engine does |
+|---|---|---|
+| `ErrJobNotFound` | `save_load` never ran ⇒ `_send_pub` never ran ⇒ **nothing executed** | re-send, under the same jid |
+| resolves | published, or about to be | **adopt** it and gather — never re-send |
+| the lookup itself fails | nothing | stop; return the error **carrying the jid** |
+
+Two consequences worth stating plainly:
+
+- A job proven not to have run is re-sent **regardless of `Idempotent`**.
+  Proving it didn't run is stronger evidence than any declaration, so even
+  `system.reboot` is safe to re-send there.
+- `Command.Idempotent` / `JobSpec.Idempotent` governs **only the third row** —
+  the case where the master is too unreachable to ask. Default (false) is the
+  careful one: if papurika cannot tell whether your command ran, it will not run
+  it again, and the error names the jid so you can look yourself.
+
+Failures that are *terminal* rather than ambiguous — authz, authn, malformed,
+ctx cancellation — skip reconciliation entirely: salt understood the request and
+rejected it, so nothing was published and there is nothing to ask about.
+
+**Known gap:** if `save_load` succeeds but `_send_pub` fails, the job exists in
+the cache though no minion ever got it. papurika adopts and then reports
+non-responders — a misdiagnosis ("minions are down" vs "it never went out"),
+though the remedy, re-running, is the same. Also: `runner`/`wheel` reach the
+master through `cmd_sync`, which takes no client jid, so those paths cannot be
+reconciled at all.
+
 ```go
 // Contract: once submission succeeds, *Result is non-nil on EVERY return path,
 // including error returns. Result.JIDs() is always populated.
