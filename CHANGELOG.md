@@ -25,6 +25,13 @@ Add entries here as you go, under these headings (drop the ones you don't use):
 ### Security    — vulnerability fixes
 -->
 
+## [0.3.0] - 2026-10-21
+
+Makes a lost submit recoverable rather than ambiguous, and stops `/events`
+connections scaling with in-flight jobs. **Two breaking API changes** — a rename
+and a signature change, each with a migration note under *Changed* — plus one
+behavior change to how event streams are opened.
+
 ### Added
 
 - **Submit reconciliation.** `Run`/`Submit` now mint the job id themselves and
@@ -179,6 +186,7 @@ First public release. Pre-1.0: expect breaking changes while the design settles.
   deadline (exit 124). An unanswered probe is no longer taken as evidence that a
   minion is down.
 
-[Unreleased]: https://github.com/cstrahan/papurika/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/cstrahan/papurika/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/cstrahan/papurika/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/cstrahan/papurika/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/cstrahan/papurika/releases/tag/v0.1.0
