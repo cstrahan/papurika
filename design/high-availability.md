@@ -55,8 +55,7 @@ deciding factors:
 | Multi-master, no stickiness, per-master caches | Both failure modes are live. |
 
 **Prod topology is the prerequisite question** and is currently unconfirmed: is
-`salt-master.us-west1.example.com:8000` (and the AWS/Linode equivalent) a
-single salt-api, or an LB VIP over several? If an LB — does it do sticky sessions,
+each regional salt-master endpoint a single salt-api, or an LB VIP over several? If an LB — does it do sticky sessions,
 and is there a shared `master_job_cache`? The ops notes mention a single Linode
 salt-master, but the GCP side may differ. **Resolve this first** — it decides
 whether any client-side work is warranted.

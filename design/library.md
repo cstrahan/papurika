@@ -428,13 +428,13 @@ default_profile = "prod"
 
 [profiles.prod]
 master_url       = "https://salt.example.com:8000"
-user             = "cstrahan"
+user             = "me"
 eauth            = "file"
 password_command = ["pass", "show", "salt/prod"]   # secret never in this file
 
 [profiles.gcp]
 master_url       = "http://salt-master.us-west1.example.com:8000"
-user             = "cstrahan"
+user             = "me"
 eauth            = "file"
 password_command = ["pass", "show", "salt/gcp"]
 ```

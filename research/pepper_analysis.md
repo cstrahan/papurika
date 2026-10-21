@@ -172,7 +172,7 @@ text:
 ```ini
 [main]
 SALTAPI_URL=https://salt.example.com:8000
-SALTAPI_USER=cstrahan
+SALTAPI_USER=me
 SALTAPI_PASS=<plaintext password>
 SALTAPI_EAUTH=file
 ```
@@ -207,9 +207,9 @@ per-profile file under the XDG cache dir, or a single store indexed by a
 profile/endpoint key. Never share one token blob across endpoints.
 
 ### 2.12 Batch vs non-batch response shapes diverge — and `full_return` doesn't fix it
-Two structural divergences, both of which bite repeatedly in prod — the ops skill
-(`the internal ops runbook`) carries explicit warnings and a
-`pepper_state_results.py` shim to paper over them:
+Two structural divergences, both of which bite repeatedly in prod — our internal
+ops runbook carries explicit warnings and a result-parsing shim to paper over
+them:
 1. **Array fan-out.** Non-batch `local` returns all minions in one dict —
    `return: [{m1: r1, m2: r2}]` (capture `out/17a_aggregate_test_ping.json`).
    `local_batch` returns **one `return[]` element per batch chunk** —
