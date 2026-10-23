@@ -80,6 +80,9 @@ papurika runner manage.up
 - Ctrl-C **and SIGTERM** print the in-flight jid(s) + a `papurika watch <jid>`
   recovery hint and render whatever was gathered — so a run killed by
   `timeout(1)`, CI or a supervisor is still recoverable.
+- `--batch N` batches **client-side**, which is what keeps a recoverable jid and
+  live progress. `--batch-mode server` uses salt's `local_batch` instead: durable
+  across a client death, but it returns no jid and cannot stream.
 
 `papurika profiles` lists what's configured, which profile the next command
 would use, and where each password comes from — without printing any password

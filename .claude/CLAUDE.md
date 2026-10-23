@@ -165,11 +165,12 @@ manual run: a `config.toml` with a profile + `PAPURIKA_PASSWORD=saltdev`, or
   there. Use absolute paths or `cd` back to the repo root.
 - **CLI flag placement:** global/persistent flags (`-p`, `-o`, `-v`, `--timeout`,
   `--insecure`) go anywhere; **subcommand-local flags** (`--batch`,
-  `--client-batch`, targeting `-G/-C/-L/...`, `--subset`) go **after** the
+  `--batch-mode`, targeting `-G/-C/-L/...`, `--subset`) go **after** the
   subcommand (cobra resolves the subcommand by scanning args).
-- **Server-side `--batch` can't stream and surfaces no jid** — salt-api buffers
-  the whole `local_batch` response (verified). Use `--client-batch` for streaming
-  progress + recoverable jids.
+- **Server-side batch can't stream and surfaces no jid** — salt-api buffers
+  the whole `local_batch` response (verified). That is why `--batch N` now
+  defaults to **client-side** batching; `--batch-mode server` opts back in and
+  warns. (`--client-batch` is a deprecated hidden alias.)
 - **Two 3008.0/3008.1 regressions — both fixed upstream in 3008.2.**
   `manage.status` reported dead minions as `up` (`79e8bb9db7`), and tokens were
   evicted within ~60s regardless of `token_expire` (`fc21fca`). The containers

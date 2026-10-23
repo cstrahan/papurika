@@ -369,10 +369,25 @@ essentially instantly — no deadlock. CLI: `papurika watch [--for all-returned|
 
 ## F. Batching strategy
 
-Default **server-side `local_batch`**; **client-side** opt-in for interactive UX.
-Either way the engine normalizes the shape so callers never see per-chunk fan-out.
+Default **client-side**; **server-side `local_batch`** on explicit opt-in
+(`--batch-mode server`). Either way the engine normalizes the shape so callers
+never see per-chunk fan-out.
 
-**Server-side (default).** Send `client: local_batch`, `batch: "<n|pct>"`. This is
+**Why client-side is the default.** Server-side batching cannot produce a jid —
+not "does not bother to", *cannot*: the sync response carries none (verified,
+below). That makes `--batch 10` the one invocation where papurika silently
+breaks its own never-lose-a-jid rule, and it is exactly what someone migrating
+from pepper types first. Correctness of the core guarantee beats the durability
+win, so the default flipped; the durability win is still one flag away, and
+choosing it prints what you are giving up on stderr.
+
+The flip is not free, and the tradeoff is real: client-side batching resolves the
+target up front (so it can go stale), orchestrates from the client process (so it
+dies with that process), and costs N× API calls. For a very large fleet or an
+unattended CI run that must survive the client, `--batch-mode server` is still
+the right answer — it is simply no longer the answer you get by accident.
+
+**Server-side (`--batch-mode server`).** Send `client: local_batch`, `batch: "<n|pct>"`. This is
 a **synchronous** `POST /` — the master orchestrates the batching and returns
 `return: [{chunk1},{chunk2},…]`; the engine **merges** the per-chunk maps into one
 `map[string]MinionResult` (ids are unique keys; lossless) and unwraps the spliced
@@ -390,9 +405,10 @@ doesn't stream it. (An earlier draft claimed progress "still flows" via per-mini
 nor has a jid to correlate.)
 
 **If you need streaming progress or a recoverable jid while batching, use
-client-side batching** — it's the only mechanism that can.
+client-side batching** — it's the only mechanism that can, which is why it is
+the default.
 
-**Client-side (opt-in).** `WithClientBatch(size, …)`: resolve target → static
+**Client-side (default).** `WithClientBatch(size, …)`: resolve target → static
 minion list (a discovery `test.ping` or key list), chunk it, and fan out one
 `local_async` per chunk through the **same `Execution` machinery** (each chunk is a
 tracked jid). The engine merges all chunk `Result`s into one unified `Result`
@@ -410,6 +426,7 @@ func WithBatchConcurrency(n int) RunOption        // cap chunks gathered at once
 `WithBatchConcurrency` is **client-side only** — server-side `local_batch` has no
 separate concurrency knob (the batch size *is* the concurrency; the master
 serializes the waves), so there it's tuned via the batch size, not this option.
+The CLI says so on stderr rather than ignoring it quietly.
 
 **Progress to the CLI:** the **non-batch** and **client-side-batch** paths feed the
 `WithOnUpdate` / `WithOnSubmit` stream (each per-minion return is one `Update`;
@@ -417,8 +434,13 @@ each chunk submit is one `Job`), so live progress and NDJSON streaming work. The
 **server-side-batch** path is a single blocking call that does *not* fire those
 callbacks — its results materialize all at once when the call returns, so there's
 no live progress there (consistent with the buffered-response finding above).
-**Default:** `spec.Batch != ""` and no `WithClientBatch` ⇒ server-side;
-`WithClientBatch` ⇒ client-side; no batch ⇒ a single `local_async`.
+**Library default** (unchanged — the library stays explicit): `spec.Batch != ""`
+and no `WithClientBatch` ⇒ server-side; `WithClientBatch` ⇒ client-side; no batch
+⇒ a single `local_async`. **CLI default:** `--batch N` adds `WithClientBatch` and
+leaves `spec.Batch` empty, so the client-side path is what you get unless
+`--batch-mode server` sets `spec.Batch` instead. The choice lives in the CLI
+because it is a UX default, not a library semantic — a library caller asking for
+`spec.Batch` means `local_batch` and should get it.
 
 ---
 

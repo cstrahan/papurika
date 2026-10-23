@@ -218,8 +218,9 @@ encoding. So there's no per-batch flush a client could consume incrementally.
 **Implication:** server-side batch can't give a client streaming progress *or* a
 jid (the sync response carries none). The only way to stream batch progress (and
 recover jids) is **client-side batching** — resolve the target, chunk it, and fan
-out `local_async` per chunk. This is why papurika offers `--client-batch` and why
-its NDJSON output streams there but not for server-side `--batch`.
+out `local_async` per chunk. This is why papurika's `--batch` **defaults** to
+client-side batching (`--batch-mode server` opts back into `local_batch`), and
+why its NDJSON output streams there but not under server-side batch.
 
 ### `runner` (sync) — `out/04*.json`
 `return[0]` is the runner's **bare return value, NOT wrapped**:

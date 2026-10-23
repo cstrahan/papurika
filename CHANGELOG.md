@@ -68,8 +68,34 @@ Add entries here as you go, under these headings (drop the ones you don't use):
 
 ### Changed
 
+- **`--batch N` now batches client-side by default** (was: salt's server-side
+  `local_batch`). Server-side batching returns **no jid at all** — salt-api
+  buffers the whole response and the sync reply carries none — so `--batch 10`,
+  the most pepper-like invocation a migrating user can type, silently discarded
+  the one thing papurika exists to keep. Client-side batching keeps a
+  recoverable jid per chunk and streams live progress.
+
+  **Migration:** pass `--batch-mode server` to restore the old behavior. It is
+  still the right choice for a very large fleet or an unattended run that must
+  survive the client process, because client-side batching resolves the target
+  up front, orchestrates from this process, and costs N× API calls — it now
+  prints what you are giving up on stderr. `--batch-mode` is also now a real
+  flag (the design had always specified it); `--client-batch` is a hidden,
+  deprecated no-op alias that warns.
+- **The low-level `local`/`local-async`/`local-subset`/`ssh` subcommands no
+  longer accept `--batch`, `--batch-mode` or `--batch-concurrency`**, and
+  `local-batch` accepts only a plain `--batch`. Those flags never did anything
+  on most of them; the low-level tier maps one client to one salt client with
+  no smart defaults, and client-side batching is an engine behavior the
+  high-level verbs compose.
 - **`papurika job <jid>` on a job that is still running now exits 0**, reporting
   `outcome: pending`, instead of exiting 1 with `outcome: failed`. See **Fixed**.
+
+### Deprecated
+
+- **`--client-batch`** — client-side batching is now the default, so the flag is
+  a no-op. It is hidden from `--help`, warns when used, and will be removed in a
+  future 0.x. Use `--batch-mode server` if you wanted the *other* behavior.
 
 ### Fixed
 

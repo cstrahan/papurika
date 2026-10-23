@@ -137,11 +137,11 @@ per line, emitted *as the run progresses*. For a gathering run it emits a
 exists — so the jid is never lost to an interrupt, satisfying the no-lost-jid rule
 on the stdout stream itself), then one `{"type":"minion",…}` line per return, then
 a trailing `{"type":"summary",…}`. Ideal for piping a large/long run into `jq -c`
-or a live processor. Caveat: **server-side `--batch` can't stream** — salt-api
+or a live processor. Caveat: **`--batch-mode server` can't stream** — salt-api
 buffers the whole `local_batch` response and returns no jid (verified;
 `async.md` §F), so under server-side batch ndjson degrades to minion + summary
-lines emitted at the end with no `submitted`/jid line. Use **`--client-batch`** for
-streaming + jids while batching.
+lines emitted at the end with no `submitted`/jid line. Client-side batching (the
+**default** for `--batch`) streams and keeps jids.
 
 ### JSON (`papurika.dev/result/v1`)
 
@@ -264,7 +264,7 @@ Strict separation so `--output json | jq` is always clean:
   watch <jid>` line when a run is cut short), `summary.jids` in json/yaml, the
   ndjson `submitted` line. Nothing else on stdout.
 - **stderr** — *everything else*: progress, per-minion streaming ticks, warnings
-  (deprecated flag, version skew), auth/connection errors, and the human summary
+  (deprecated flag, version skew, `--batch-mode server`), auth/connection errors, and the human summary
   line **when `--output json`** (so stdout stays one pure JSON document; in pretty
   mode the summary footer is part of the stdout render). On interrupt/deadline it
   gets **one terse line** — jid-free in pretty (the jid is already on stdout,
@@ -425,9 +425,9 @@ result keeps normal-path output far less noisy. Worth it.
 | `--timeout DUR` | **hard** wall-clock deadline (ctx); hitting it → exit 124 | — |
 | `--salt-timeout DUR` | settle window: initial wait for returns | — |
 | `--gather-timeout DUR` | settle window: quiet period (extended per return) before settling non-responders → exit per `--fail` | — |
-| `--batch N\|N%` | batching | `batch` (+ `local_batch`) |
-| `--batch-mode server\|client` | server-side `local_batch` vs client-side fan-out | selects path |
-| `--batch-concurrency N` | max client-batch chunks gathered at once (client-batch only; default 8) | — |
+| `--batch N\|N%` | batching | — (client-side) / `batch` (+ `local_batch`) under `--batch-mode server` |
+| `--batch-mode client\|server` | **default `client`**: chunk + fan out, keeping jids and live progress. `server` is salt's `local_batch`: no jid, no progress (warned on stderr) | selects path |
+| `--batch-concurrency N` | max client-side batch chunks gathered at once (default 8; ignored under `--batch-mode server`) | — |
 | `--subset N` | subset targeting | `local_subset` |
 | `--async` / `--detach` | fire-and-forget on any verb (= `submit`) | `*_async` |
 | `--fail-any\|--fail-all\|--fail-none` | exit policy (§D) | — |
@@ -438,6 +438,18 @@ result keeps normal-path output far less noisy. Worth it.
 | `-v, -vv` | verbosity → stderr (request bodies at `-vv`) | — |
 | `--insecure` / `--cacert PATH` | per-client TLS | — |
 | `arg` positionals, `k=v` | function args/kwargs | `arg`, `kwarg` |
+
+Note the `--batch-mode` **default is `client`**, and this is load-bearing: `--batch
+10` is the single most pepper-like thing a migrating user can type, and under
+server-side batching it silently returns **no jid** (async.md §F) — a never-lose-a-jid
+violation invisible at the call site. Server-side batching is still available,
+but you have to ask for it, and saying so prints the tradeoff on stderr. The cost
+of the flip is that batching now resolves the target client-side and orchestrates
+from this process, so it dies with the process and costs N× API calls; `--batch-mode
+server` remains the durable/large-fleet choice. (`--client-batch`, which
+previously opted *in* to this, is now a hidden no-op alias that warns.) The
+batching flags are high-level-only: the low-level `local-batch` subcommand takes a
+plain `--batch` and nothing else, per the tiering contract in §A.
 
 Orthogonality fixes for pepper's mess: `--async` is one flag meaning fire-and-forget
 on *any* verb (the per-client zoo lives in the low-level subcommands, not in human

@@ -16,14 +16,24 @@ import (
 type targeting struct {
 	list, pcre, grain, grainPCRE, pillar, pillarPCRE, rng, compound, nodegroup bool
 	batch                                                                      string
-	clientBatch                                                                bool
+	batchMode                                                                  string
+	clientBatch                                                                bool // deprecated alias for --batch-mode=client
 	batchConcurrency                                                           int
 }
 
-// batchOpts returns the client-side-batch RunOptions implied by the flags — empty
-// unless --client-batch is set with a --batch size.
+const (
+	batchModeClient = "client"
+	batchModeServer = "server"
+)
+
+// serverBatch reports whether batching should go through salt's own
+// local_batch rather than papurika's client-side fan-out.
+func (t *targeting) serverBatch() bool { return t.batchMode == batchModeServer }
+
+// batchOpts returns the client-side-batch RunOptions implied by the flags —
+// empty unless a --batch size was given and the mode is client-side.
 func (t *targeting) batchOpts() []papurika.RunOption {
-	if !t.clientBatch || t.batch == "" {
+	if t.batch == "" || t.serverBatch() {
 		return nil
 	}
 	opts := []papurika.RunOption{papurika.WithClientBatch(t.batch)}
@@ -33,7 +43,11 @@ func (t *targeting) batchOpts() []papurika.RunOption {
 	return opts
 }
 
-func (t *targeting) register(c *cobra.Command) {
+// registerSelectors adds only the tgt_type flags. Low-level (one client = one
+// subcommand) commands take these but NOT the batch-mode machinery: they map
+// straight onto a salt client with no smart defaults, which is the tiering
+// contract in design/cli.md §A.
+func (t *targeting) registerSelectors(c *cobra.Command) {
 	f := c.Flags()
 	f.BoolVarP(&t.list, "list", "L", false, "target type: comma-separated list")
 	f.BoolVarP(&t.pcre, "pcre", "E", false, "target type: minion-id PCRE")
@@ -44,9 +58,62 @@ func (t *targeting) register(c *cobra.Command) {
 	f.BoolVarP(&t.rng, "range", "R", false, "target type: range expression")
 	f.BoolVarP(&t.compound, "compound", "C", false, "target type: compound")
 	f.BoolVarP(&t.nodegroup, "nodegroup", "N", false, "target type: nodegroup")
+}
+
+// register adds the selectors plus the batching flags, for the high-level verbs.
+func (t *targeting) register(c *cobra.Command) {
+	t.registerSelectors(c)
+	f := c.Flags()
 	f.StringVar(&t.batch, "batch", "", "batch size (e.g. 10 or 25%)")
-	f.BoolVar(&t.clientBatch, "client-batch", false, "batch client-side (chunk + fan out) instead of server-side local_batch")
-	f.IntVar(&t.batchConcurrency, "batch-concurrency", 0, "max --client-batch chunks gathered at once (default 8; client-batch only)")
+	f.StringVar(&t.batchMode, "batch-mode", batchModeClient,
+		"how to batch: client (chunk + fan out; keeps jids and live progress) or server (salt local_batch; no jid, no progress)")
+	f.IntVar(&t.batchConcurrency, "batch-concurrency", 0, "max client-side batch chunks gathered at once (default 8)")
+	f.BoolVar(&t.clientBatch, "client-batch", false, "deprecated: client-side batching is now the default; use --batch-mode server to opt out")
+	_ = f.MarkHidden("client-batch")
+}
+
+// resolveBatch validates the batching flags and warns about the combinations
+// that quietly do less than they look like they do.
+//
+// Server-side local_batch gets the loud warning because it is the one mode that
+// cannot satisfy the never-lose-a-jid rule: salt-api buffers the whole response
+// and returns no jid at all (verified — async.md §F). It used to be the default,
+// which meant the single most pepper-like invocation anyone could type,
+// `--batch 10`, silently threw the jid away.
+func (t *targeting) resolveBatch() error {
+	if t.clientBatch {
+		fmt.Fprintln(os.Stderr, "papurika: --client-batch is deprecated and now redundant; client-side batching is the default")
+		t.batchMode = batchModeClient
+	}
+	switch t.batchMode {
+	case batchModeClient, batchModeServer:
+	default:
+		return usageErr(fmt.Sprintf("--batch-mode must be %q or %q, got %q", batchModeClient, batchModeServer, t.batchMode))
+	}
+	if t.batch == "" {
+		return nil
+	}
+	if t.serverBatch() {
+		fmt.Fprintln(os.Stderr, "papurika: --batch-mode server returns no jid and no live progress (salt-api buffers the whole local_batch response); the run is not recoverable if this process dies")
+		if t.batchConcurrency > 0 {
+			fmt.Fprintln(os.Stderr, "papurika: --batch-concurrency is ignored under --batch-mode server; the batch size is the concurrency there")
+		}
+	}
+	return nil
+}
+
+// resolve validates every targeting/batching flag and returns the tgt_type.
+// Commands call this once, instead of tgtType, so no path can skip the
+// batch-mode checks.
+func (t *targeting) resolve() (papurika.TgtType, error) {
+	tt, err := t.tgtType()
+	if err != nil {
+		return "", err
+	}
+	if err := t.resolveBatch(); err != nil {
+		return "", err
+	}
+	return tt, nil
 }
 
 func (t *targeting) tgtType() (papurika.TgtType, error) {
@@ -211,7 +278,7 @@ func newPingCmd() *cobra.Command {
 		Short: "test.ping with up/down classification",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			tt, err := tg.tgtType()
+			tt, err := tg.resolve()
 			if err != nil {
 				return err
 			}
@@ -413,7 +480,7 @@ func newLowstateCmd() *cobra.Command {
 
 // specFromArgs builds a JobSpec from positional <tgt> <fun> [args...] + flags.
 func specFromArgs(tg *targeting, args []string) (papurika.JobSpec, error) {
-	tt, err := tg.tgtType()
+	tt, err := tg.resolve()
 	if err != nil {
 		return papurika.JobSpec{}, err
 	}
@@ -424,11 +491,15 @@ func specFromArgs(tg *targeting, args []string) (papurika.JobSpec, error) {
 	}, nil
 }
 
+// batchIfServer returns the lowstate `batch` field, which is only set when the
+// user explicitly asked for salt-side batching. Client-side batching (the
+// default) is driven by WithClientBatch instead and must leave this empty, or
+// salt would batch the chunks again.
 func batchIfServer(tg *targeting) string {
-	if tg.clientBatch {
-		return "" // client-side handled via WithClientBatch
+	if tg.serverBatch() {
+		return tg.batch
 	}
-	return tg.batch
+	return ""
 }
 
 // commandFromMap converts a raw lowstate dict into a Command (best-effort; unknown
@@ -475,7 +546,7 @@ func newStateCmd() *cobra.Command {
 		Short: "Apply state (state.apply <sls...> / state.highstate)",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			tt, err := tg.tgtType()
+			tt, err := tg.resolve()
 			if err != nil {
 				return err
 			}
@@ -580,11 +651,25 @@ func newEventsCmd() *cobra.Command {
 
 // --- low-level: one client = one subcommand ---
 
+// clientCmdOpts are the extra lowstate knobs a particular low-level client
+// accepts. They are per-client on purpose: the low-level tier mirrors exactly
+// what salt-api takes for that client and nothing else.
+type clientCmdOpts struct {
+	subset bool // --subset N   (local_subset)
+	batch  bool // --batch N|N% (local_batch)
+}
+
 // newClientCmd builds a to-the-metal command for a target-taking client
 // (local/local_async/local_batch/local_subset/ssh), via a synchronous Exec.
-func newClientCmd(use, short string, client papurika.ClientType, wantSubset bool) *cobra.Command {
+//
+// These take the targeting SELECTORS only — no --batch-mode, no
+// --batch-concurrency. Client-side batching is an engine behavior the
+// high-level verbs compose; down here `local-batch --batch N` means salt's
+// local_batch and nothing else, which is what makes the tier predictable.
+func newClientCmd(use, short string, client papurika.ClientType, extra clientCmdOpts) *cobra.Command {
 	tg := &targeting{}
 	var subset int
+	var batch string
 	c := &cobra.Command{
 		Use:   use,
 		Short: short,
@@ -595,7 +680,7 @@ func newClientCmd(use, short string, client papurika.ClientType, wantSubset bool
 				return err
 			}
 			pos, kw := parseArgs(args[2:])
-			lc := papurika.Command{Client: client, Tgt: args[0], TgtType: tt, Fun: args[1], Arg: pos, Kwarg: kw, Batch: tg.batch, Subset: subset}
+			lc := papurika.Command{Client: client, Tgt: args[0], TgtType: tt, Fun: args[1], Arg: pos, Kwarg: kw, Batch: batch, Subset: subset}
 			cl, err := buildClient()
 			if err != nil {
 				return err
@@ -604,9 +689,12 @@ func newClientCmd(use, short string, client papurika.ClientType, wantSubset bool
 			return emit(res, rerr)
 		},
 	}
-	tg.register(c)
-	if wantSubset {
+	tg.registerSelectors(c)
+	if extra.subset {
 		c.Flags().IntVar(&subset, "subset", 0, "number of minions in the subset")
+	}
+	if extra.batch {
+		c.Flags().StringVar(&batch, "batch", "", "batch size (e.g. 10 or 25%); server-side local_batch, so no jid and no progress")
 	}
 	return c
 }
