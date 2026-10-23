@@ -299,7 +299,14 @@ func newRunnerCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "runner <fun> [k=v...]",
 		Short: "Run a master-side runner",
-		Args:  cobra.MinimumNArgs(1),
+		Long: "Run a runner module on the master (client=runner).\n\n" +
+			"A runner runs on the MASTER, not on minions, so its output is a single " +
+			"value — not a per-minion map. Under --output json|yaml that value lands " +
+			"at commands[0].value, where an execution function's per-minion results " +
+			"would be at commands[0].minions[]. A consumer handling both shapes needs " +
+			"both paths; summary.targeted is 0 for a runner, which is the cheapest way " +
+			"to tell them apart.",
+		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			_, kw := parseArgs(args[1:])
 			rc := papurika.Runner(args[0])
@@ -320,7 +327,11 @@ func newWheelCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "wheel <fun> [k=v...]",
 		Short: "Run a master-side wheel function (key/config management)",
-		Args:  cobra.MinimumNArgs(1),
+		Long: "Run a wheel module on the master (client=wheel).\n\n" +
+			"Like a runner, this executes on the MASTER, so under --output json|yaml " +
+			"the payload is a single value at commands[0].value — not a per-minion " +
+			"map at commands[0].minions[]. summary.targeted is 0.",
+		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			_, kw := parseArgs(args[1:])
 			wc := papurika.Wheel(args[0])

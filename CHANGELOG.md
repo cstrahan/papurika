@@ -126,6 +126,11 @@ Add entries here as you go, under these headings (drop the ones you don't use):
   `commands`, and the new `error` object; ndjson emits an `error` line plus a
   summary line. `pretty` and `raw` still emit nothing to stdout, and the
   message stays on stderr in every mode.
+- **`papurika runner` / `papurika wheel` did not say where their output lands.**
+  A master-side payload is a single value at `commands[0].value`, not a
+  per-minion map at `commands[0].minions[]`, so a consumer handling both shapes
+  needs two code paths. `--help` now says so (`summary.targeted` is 0 for a
+  master-side command, which is the cheapest discriminator).
 - **`papurika job <jid>` reported a still-running job as failed.** Minions that
   had not answered yet were synthesized as `noresponse` — indistinguishable
   from a dead minion — giving `outcome: failed` and exit 1 for a perfectly
@@ -144,7 +149,6 @@ Add entries here as you go, under these headings (drop the ones you don't use):
   the message was an unhelpful bare `transport error`. The context error is now
   preserved through `APIError.Cause` and reaches both `errors.Is` and the
   message (`transport error: context deadline exceeded`).
-
 - **`papurika jobs` and `papurika job <jid>` failed with "malformed request" on
   any master that had ever run a list-targeted job.** Salt types the `Target`
   field as a string for most tgt_types but as a **list** for `tgt_type: list`,
