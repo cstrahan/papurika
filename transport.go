@@ -166,10 +166,14 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body []byte
 		if err == nil {
 			lastErr = apiError(ErrTransport, res.status, res.contentType, string(res.body), res.module)
 		} else {
-			if ctx.Err() != nil {
-				return nil, apiError(ErrTransport, 0, "", "", ModuleUnknown)
+			// Keep the context error reachable. The CLI maps a deadline to exit
+			// 124 and a cancel to 130 off errors.Is; collapsing both into a bare
+			// ErrTransport (as this once did) reported "transport error" and exit
+			// 69 for a timeout the caller asked for.
+			if ce := ctx.Err(); ce != nil {
+				return nil, causedError(ErrTransport, ce, 0, "", "", ModuleUnknown)
 			}
-			lastErr = fmt.Errorf("%w: %v", ErrTransport, err)
+			lastErr = causedError(ErrTransport, err, 0, "", "", ModuleUnknown)
 		}
 		if attempt == policy.MaxAttempts || !mayRetry(class, res, err) {
 			break
@@ -184,7 +188,7 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body []byte
 		c.log.Debug("retrying request", "method", method, "path", path, "attempt", attempt, "wait", wait)
 		select {
 		case <-ctx.Done():
-			return nil, apiError(ErrTransport, 0, "", "", ModuleUnknown)
+			return nil, causedError(ErrTransport, ctx.Err(), 0, "", "", ModuleUnknown)
 		case <-time.After(wait):
 		}
 	}

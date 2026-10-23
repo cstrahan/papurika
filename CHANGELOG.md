@@ -54,8 +54,20 @@ Add entries here as you go, under these headings (drop the ones you don't use):
   which cannot be detected from `success`: a runner called with missing
   arguments reports `success: true` and puts the usage text in its return
   value.
+- **`papurika.APIError.Cause`** — the underlying failure (the `net/url` error,
+  or the context error) behind a sentinel. `Unwrap` now returns both it and
+  `Kind`, so `errors.Is(err, context.DeadlineExceeded)` works on a timed-out
+  request.
 
 ### Fixed
+
+- **A deadline or a Ctrl-C that landed mid-request exited 69, not 124/130.**
+  The transport built its cancellation error as a bare `ErrTransport`,
+  discarding `ctx.Err()`, so `--timeout` gave 124 when the *gather* ran out of
+  clock but 69 when the initial POST did — the same clock, two exit codes — and
+  the message was an unhelpful bare `transport error`. The context error is now
+  preserved through `APIError.Cause` and reaches both `errors.Is` and the
+  message (`transport error: context deadline exceeded`).
 
 - **`papurika jobs` and `papurika job <jid>` failed with "malformed request" on
   any master that had ever run a list-targeted job.** Salt types the `Target`

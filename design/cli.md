@@ -301,6 +301,16 @@ is information pepper discarded. Codes map from the library errors
 ([library.md](library.md) §C): `ErrAuthFailure`/`ErrAuthDenied`→77,
 `ErrMalformed`→65 (or 64 if pre-flight), `ErrTransport`→69, deadline→124.
 
+**The context error outranks the transport sentinel.** A deadline or a Ctrl-C
+that lands mid-HTTP-exchange arrives wrapped in `ErrTransport` — the clock
+interrupts a request, so of course it does — and must still map to 124/130, not
+69. That requires the cause to survive the wrap: `APIError` carries the
+underlying error in `Cause` and unwraps to *both* it and `Kind`, so
+`errors.Is(err, context.DeadlineExceeded)` holds on a timed-out POST
+([library.md](library.md) §C). Collapsing the two, as an earlier version did,
+made `--timeout` exit 69 when the master was slow to answer and 124 only when it
+was slow to *gather* — the same clock, two codes.
+
 **Down minion → 1, not 124.** A genuinely-down minion is a *normal* partial
 completion: the gather **settle window** (async.md §B) elapses, the minion is
 reported `noresponse`, and the exit code follows `--fail` (1 by default). Exit

@@ -318,13 +318,24 @@ type APIError struct {
     ContentType string
     Body        string  // raw (may be HTML) — diagnostics only, never trusted as a result
     Module      Module  // best-effort: cherrypy | tornado
+    Cause       error   // underlying failure: the net/url error, or the context error
 }
-func (e *APIError) Error() string { /* ... */ }
-func (e *APIError) Unwrap() error { return e.Kind }
+func (e *APIError) Error() string   { /* "<kind> (HTTP n): <cause>" */ }
+func (e *APIError) Unwrap() []error { return []error{e.Kind, e.Cause} }
 
 type Module int
 const (ModuleUnknown Module = iota; ModuleCherryPy; ModuleTornado)
 ```
+
+**`Unwrap` returns *both*, deliberately.** A deadline or a cancel that lands
+mid-exchange is a transport failure *and* a context error, and callers need the
+second: the CLI maps `context.DeadlineExceeded` → exit 124 and
+`context.Canceled` → 130, while bare `ErrTransport` → 69. An earlier version
+unwrapped to `Kind` alone and built the cancellation error as
+`apiError(ErrTransport, 0, …)`, discarding `ctx.Err()` — so `--timeout` produced
+124 when the gather ran out of clock but 69 when the initial POST did, and the
+message was a bare "transport error" with no hint that a timeout caused it. The
+cause now rides along and reaches `Error()`.
 
 **Classifier (in `internal/transport`)** — inspects status *and* body, and never
 assumes JSON on non-2xx (`cherrypy_learnings.md` failure taxonomy):

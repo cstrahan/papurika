@@ -83,6 +83,13 @@ type APIError struct {
 	ContentType string // response Content-Type (may be text/html on errors)
 	Body        string // raw response body — for diagnostics, never trusted as a result
 	Module      Module
+	// Cause is the underlying failure, when there is one distinct from Kind:
+	// the net/url error behind a transport failure, or the context error
+	// behind a cancellation. It is reachable via errors.Is/As alongside Kind,
+	// which is what lets a caller tell a deadline (context.DeadlineExceeded)
+	// from a cancel (context.Canceled) from a genuine network fault — all
+	// three arrive as ErrTransport.
+	Cause error
 }
 
 func (e *APIError) Error() string {
@@ -91,16 +98,33 @@ func (e *APIError) Error() string {
 		kind = e.Kind.Error()
 	}
 	if e.StatusCode != 0 {
-		return fmt.Sprintf("%s (HTTP %d)", kind, e.StatusCode)
+		kind = fmt.Sprintf("%s (HTTP %d)", kind, e.StatusCode)
+	}
+	if e.Cause != nil {
+		kind = fmt.Sprintf("%s: %v", kind, e.Cause)
 	}
 	return kind
 }
 
-func (e *APIError) Unwrap() error { return e.Kind }
+// Unwrap returns both the sentinel and the cause, so errors.Is matches either.
+// Returning only Kind — as an earlier version did — silently dropped the
+// context error, which made a deadline during an HTTP exchange indistinguishable
+// from a connection reset.
+func (e *APIError) Unwrap() []error {
+	if e.Cause == nil {
+		return []error{e.Kind}
+	}
+	return []error{e.Kind, e.Cause}
+}
 
 // apiError builds an *APIError wrapping kind.
 func apiError(kind error, status int, contentType, body string, mod Module) *APIError {
 	return &APIError{Kind: kind, StatusCode: status, ContentType: contentType, Body: body, Module: mod}
+}
+
+// causedError builds an *APIError wrapping both kind and the underlying cause.
+func causedError(kind, cause error, status int, contentType, body string, mod Module) *APIError {
+	return &APIError{Kind: kind, Cause: cause, StatusCode: status, ContentType: contentType, Body: body, Module: mod}
 }
 
 // JobError carries the jid of the job an error concerns.
