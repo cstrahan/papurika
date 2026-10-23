@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"os"
 	"strings"
 
@@ -303,9 +302,11 @@ func newJobsCmd() *cobra.Command {
 			"it is running. That is fast when every minion answers (~0.3s), but any " +
 			"minion that does NOT answer costs the master's full timeout + " +
 			"gather_job_timeout — 15s by default, however few are missing. A fleet " +
-			"with dead hosts in it pays that on every call. Bound it with --timeout, " +
-			"which is passed to salt-api as the runner's own timeout so the master " +
-			"stops waiting when you do.",
+			"with dead hosts in it pays that on every call.\n\n" +
+			"It runs the runner asynchronously and collects the result off the event " +
+			"bus, so that wait does not hold a salt-api worker thread. --timeout " +
+			"bounds how long papurika waits, not the runner, which keeps going on the " +
+			"master and stays reachable by its jid.",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cl, err := buildClient()
@@ -323,14 +324,13 @@ func newJobsCmd() *cobra.Command {
 				fmt.Fprintln(os.Stderr, "papurika: asking every minion what it is running (jobs.active); any minion that does not answer costs ~15s")
 				jobs, jerr := cl.ActiveJobs(ctx)
 				if jerr != nil {
-					// A 504 here is the master still waiting on minions when our
-					// --timeout cut it off. Say that, rather than leaving the
-					// user with a bare gateway error after taking our advice.
-					var ae *papurika.APIError
-					if errors.As(jerr, &ae) && ae.StatusCode == http.StatusGatewayTimeout {
+					// The runner keeps going on the master after we stop
+					// waiting, so point at the jid rather than implying the
+					// work was lost.
+					if errors.Is(jerr, context.DeadlineExceeded) {
 						fmt.Fprintf(os.Stderr,
-							"papurika: the master was still waiting on minions when --timeout (%s) elapsed; "+
-								"raise it, or accept ~15s while any minion is unreachable\n", flagTimeout)
+							"papurika: stopped waiting after --timeout (%s); the runner is still going on the master\n",
+							flagTimeout)
 					}
 					return emit(nil, jerr)
 				}

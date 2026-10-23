@@ -34,6 +34,15 @@ Add entries here as you go, under these headings (drop the ones you don't use):
 - **`papurika.Client.ActiveJobs`** — the library equivalent, folding salt's
   `Running: [{"m2": 19816}, {"m1": 19815}]` list-of-single-key-maps into a
   `map[string]int` of minion to pid.
+- **`papurika.Client.ExecAsync`** — run a master-side command (`runner_async` /
+  `wheel_async`) and gather its return off the event bus, with a `/jobs/<jid>`
+  poll as backstop, instead of holding a synchronous connection open. Returns
+  the same `*Result` sync `Exec` does. `jobs --active` now uses it, so a
+  fleet-wide runner no longer pins a cherrypy worker for the duration.
+- **`papurika.RunnerFailed`** — detects salt's invalid-arguments runner return,
+  which cannot be detected from `success`: a runner called with missing
+  arguments reports `success: true` and puts the usage text in its return
+  value.
 
 ### Fixed
 

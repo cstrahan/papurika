@@ -20,6 +20,7 @@ github.com/cstrahan/papurika
 ├── result.go        PUBLIC  Result, CommandResult, MinionResult, Status, RawValue
 ├── errors.go        PUBLIC  sentinels + APIError, Module
 ├── run.go           PUBLIC  Run / Submit / Ping / Kill (async engine; async.md)
+├── runner.go        PUBLIC  ExecAsync (async runner/wheel + return gather; async.md §B.1)
 ├── watch.go         PUBLIC  Watch, WatchState (async.md)
 ├── events.go        PUBLIC  Events() -> *EventStream (async.md)
 ├── jobs.go          PUBLIC  Job / Jobs, JobResult, JobMeta

@@ -862,6 +862,45 @@ encoding. Client-supplied jids (above) are the real remedy.
 
 ---
 
+## Async runner returns — `out/25a_*.json`, `out/25b_*.json` (script `25`)
+
+`out/04e` recorded what `runner_async` returns at *submit* time
+(`{"tag": "salt/run/<jid>", "jid": "<jid>"}`). What was missing — and what a
+client needs to run a runner async-first instead of holding a sync connection
+across a fleet-wide fan-out — is how the **result** comes back. Captured live
+on 3008.3:
+
+- **Tags.** `salt/run/<jid>/new` at publish, `salt/run/<jid>/ret` on
+  completion. (Wheel uses `salt/wheel/`.) Note there is **no per-minion
+  fan-out** as `salt/job/<jid>/ret/<minion>` has — a runner is one master-side
+  job with one return.
+- **`/ret` payload** (the inner `data` object):
+  `{fun, jid, user, fun_args, _stamp, return, success}`. The runner's actual
+  value is at **`return`**; `fun` is prefixed (`runner.jobs.active`).
+- **`GET /jobs/<jid>` resolves a runner jid**, so the event bus is not the only
+  way to see the result and a missed `/ret` can be reconciled by polling — the
+  same belt-and-braces the local gather uses. The envelope is nested one deeper
+  than for a local job: `info[0].Result.master.return` (and
+  `return[0].master`), keyed by the pseudo-minion **`master`**.
+
+### `success: true` does not mean the runner worked
+
+The load-bearing trap. A runner invoked with **missing required arguments**
+still comes back `success: true`, with salt's usage text as the return
+**value**:
+
+```json
+{"fun": "runner.jobs.lookup_jid", "jid": "…", "success": true,
+ "return": "\nPassed invalid arguments: lookup_jid() missing 1 required positional argument: 'jid'\n\nUsage:\n…"}
+```
+
+So `success` reports *"the runner executed"*, not *"the runner did what you
+asked"*. Anything branching on it alone reports a broken call as a successful
+one. There is no structural signal — the only discriminator is that the return
+is a string of usage text where a result was expected.
+
+---
+
 ## `jobs.active` cost is set by *non-responding* minions — verified 2026-10-23, 3008.3
 
 `runner jobs.active` is **not a cache read**. `salt/runners/jobs.py` `active()`

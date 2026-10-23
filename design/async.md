@@ -167,6 +167,40 @@ exactly why the client owns its own timing rather than trusting salt's.
 
 ---
 
+## B.1 Master-side jobs (runner / wheel) — `ExecAsync`
+
+The async rule is not only about `local`. A **runner that touches the fleet is
+a long-running command too**: `jobs.active` fans out a live `saltutil.running`
+to every minion, and any minion that fails to answer costs the master's full
+`timeout + gather_job_timeout` (~15s). Run synchronously, that holds a cherrypy
+worker for the whole window — the exact thing §A exists to avoid.
+
+`ExecAsync(ctx, cmd, opts…)` submits `runner_async` / `wheel_async` and gathers
+the return, returning the **same `*Result` sync `Exec` produces** so nothing
+downstream branches on how it was obtained.
+
+The gather mirrors the local one, for the same reason — the event stream is
+lossy, so events alone would hang on a dropped `/ret`:
+
+| source | detail |
+|---|---|
+| events | `salt/run/<jid>/ret` (wheel: `salt/wheel/<jid>/`). One return, not a per-minion fan-out. Subscribe to the **prefix** before submitting — the jid is only known afterwards — then match on the full tag. |
+| `/jobs/<jid>` | Backstop poll with the usual backoff. A runner jid **is** resolvable, with the envelope one level deeper than a local job: `info[0].Result.master.return`, keyed by the pseudo-minion `master`. |
+
+Both decode the envelope `{fun, jid, user, return, success}` and surface
+`return` as the command's value.
+
+**`success` is not a success signal.** A runner called with missing arguments
+returns `success: true` with salt's usage text as its return *value* (verified
+— `cherrypy_learnings.md`). The flag means "the runner executed". `RunnerFailed`
+exposes the one case a client can act on; everything else has to be judged from
+the value.
+
+A deadline bounds **our waiting, not the runner** — it keeps running on the
+master, and the partial `Result` carries the jid so it stays reachable.
+
+---
+
 ## C. Interruption / partial results — never lose the jid
 
 Hard requirement: on `Ctrl-C`, ctx cancel, or hard failure, the caller still gets

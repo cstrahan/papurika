@@ -1,0 +1,88 @@
+{
+  "ok": {
+    "jid": "20261023075159964896",
+    "status_code": 200,
+    "body": {
+      "info": [
+        {
+          "jid": "20261023075159964896",
+          "Function": "runner.jobs.active",
+          "Arguments": [],
+          "Target": "master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Oct 23 07:51:59.964896",
+          "Result": {
+            "master": {
+              "return": {
+                "fun": "runner.jobs.active",
+                "jid": "20261023075159964896",
+                "user": "saltdev",
+                "fun_args": [],
+                "_stamp": "2026-10-23T07:52:00.088145+00:00",
+                "return": {},
+                "success": true
+              }
+            }
+          }
+        }
+      ],
+      "return": [
+        {
+          "master": {
+            "fun": "runner.jobs.active",
+            "jid": "20261023075159964896",
+            "user": "saltdev",
+            "fun_args": [],
+            "_stamp": "2026-10-23T07:52:00.088145+00:00",
+            "return": {},
+            "success": true
+          }
+        }
+      ]
+    }
+  },
+  "failing": {
+    "jid": "20261023075200037768",
+    "status_code": 200,
+    "body": {
+      "info": [
+        {
+          "jid": "20261023075200037768",
+          "Function": "runner.jobs.lookup_jid",
+          "Arguments": [],
+          "Target": "master",
+          "Target-type": "list",
+          "User": "saltdev",
+          "StartTime": "2026, Oct 23 07:52:00.037768",
+          "Result": {
+            "master": {
+              "return": {
+                "fun": "runner.jobs.lookup_jid",
+                "jid": "20261023075200037768",
+                "user": "saltdev",
+                "fun_args": [],
+                "_stamp": "2026-10-23T07:52:00.120765+00:00",
+                "return": "\nPassed invalid arguments: lookup_jid() missing 1 required positional argument: 'jid'\n\nUsage:\n\nReturn the printout from a previously executed job\n\njid\n    The jid to look up.\n\next_source\n    The external job cache to use. Default: `None`.\n\nreturned : True\n    If ``True``, include the minions that did return from the command.\n\n    .. versionadded:: 2015.8.0\n\nmissing : False\n    If ``True``, include the minions that did *not* return from the\n    command.\n\ndisplay_progress : False\n    If ``True``, fire progress events.\n\n    .. versionadded:: 2015.5.0\n\nCLI Example:\n\n.. code-block:: bash\n\n    salt-run jobs.lookup_jid 20130916125524463507\n    salt-run jobs.lookup_jid 20130916125524463507 --out=highstate\n",
+                "success": true
+              }
+            }
+          }
+        }
+      ],
+      "return": [
+        {
+          "master": {
+            "fun": "runner.jobs.lookup_jid",
+            "jid": "20261023075200037768",
+            "user": "saltdev",
+            "fun_args": [],
+            "_stamp": "2026-10-23T07:52:00.120765+00:00",
+            "return": "\nPassed invalid arguments: lookup_jid() missing 1 required positional argument: 'jid'\n\nUsage:\n\nReturn the printout from a previously executed job\n\njid\n    The jid to look up.\n\next_source\n    The external job cache to use. Default: `None`.\n\nreturned : True\n    If ``True``, include the minions that did return from the command.\n\n    .. versionadded:: 2015.8.0\n\nmissing : False\n    If ``True``, include the minions that did *not* return from the\n    command.\n\ndisplay_progress : False\n    If ``True``, fire progress events.\n\n    .. versionadded:: 2015.5.0\n\nCLI Example:\n\n.. code-block:: bash\n\n    salt-run jobs.lookup_jid 20130916125524463507\n    salt-run jobs.lookup_jid 20130916125524463507 --out=highstate\n",
+            "success": true
+          }
+        }
+      ]
+    }
+  }
+}

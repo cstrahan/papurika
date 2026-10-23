@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 )
 
 // JobMeta is the metadata salt records for a job.
@@ -232,18 +231,14 @@ type ActiveJob struct {
 // call, which is most real fleets — the same fact that makes papurika compute
 // liveness itself rather than asking.
 //
-// A deadline on ctx is passed to salt-api as the runner's own timeout, so the
-// server stops waiting when the caller does rather than being left to finish a
-// fan-out nobody is listening for. Without one, papurika waits as long as
-// salt-api takes.
+// It runs the runner **asynchronously** and gathers the return off the event
+// bus, so that ~15s is spent waiting on an event rather than holding a
+// cherrypy worker thread hostage — see ExecAsync. A deadline on ctx bounds the
+// wait and still yields the jid.
 func (c *Client) ActiveJobs(ctx context.Context) (map[string]ActiveJob, error) {
 	cmd := Runner("jobs.active")
-	if dl, ok := ctx.Deadline(); ok {
-		if secs := int(time.Until(dl).Seconds()); secs > 0 {
-			cmd.Extra = map[string]any{"timeout": secs}
-		}
-	}
-	res, err := c.Exec(ctx, cmd)
+	cmd.Client = ClientRunnerAsync
+	res, err := c.ExecAsync(ctx, cmd)
 	if err != nil {
 		return nil, err
 	}

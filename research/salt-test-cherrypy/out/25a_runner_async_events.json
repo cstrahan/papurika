@@ -1,0 +1,91 @@
+{
+  "submit": {
+    "return": [
+      {
+        "tag": "salt/run/20261023075159964896",
+        "jid": "20261023075159964896"
+      }
+    ]
+  },
+  "submit_failing": {
+    "return": [
+      {
+        "tag": "salt/run/20261023075200037768",
+        "jid": "20261023075200037768"
+      }
+    ]
+  },
+  "jid": "20261023075159964896",
+  "failing_jid": "20261023075200037768",
+  "salt_run_events": [
+    {
+      "t": 1792741920.072,
+      "tag": "salt/run/20261023075159964896/new",
+      "data": {
+        "data": {
+          "fun": "runner.jobs.active",
+          "jid": "20261023075159964896",
+          "user": "saltdev",
+          "fun_args": [],
+          "_stamp": "2026-10-23T07:52:00.088145+00:00"
+        },
+        "tag": "salt/run/20261023075159964896/new"
+      }
+    },
+    {
+      "t": 1792741920.105,
+      "tag": "salt/run/20261023075200037768/new",
+      "data": {
+        "data": {
+          "fun": "runner.jobs.lookup_jid",
+          "jid": "20261023075200037768",
+          "user": "saltdev",
+          "fun_args": [],
+          "_stamp": "2026-10-23T07:52:00.120765+00:00"
+        },
+        "tag": "salt/run/20261023075200037768/new"
+      }
+    },
+    {
+      "t": 1792741920.12,
+      "tag": "salt/run/20261023075200037768/ret",
+      "data": {
+        "data": {
+          "fun": "runner.jobs.lookup_jid",
+          "jid": "20261023075200037768",
+          "user": "saltdev",
+          "fun_args": [],
+          "_stamp": "2026-10-23T07:52:00.136688+00:00",
+          "return": "\nPassed invalid arguments: lookup_jid() missing 1 required positional argument: 'jid'\n\nUsage:\n\nReturn the printout from a previously executed job\n\njid\n    The jid to look up.\n\next_source\n    The external job cache to use. Default: `None`.\n\nreturned : True\n    If ``True``, include the minions that did return from the command.\n\n    .. versionadded:: 2015.8.0\n\nmissing : False\n    If ``True``, include the minions that did *not* return from the\n    command.\n\ndisplay_progress : False\n    If ``True``, fire progress events.\n\n    .. versionadded:: 2015.5.0\n\nCLI Example:\n\n.. code-block:: bash\n\n    salt-run jobs.lookup_jid 20130916125524463507\n    salt-run jobs.lookup_jid 20130916125524463507 --out=highstate\n",
+          "success": true
+        },
+        "tag": "salt/run/20261023075200037768/ret"
+      }
+    },
+    {
+      "t": 1792741920.226,
+      "tag": "salt/run/20261023075159964896/ret",
+      "data": {
+        "data": {
+          "fun": "runner.jobs.active",
+          "jid": "20261023075159964896",
+          "user": "saltdev",
+          "fun_args": [],
+          "_stamp": "2026-10-23T07:52:00.241773+00:00",
+          "return": {},
+          "success": true
+        },
+        "tag": "salt/run/20261023075159964896/ret"
+      }
+    }
+  ],
+  "all_tags_seen": [
+    "salt/job/20261023075200110923/new",
+    "salt/job/20261023075200110923/publish",
+    "salt/job/20261023075200110923/ret/builtin.minion",
+    "salt/run/20261023075159964896/new",
+    "salt/run/20261023075159964896/ret",
+    "salt/run/20261023075200037768/new",
+    "salt/run/20261023075200037768/ret"
+  ]
+}

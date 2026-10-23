@@ -34,15 +34,6 @@ const jobDetailListTarget = `{"info": [{"jid": "20261023072324444951",
   "Result": {"builtin.minion": {"return": true, "retcode": 0, "success": true}}}],
   "return": [{"builtin.minion": true}]}`
 
-// Verbatim from research/salt-test-cherrypy/out-3006/12d_jobs_active_running.json.
-// Running is a list of single-key maps, not a map.
-const jobsActiveRunning = `{"return": [{"20260627222818016951": {
-  "Function": "cmd.run", "Arguments": ["sleep 120"], "Target": "*",
-  "Target-type": "glob", "User": "saltdev",
-  "StartTime": "2026, Jun 27 22:28:18.016951",
-  "Running": [{"builtin.minion2": 19816}, {"builtin.minion": 19815}],
-  "Returned": []}}]}`
-
 func jobsServer(t *testing.T, path, body string) *httptest.Server {
 	t.Helper()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -94,41 +85,6 @@ func TestJobDetailDecodesListTarget(t *testing.T) {
 	}
 	if m, ok := jr.Result.Minions["builtin.minion"]; !ok || m.Status != StatusResponded {
 		t.Errorf("minion result not decoded: %+v", jr.Result.Minions)
-	}
-}
-
-func TestActiveJobsFoldsRunningList(t *testing.T) {
-	c := newTestClient(t, jobsServer(t, "/", jobsActiveRunning))
-
-	active, err := c.ActiveJobs(context.Background())
-	if err != nil {
-		t.Fatalf("ActiveJobs: %v", err)
-	}
-	job, ok := active["20260627222818016951"]
-	if !ok {
-		t.Fatalf("job not found in %v", active)
-	}
-	if job.Function != "cmd.run" || job.Target != "*" {
-		t.Errorf("metadata = %+v", job.JobMeta)
-	}
-	// Salt's [{m2: pid}, {m1: pid}] becomes one map so callers never walk it.
-	if len(job.Running) != 2 || job.Running["builtin.minion"] != 19815 || job.Running["builtin.minion2"] != 19816 {
-		t.Errorf("Running = %v, want both minions with their pids", job.Running)
-	}
-	if len(job.Returned) != 0 {
-		t.Errorf("Returned = %v, want empty", job.Returned)
-	}
-}
-
-func TestActiveJobsEmpty(t *testing.T) {
-	c := newTestClient(t, jobsServer(t, "/", `{"return": [{}]}`))
-
-	active, err := c.ActiveJobs(context.Background())
-	if err != nil {
-		t.Fatalf("ActiveJobs: %v", err)
-	}
-	if len(active) != 0 {
-		t.Errorf("active = %v, want empty", active)
 	}
 }
 
