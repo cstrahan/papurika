@@ -240,7 +240,13 @@ func (c *Client) ActiveJobs(ctx context.Context) (map[string]ActiveJob, error) {
 	cmd.Client = ClientRunnerAsync
 	res, err := c.ExecAsync(ctx, cmd)
 	if err != nil {
-		return nil, err
+		// A map has nowhere to carry a jid, so it rides on the error —
+		// otherwise a Ctrl-C here loses the runner we just started.
+		var jid string
+		if res != nil && len(res.Commands) > 0 {
+			jid = res.Commands[0].JID
+		}
+		return nil, withJID(jid, err)
 	}
 	if len(res.Commands) == 0 {
 		return map[string]ActiveJob{}, nil

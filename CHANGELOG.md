@@ -39,6 +39,10 @@ Add entries here as you go, under these headings (drop the ones you don't use):
   poll as backstop, instead of holding a synchronous connection open. Returns
   the same `*Result` sync `Exec` does. `jobs --active` now uses it, so a
   fleet-wide runner no longer pins a cherrypy worker for the duration.
+- **`papurika.JobError`** — an error carrying the jid of the job it concerns,
+  for methods whose success type (a map, a slice) has nowhere to put one. The
+  jid is included in `Error()`, so even a caller that only prints the error
+  keeps it.
 - **`papurika.RunnerFailed`** — detects salt's invalid-arguments runner return,
   which cannot be detected from `success`: a runner called with missing
   arguments reports `success: true` and puts the usage text in its return
@@ -57,6 +61,10 @@ Add entries here as you go, under these headings (drop the ones you don't use):
   degrades to its raw text rather than failing the listing.
 - **`papurika jobs` ignored `--output`**, always printing JSON. It now renders
   in the selected mode like every other command.
+- **Interrupting `jobs --active` lost the jid**, reporting a bare "context
+  canceled" for a runner that was still going on the master — a violation of
+  the never-lose-a-jid rule introduced with the command. The jid now rides out
+  on a `JobError` and the CLI prints the `papurika job <jid>` recovery hint.
 - **`jobs --active` looked like it hung.** It is a live fan-out to every
   minion, and any minion that does not answer costs the master's full
   `timeout` + `gather_job_timeout` (~15s), so on a fleet with a dead host it

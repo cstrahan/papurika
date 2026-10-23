@@ -274,3 +274,45 @@ func TestActiveJobsEmptyOverAsyncRunner(t *testing.T) {
 		t.Errorf("active = %v, want empty", active)
 	}
 }
+
+// Interrupting a call whose success type is a map must still yield the jid:
+// the runner keeps going on the master, and without the jid it is unfindable.
+// This is the "never lose a jid" rule on a return type with nowhere to put one.
+func TestActiveJobsCancelledStillCarriesTheJID(t *testing.T) {
+	fastPolls(t)
+	srv := &asyncRunnerServer{sse: false} // submits, then never answers
+	c := newTestClient(t, srv.start(t))
+
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Millisecond)
+	defer cancel()
+
+	_, err := c.ActiveJobs(ctx)
+	if err == nil {
+		t.Fatal("ActiveJobs succeeded, want a deadline error")
+	}
+	var je *JobError
+	if !errors.As(err, &je) {
+		t.Fatalf("err = %v (%T), want a *JobError carrying the jid", err, err)
+	}
+	if je.JID != asyncJID {
+		t.Errorf("JobError.JID = %q, want %q", je.JID, asyncJID)
+	}
+	// The underlying cause must stay matchable.
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Errorf("err = %v, want it to still unwrap to DeadlineExceeded", err)
+	}
+	// And printing it alone must not lose the jid.
+	if !strings.Contains(err.Error(), asyncJID) {
+		t.Errorf("err.Error() = %q, want it to name the jid", err.Error())
+	}
+}
+
+// A failure before the job exists has no jid to carry, and must not invent one.
+func TestJobErrorOnlyWrapsWhenThereIsAJID(t *testing.T) {
+	if got := withJID("", context.Canceled); got != context.Canceled {
+		t.Errorf("withJID with no jid = %v, want the error unchanged", got)
+	}
+	if got := withJID("j1", nil); got != nil {
+		t.Errorf("withJID(nil error) = %v, want nil", got)
+	}
+}

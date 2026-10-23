@@ -862,6 +862,42 @@ encoding. Client-supplied jids (above) are the real remedy.
 
 ---
 
+## Making a dead minion cheap — master-side levers (verified 2026-10-23, 3008.3)
+
+The ~15s a non-responding minion costs every fleet-wide gather is a *master*
+setting, not something a client can route around. What the master does and
+does not know:
+
+- **Targeting is key-based, not connection-based.** `_check_glob_minions`
+  matches against **accepted keys** (`key.ACC`); `greedy=False` exists only for
+  the cache-backed matchers and means "has a cache entry", not "is connected".
+  There is no targeting mode that skips disconnected minions, so a
+  key-accepted-but-absent minion is always in the target set and always waited
+  for.
+- **The master does know, but only uses it to phrase the failure.**
+  `LocalClient.get_iter_returns` calls `CkMinions.connected_ids()` *after* the
+  timeout to say `"Minion did not return. [Not connected]"` instead of
+  `[No response]` (and only when `minion_data_cache` is on and grains are
+  cached). It never short-circuits the wait.
+
+Measured, `jobs.active` with one stopped-but-key-accepted minion:
+
+| master config | wall time |
+|---|---|
+| default (`timeout: 5`, `gather_job_timeout: 10`) | **15.30s** |
+| `timeout: 2`, `gather_job_timeout: 1` | **3.34s** |
+| default, stale key deleted (`salt-key -d`) | **0.19s** |
+
+So: deleting the stale key removes the cost entirely and is the real fix — a
+key-accepted minion that is gone is stale key state, and salt is behaving
+correctly by waiting for it. Lowering the window is the blunt lever when hosts
+are legitimately slow to answer, at the cost of calling slow-but-alive minions
+non-responsive. For `jobs.active` specifically the master config is the *only*
+lever: `active()` takes no timeout parameter and passes no `gather_job_timeout`
+to its own `client.cmd`, so per-call overrides cannot reach it.
+
+---
+
 ## Async runner returns — `out/25a_*.json`, `out/25b_*.json` (script `25`)
 
 `out/04e` recorded what `runner_async` returns at *submit* time

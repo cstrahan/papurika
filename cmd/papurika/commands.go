@@ -324,13 +324,14 @@ func newJobsCmd() *cobra.Command {
 				fmt.Fprintln(os.Stderr, "papurika: asking every minion what it is running (jobs.active); any minion that does not answer costs ~15s")
 				jobs, jerr := cl.ActiveJobs(ctx)
 				if jerr != nil {
-					// The runner keeps going on the master after we stop
-					// waiting, so point at the jid rather than implying the
-					// work was lost.
-					if errors.Is(jerr, context.DeadlineExceeded) {
+					// Interrupting us does not stop the runner — it keeps going
+					// on the master. Hand back the jid so the work is still
+					// reachable rather than implying it was lost.
+					var je *papurika.JobError
+					if errors.As(jerr, &je) && je.JID != "" {
 						fmt.Fprintf(os.Stderr,
-							"papurika: stopped waiting after --timeout (%s); the runner is still going on the master\n",
-							flagTimeout)
+							"papurika: stopped waiting; the runner is still going on the master — `papurika job %s`\n",
+							je.JID)
 					}
 					return emit(nil, jerr)
 				}

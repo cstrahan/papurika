@@ -97,3 +97,34 @@ func (e *APIError) Unwrap() error { return e.Kind }
 func apiError(kind error, status int, contentType, body string, mod Module) *APIError {
 	return &APIError{Kind: kind, StatusCode: status, ContentType: contentType, Body: body, Module: mod}
 }
+
+// JobError carries the jid of the job an error concerns.
+//
+// It exists for the "never lose a jid" rule (design/async.md §C). Methods that
+// return a *Result can put the jid on the partial result, but one whose
+// success type is a plain map or slice has nowhere to carry it — so without
+// this, a Ctrl-C during such a call reports "context canceled" and the job it
+// started becomes unfindable.
+//
+// The jid is in Error(), so even a caller that only prints the error keeps it.
+type JobError struct {
+	JID string
+	Err error
+}
+
+func (e *JobError) Error() string {
+	if e.JID == "" {
+		return e.Err.Error()
+	}
+	return fmt.Sprintf("%v (jid %s)", e.Err, e.JID)
+}
+
+func (e *JobError) Unwrap() error { return e.Err }
+
+// withJID wraps err so the jid survives, when there is one to keep.
+func withJID(jid string, err error) error {
+	if err == nil || jid == "" {
+		return err
+	}
+	return &JobError{JID: jid, Err: err}
+}
