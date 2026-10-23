@@ -276,3 +276,64 @@ func spaces(n int) string {
 	}
 	return string(b)
 }
+
+func newServerCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "server",
+		Short: "Show what this endpoint is: netapi module, salt version, enabled clients",
+		Long: "Report which salt-api the current profile points at — rest_cherrypy or " +
+			"rest_tornado, the master's salt version, and which netapi client types it " +
+			"has enabled.\n\n" +
+			"Behavior differs enough between salt versions and between the two netapi " +
+			"modules that this is worth being able to check directly, particularly " +
+			"across masters that are not all on the same release.\n\n" +
+			"Everything but the salt version comes from an unauthenticated request, so " +
+			"it works before credentials are set up; the version needs auth and is " +
+			"reported as missing rather than failing the command.",
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			cl, err := buildClient()
+			if err != nil {
+				return err
+			}
+			info, ierr := cl.ServerInfo(cmd.Context())
+			if ierr != nil {
+				return emit(nil, ierr)
+			}
+			switch resolveOutput() {
+			case outputPretty:
+				g := glyphs{color: useColor()}
+				fmt.Fprintf(cmd.OutOrStdout(), "%s\n", info.URL)
+				fmt.Fprintf(cmd.OutOrStdout(), "  %s %s\n", g.dim("netapi: "), info.Module)
+				if info.Server != "" {
+					fmt.Fprintf(cmd.OutOrStdout(), "  %s %s\n", g.dim("server: "), info.Server)
+				}
+				if info.SaltVersion != "" {
+					fmt.Fprintf(cmd.OutOrStdout(), "  %s %s\n", g.dim("salt:   "), info.SaltVersion)
+				} else {
+					fmt.Fprintf(cmd.OutOrStdout(), "  %s %s\n", g.dim("salt:   "),
+						g.yellow("unknown")+g.dim(" ("+info.VersionErr+")"))
+				}
+				if len(info.Clients) > 0 {
+					fmt.Fprintf(cmd.OutOrStdout(), "  %s %s\n", g.dim("clients:"), strings.Join(info.Clients, " "))
+				}
+			case outputYAML:
+				b, err := json.Marshal(info)
+				if err != nil {
+					return err
+				}
+				y, err := sigsyaml.JSONToYAML(b)
+				if err != nil {
+					return err
+				}
+				_, err = cmd.OutOrStdout().Write(y)
+				return err
+			default:
+				enc := json.NewEncoder(cmd.OutOrStdout())
+				enc.SetIndent("", "  ")
+				return enc.Encode(info)
+			}
+			return nil
+		},
+	}
+}

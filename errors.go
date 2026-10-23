@@ -1,6 +1,7 @@
 package papurika
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 )
@@ -57,6 +58,10 @@ const (
 	ModuleCherryPy
 	ModuleTornado
 )
+
+// MarshalJSON renders the module by name. The zero value is a plain int,
+// which tells a consumer nothing.
+func (m Module) MarshalJSON() ([]byte, error) { return json.Marshal(m.String()) }
 
 func (m Module) String() string {
 	switch m {

@@ -77,6 +77,7 @@ type httpResult struct {
 	contentType string
 	body        []byte
 	module      Module
+	server      string // raw Server header, e.g. "CherryPy/18.10.0"
 }
 
 // retryClass says how aggressively a request may be re-sent.
@@ -224,6 +225,7 @@ func (c *Client) doOnce(ctx context.Context, method, path string, body []byte, t
 		contentType: resp.Header.Get("Content-Type"),
 		body:        b,
 		module:      detectModule(resp.Header.Get("Server"), resp.Header.Get("X-Salt-Version")),
+		server:      resp.Header.Get("Server"),
 	}, nil
 }
 

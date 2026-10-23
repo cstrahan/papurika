@@ -139,9 +139,16 @@ func (c Command) lowstate(fullReturn bool) map[string]any {
 	}
 	switch c.Client {
 	case ClientRunner, ClientRunnerAsync, ClientWheel, ClientWheelAsync:
-		// Runners/wheel take kwargs as top-level fields; no tgt.
+		// Runners/wheel take kwargs as top-level fields, and no tgt.
 		for k, v := range c.Kwarg {
 			m[k] = v
+		}
+		// They DO also take positional args — `salt-run salt.cmd test.version`
+		// is one — and salt-api accepts `arg` for them (verified). Dropping
+		// them here silently produced salt's "Passed invalid arguments" usage
+		// text where a result was expected.
+		if len(c.Arg) > 0 {
+			m["arg"] = c.Arg
 		}
 	default:
 		m["tgt"] = c.Tgt

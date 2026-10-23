@@ -402,3 +402,73 @@ func encodeLowstate(cmds []Command, fullReturn bool) ([]byte, error) {
 	b, _ := json.Marshal(low)
 	return b, nil
 }
+
+// ServerInfo describes the salt-api a Client is pointed at.
+type ServerInfo struct {
+	// URL is the endpoint, as configured.
+	URL string `json:"url"`
+	// Module is the netapi module serving it.
+	Module Module `json:"module"`
+	// Server is the raw Server header, e.g. "CherryPy/18.10.0". It is the
+	// HTTP server's version, not salt's.
+	Server string `json:"server,omitempty"`
+	// Clients are the netapi client types the master has enabled
+	// (netapi_enable_clients). Absent ones fail at request time, so this is
+	// what the endpoint will actually accept.
+	Clients []string `json:"clients,omitempty"`
+	// SaltVersion is the MASTER's salt version. Empty when credentials were
+	// not supplied or were rejected — reading it needs auth, everything above
+	// does not.
+	SaltVersion string `json:"salt_version,omitempty"`
+	// VersionErr explains an empty SaltVersion.
+	VersionErr string `json:"version_error,omitempty"`
+}
+
+// ServerInfo reports what this Client is talking to: which netapi module,
+// which client types are enabled, and the master's salt version.
+//
+// Behavior differs enough between salt versions and between rest_cherrypy and
+// rest_tornado that "which am I pointed at" is a question worth being able to
+// answer directly — especially against a fleet of masters that are not all on
+// the same release.
+//
+// Everything except SaltVersion comes from an UNAUTHENTICATED GET /, so this
+// works before any credentials exist. The version needs auth and is
+// best-effort: a failure there is reported in VersionErr rather than failing
+// the call.
+func (c *Client) ServerInfo(ctx context.Context) (*ServerInfo, error) {
+	res, err := c.doRequest(ctx, http.MethodGet, "/", nil, "", retryTransient)
+	if err != nil {
+		return nil, err
+	}
+	if cerr := classify(res); cerr != nil {
+		return nil, cerr
+	}
+	info := &ServerInfo{URL: c.base, Module: res.module, Server: res.server}
+	var root struct {
+		Clients []string `json:"clients"`
+	}
+	if json.Unmarshal(res.body, &root) == nil {
+		info.Clients = root.Clients
+	}
+
+	// The master's own version, via a runner that executes locally on the
+	// master — NOT manage.versions, which would query every minion and pay the
+	// fleet-gather cost this command exists to help diagnose.
+	vres, verr := c.Exec(ctx, Runner("salt.cmd").WithArg("test.version"))
+	if verr != nil {
+		info.VersionErr = verr.Error()
+		return info, nil
+	}
+	if len(vres.Commands) > 0 {
+		v := vres.Commands[0].Value
+		// salt reports an invalid runner call as success:true with the usage
+		// text as the value, so check before believing it is a version.
+		if msg, failed := RunnerFailed(v); failed {
+			info.VersionErr = msg
+		} else if s, ok := v.String(); ok {
+			info.SaltVersion = s
+		}
+	}
+	return info, nil
+}

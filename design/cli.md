@@ -31,6 +31,7 @@ papurika kill   <jid>                     # saltutil.kill_job (Client.Kill)
 papurika events [--filter <tag>]          # tail the event bus (Client.Events)
 papurika key    list|accept|reject|delete|finger <match>
 papurika profiles                        # configured profiles + which one is selected (secrets redacted)
+papurika server                          # netapi module, salt version, enabled clients for this endpoint
 papurika version                         # version, commit and build date (also --version)
 ```
 

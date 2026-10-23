@@ -39,6 +39,13 @@ Add entries here as you go, under these headings (drop the ones you don't use):
   poll as backstop, instead of holding a synchronous connection open. Returns
   the same `*Result` sync `Exec` does. `jobs --active` now uses it, so a
   fleet-wide runner no longer pins a cherrypy worker for the duration.
+- **`papurika server`** / **`papurika.Client.ServerInfo`** — report which
+  salt-api the current profile points at: netapi module (rest_cherrypy vs
+  rest_tornado), the master's salt version, and the netapi client types it has
+  enabled. Behavior differs enough between salt versions and between the two
+  modules that this is worth checking directly, especially across masters that
+  are not all on the same release. Everything but the version comes from an
+  unauthenticated request, so it works before credentials exist.
 - **`papurika.JobError`** — an error carrying the jid of the job it concerns,
   for methods whose success type (a map, a slice) has nowhere to put one. The
   jid is included in `Error()`, so even a caller that only prints the error
@@ -61,6 +68,15 @@ Add entries here as you go, under these headings (drop the ones you don't use):
   degrades to its raw text rather than failing the listing.
 - **`papurika jobs` ignored `--output`**, always printing JSON. It now renders
   in the selected mode like every other command.
+- **Runner and wheel commands silently dropped positional arguments.**
+  `Runner("salt.cmd").WithArg("test.version")` built a lowstate with no `arg`,
+  so salt received a call with its required argument missing. salt-api does
+  accept `arg` for these clients; only papurika's builder withheld it. Nastier
+  than a normal bug because salt reports an invalid runner call as
+  `success: true` with its usage text as the return value, so the failure
+  arrives looking like a result.
+- **`Module` marshalled to JSON as a bare integer**, which tells a consumer
+  nothing. It now marshals by name (`"rest_cherrypy"`).
 - **Interrupting `jobs --active` lost the jid**, reporting a bare "context
   canceled" for a runner that was still going on the master — a violation of
   the never-lose-a-jid rule introduced with the command. The jid now rides out
