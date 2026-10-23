@@ -120,6 +120,26 @@ as a Go library and as a binary.
    that rule is for PRs there, not for this repo. See
    `research/salt-test-cherrypy/` patch commits.)
 
+## Local, uncommitted notes
+
+Environment specifics — which salt versions the production masters actually
+run, which endpoint a profile points at, anything org-specific — live in
+**`.claude/CLAUDE.local.md`**, which is gitignored. Read it if present; it is
+where the "what does prod actually run" answer is kept. Do **not** copy its
+contents into this file, the design docs, `research/`, or commit messages:
+this repo is public, and internal hostnames were already scrubbed from its
+history once.
+
+Two consequences worth stating here, since they are not org-specific:
+
+- **The harness containers below do not necessarily match production.** A
+  behaviour verified on one salt version is not automatically true of another
+  — the error taxonomy, `manage.status`, token lifetime and job-cache shapes
+  have all differed across 3004/3006/3008.
+- `papurika server` prints the netapi module and salt version for whatever
+  endpoint a profile points at. Use it before assuming which you are testing
+  against.
+
 ## Dev environment — live salt containers
 
 Throwaway dockerized salt masters for verification (creds `saltdev`/`saltdev`,

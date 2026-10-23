@@ -20,3 +20,6 @@ dist/
 
 # machine-local Claude Code settings
 .claude/settings.local.json
+
+# local, uncommitted operator notes (environment specifics)
+.claude/CLAUDE.local.md
