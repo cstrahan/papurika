@@ -77,8 +77,9 @@ papurika runner manage.up
   --pillar-pcre -R -C -N`.
 - Exit code reflects **all** minions/commands: `--fail any|all|none`,
   `--allow-noresponse`. See [`design/cli.md`](design/cli.md) §D for the table.
-- Ctrl-C prints the in-flight jid(s) + a `papurika watch <jid>` recovery hint and
-  renders whatever was gathered.
+- Ctrl-C **and SIGTERM** print the in-flight jid(s) + a `papurika watch <jid>`
+  recovery hint and render whatever was gathered — so a run killed by
+  `timeout(1)`, CI or a supervisor is still recoverable.
 
 `papurika profiles` lists what's configured, which profile the next command
 would use, and where each password comes from — without printing any password

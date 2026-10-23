@@ -54,6 +54,7 @@ const (
 	exitAuth        = 77
 	exitTimeout     = 124
 	exitInterrupted = 130
+	exitTerminated  = 143
 )
 
 // resultView is the stable papurika.dev/result/v1 JSON schema.

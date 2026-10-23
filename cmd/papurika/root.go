@@ -302,8 +302,11 @@ func emit(res *papurika.Result, err error) error {
 	// can't eyeball the jid, get the resume command on stderr.
 	if err != nil && res != nil {
 		what := "interrupted"
-		if errors.Is(err, context.DeadlineExceeded) {
+		switch {
+		case errors.Is(err, context.DeadlineExceeded):
 			what = "timed out"
+		case termSignal.Load():
+			what = "terminated"
 		}
 		jids := res.JIDs()
 		switch {

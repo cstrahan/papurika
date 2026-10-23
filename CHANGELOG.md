@@ -73,6 +73,15 @@ Add entries here as you go, under these headings (drop the ones you don't use):
 
 ### Fixed
 
+- **SIGTERM produced no output at all — no partial result, no jid, nothing.**
+  Only SIGINT was handled, so anything running papurika under `timeout(1)`, a
+  CI job, or a supervisor got zero bytes and lost the jid of a job that was
+  still running on the master: the exact failure the engine exists to prevent.
+  SIGTERM now takes the same drain path as SIGINT (partial result + jid on
+  stdout, one terse stderr line) and exits **143**. Relatedly, a *second*
+  interrupt now really does exit immediately: `signal.NotifyContext` leaves
+  itself installed after the first signal, so the documented "second Ctrl-C
+  exits 130 without draining" had never worked.
 - **`--output json` wrote zero bytes on a request-level failure**, so
   `json.load()` raised instead of reporting the failure, on exactly the runs a
   script most needs to inspect. json/yaml now emit a well-formed

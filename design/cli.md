@@ -329,6 +329,7 @@ Exit-code table:
 | 77 | Auth failure — login rejected, token expired, eauth denied (`EX_NOPERM`) |
 | 124 | Timeout — `--timeout` elapsed before target state (matches `timeout(1)`) |
 | 130 | Interrupted — SIGINT (128 + 2) |
+| 143 | Terminated — SIGTERM (128 + 15) |
 
 Distinguishing 2 (no match) from 1 (matched-but-failed), and 124 (timeout) from 1,
 is information pepper discarded. Codes map from the library errors
@@ -364,7 +365,14 @@ reported `noresponse`, and the exit code follows `--fail` (1 by default). Exit
 ## E. Interrupt UX
 
 The library yields partial results + jid on cancel (async.md §C); the CLI consumes
-it. On SIGINT / deadline papurika does **not** abandon the job:
+it. On SIGINT / **SIGTERM** / deadline papurika does **not** abandon the job:
+
+**SIGTERM counts.** Anything running papurika under `timeout(1)`, a CI job, or a
+supervisor kills it with SIGTERM, not SIGINT. Handling only SIGINT meant those
+callers got **zero bytes** — no partial result, no stderr line, no jid — which is
+the one outcome the engine exists to prevent. Both signals take the drain path
+below; they differ only in the exit code (130 vs 143) and the word on the stderr
+line (`interrupted` vs `terminated`).
 
 1. Drain what the engine gathered and **render the partial result to stdout**
    (respecting `--output`; un-returned minions shown `pending`/`noresponse`). The
@@ -374,7 +382,7 @@ it. On SIGINT / deadline papurika does **not** abandon the job:
    partial result above; jid(s) recoverable`), since the jid is already visible on
    stdout; or a single `papurika: interrupted — resume: papurika watch <jid>` in
    the machine formats, where a human can't eyeball stdout.
-3. Exit **130** (SIGINT) or **124** (deadline).
+3. Exit **130** (SIGINT), **143** (SIGTERM), or **124** (deadline).
 
 `papurika run '*' state.highstate`, Ctrl-C mid-run (pretty):
 ```
@@ -392,6 +400,10 @@ papurika: interrupted — partial result above; jid(s) recoverable
 With `--output json`, only the JSON (carrying `summary.jids`) hits stdout, and the
 single stderr line becomes `papurika: interrupted — resume: papurika watch
 20260627222843908511`. A second Ctrl-C exits 130 immediately without draining.
+
+That second-signal escape needs an explicit handler, not `signal.NotifyContext`:
+the latter cancels on the first signal but leaves itself installed, so a second
+Ctrl-C re-cancels an already-cancelled context and does nothing at all.
 
 **The compromise.** We rely on flushing stdout at interrupt rather than pre-echoing
 the jid to stderr "just in case". A `SIGKILL` before that flush loses the jid — but
