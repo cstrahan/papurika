@@ -173,7 +173,7 @@
           "type": "integer"
         },
         "jids": {
-          "description": "Every job id the run touched, including each chunk of a batched run. These stay recoverable with `papurika watch \u003cjid\u003e` whatever else happened.",
+          "description": "Every job id the run touched, including each chunk of a batched run. These stay recoverable with `papurika watch <jid>` whatever else happened.",
           "type": "array",
           "items": {
             "type": "string"

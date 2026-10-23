@@ -59,21 +59,43 @@ const (
 	exitTerminated  = 143
 )
 
+// newJSONEncoder returns an encoder for a single user-facing JSON document.
+//
+// HTML escaping is OFF. encoding/json escapes <, > and & by default so a
+// document can be dropped into a <script> block; papurika writes to stdout and
+// to files, where that only yields \u003c noise in exactly the payloads people
+// most need to read — cmd.run output with redirects, XML, HTML, SQL. It also
+// made --output json and --output yaml disagree about identical data, because
+// the YAML path decodes the escapes on its way through. The escaped and
+// unescaped forms parse to the same string, so this changes bytes, not meaning.
+func newJSONEncoder(w io.Writer) *json.Encoder {
+	enc := json.NewEncoder(w)
+	enc.SetEscapeHTML(false)
+	enc.SetIndent("", "  ")
+	return enc
+}
+
+// newLineEncoder is newJSONEncoder for the one-object-per-line streams (ndjson,
+// events): same escaping rules, no indentation.
+func newLineEncoder(w io.Writer) *json.Encoder {
+	enc := json.NewEncoder(w)
+	enc.SetEscapeHTML(false)
+	return enc
+}
+
 // renderErrorOnly writes the content-less-failure document in the machine
 // formats. pretty and raw emit nothing — the message is already on stderr, and
 // a human does not need a stub document.
 func renderErrorOnly(w io.Writer, mode outputMode, err error) {
 	switch mode {
 	case outputJSON:
-		enc := json.NewEncoder(w)
-		enc.SetIndent("", "  ")
-		_ = enc.Encode(schema.FromError(err))
+		_ = newJSONEncoder(w).Encode(schema.FromError(err))
 	case outputYAML:
 		if b, merr := sigsyaml.Marshal(schema.FromError(err)); merr == nil {
 			_, _ = w.Write(b)
 		}
 	case outputNDJSON:
-		enc := json.NewEncoder(w)
+		enc := newLineEncoder(w)
 		_ = enc.Encode(ndjsonError{Type: "error", Error: err.Error()})
 		_ = enc.Encode(ndjsonSummary{Type: "summary", Summary: schema.FromError(err).Summary})
 	}
@@ -93,8 +115,7 @@ func commandJIDs(c papurika.CommandResult) []string {
 func render(w io.Writer, res *papurika.Result, mode outputMode, opts renderOpts) error {
 	switch mode {
 	case outputJSON:
-		enc := json.NewEncoder(w)
-		enc.SetIndent("", "  ")
+		enc := newJSONEncoder(w)
 		v := schema.FromResult(res)
 		v.Error = schema.NewError(opts.err)
 		return enc.Encode(v)
@@ -171,7 +192,7 @@ func minionLine(jid string, m papurika.MinionResult) ndjsonMinion {
 // for any async-shaped command, a minion line per minion (or a value line for
 // runner/wheel), then a summary line. Used by emit-based commands.
 func writeNDJSON(w io.Writer, res *papurika.Result) error {
-	enc := json.NewEncoder(w)
+	enc := newLineEncoder(w)
 	for _, c := range res.Commands {
 		if c.JID != "" || len(c.Targeted) > 0 {
 			_ = enc.Encode(ndjsonSubmit{Type: "submitted", JID: c.JID, Targeted: c.Targeted})
@@ -207,7 +228,7 @@ type ndjsonStreamer struct {
 }
 
 func newNDJSONStreamer(w io.Writer) *ndjsonStreamer {
-	return &ndjsonStreamer{enc: json.NewEncoder(w), seen: map[string]bool{}}
+	return &ndjsonStreamer{enc: newLineEncoder(w), seen: map[string]bool{}}
 }
 
 func (s *ndjsonStreamer) onSubmit(j papurika.Job) {
@@ -1189,9 +1210,7 @@ func writeJobListing(w io.Writer, rows []jobRow) error {
 		renderJobListing(w, rows, glyphs{color: useColor()})
 		return nil
 	default: // json, ndjson, raw
-		enc := json.NewEncoder(w)
-		enc.SetIndent("", "  ")
-		return enc.Encode(rows)
+		return newJSONEncoder(w).Encode(rows)
 	}
 }
 

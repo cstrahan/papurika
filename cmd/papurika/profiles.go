@@ -78,8 +78,7 @@ func newProfilesCmd() *cobra.Command {
 			doc := buildProfilesDoc(cfg, flagProfile)
 			switch resolveOutput() {
 			case outputJSON, outputNDJSON, outputRaw:
-				enc := json.NewEncoder(cmd.OutOrStdout())
-				enc.SetIndent("", "  ")
+				enc := newJSONEncoder(cmd.OutOrStdout())
 				return enc.Encode(doc)
 			case outputYAML:
 				b, err := json.Marshal(doc)
@@ -329,8 +328,7 @@ func newServerCmd() *cobra.Command {
 				_, err = cmd.OutOrStdout().Write(y)
 				return err
 			default:
-				enc := json.NewEncoder(cmd.OutOrStdout())
-				enc.SetIndent("", "  ")
+				enc := newJSONEncoder(cmd.OutOrStdout())
 				return enc.Encode(info)
 			}
 			return nil

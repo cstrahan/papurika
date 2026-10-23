@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"bytes"
 	"encoding/json"
 	"strings"
 	"sync"
@@ -235,13 +236,20 @@ func buildJSONSchema() string {
 	for _, o := range v1Objects {
 		root.Defs[o.name] = o.schema()
 	}
-	b, err := json.MarshalIndent(root, "", "  ")
-	if err != nil {
+	// Not json.MarshalIndent: that escapes <, > and & for embedding in HTML,
+	// which here only turns `papurika watch <jid>` in a description into
+	// `papurika watch \u003cjid\u003e`. An Encoder can turn it off, and
+	// already terminates with a newline.
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(root); err != nil {
 		// Unreachable: every type above is a plain struct of marshalable
 		// values, and a test renders it on every run.
 		panic("schema: cannot render JSON Schema: " + err.Error())
 	}
-	return string(b) + "\n"
+	return buf.String()
 }
 
 // JSONSchema returns the JSON Schema (draft 2020-12) describing

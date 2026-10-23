@@ -172,6 +172,17 @@ Add entries here as you go, under these headings (drop the ones you don't use):
 
 ### Fixed
 
+- **`--output json` HTML-escaped `<`, `>` and `&`**, rendering a `cmd.run`
+  return of `<tag a=1 & b=2>` as `\u003ctag a=1 \u0026 b=2\u003e`. That is
+  `encoding/json`'s default, meant for embedding a document in a `<script>`
+  block; papurika writes to stdout and to files, where it only obscured the
+  payloads most worth reading — command output with redirects, XML, HTML, SQL.
+  It also made `--output json` and `--output yaml` disagree about identical
+  data, because the YAML path decodes the escapes on its way through. Now off
+  for every user-facing document: json, ndjson, the `events` stream, `jobs`,
+  `profiles`, `server`, and the `papurika schema` output. **This changes bytes,
+  not meaning** — both forms parse to the same string — and a consumer
+  embedding the output in HTML must escape it itself, as for any other tool.
 - **`Client.Submit` silently discarded `JobSpec.Batch` and published one job to
   the entire target.** It branched only on the client-batch option, so a spec
   carrying a batch size fell through to a single `local_async` — with `batch`

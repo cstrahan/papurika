@@ -682,7 +682,7 @@ func newEventsCmd() *cobra.Command {
 			defer stream.Close()
 			ch, unsub := stream.Subscribe(filter)
 			defer unsub()
-			enc := json.NewEncoder(os.Stdout)
+			enc := newLineEncoder(os.Stdout)
 			for {
 				select {
 				case <-cmd.Context().Done():

@@ -180,6 +180,16 @@ hidden.
 **json** when piped. **Zero dependency on Salt's Python outputters** — we render
 natively.
 
+**No HTML escaping.** `encoding/json` escapes `<`, `>` and `&` by default so a
+document can be dropped into a `<script>` block; papurika turns that off. stdout
+is for people and for `jq`, and the escaping only produced `\u003c` noise in
+exactly the payloads most worth reading — `cmd.run` output with redirects, XML,
+HTML, SQL. It also made `json` and `yaml` disagree about identical data, since
+the YAML path decodes the escapes on its way through. The escaped and unescaped
+forms parse to the same string, so this is a difference in bytes, not in meaning;
+a consumer embedding the output in HTML must escape it itself, as it would for
+any other tool's output.
+
 The **JSON output is the unified result model** ([library.md](library.md) §B) —
 a stable, versioned, documented schema. It's the contract scripts consume; pretty
 is a lossy projection of it; `yaml` is the same model as YAML.
