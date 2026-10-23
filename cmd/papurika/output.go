@@ -1310,17 +1310,22 @@ func jidCutoff(t time.Time) string {
 }
 
 // filterJobRows applies --since and --limit, returning the kept rows and how
-// many were dropped by each. Rows must already be sorted newest-first.
+// many were dropped by each. Rows must already be sorted newest-first. A zero
+// cutoff means no time filter.
+//
+// The cutoff is an absolute instant, already resolved from whichever spelling
+// of --since the user gave (sinceFlag), so this does not need to know the time
+// now or which form was typed.
 //
 // Filtering is client-side on purpose. The obvious alternative, the
 // jobs.list_jobs runner with start_time, applies its filter AFTER materializing
 // the whole cache (salt/runners/jobs.py), so it saves no master-side work — and
 // it silently skips the filter entirely when python-dateutil is missing on the
 // master, which looks identical to "no jobs in that window".
-func filterJobRows(rows []jobRow, since time.Duration, limit int, now time.Time) (kept []jobRow, agedOut, truncated int) {
+func filterJobRows(rows []jobRow, since time.Time, limit int) (kept []jobRow, agedOut, truncated int) {
 	kept = rows
-	if since > 0 {
-		cutoff := jidCutoff(now.Add(-since))
+	if !since.IsZero() {
+		cutoff := jidCutoff(since)
 		keep := make([]jobRow, 0, len(kept))
 		for _, r := range kept {
 			// An unparseable jid is kept rather than hidden: dropping rows we

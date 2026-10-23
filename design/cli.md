@@ -25,7 +25,7 @@ papurika state  <tgt> <sls|highstate>   # state.apply / state.highstate wrapper
 papurika ping   <tgt>                    # test.ping + up/down classification (Client.Ping)
 papurika submit <tgt> <fun> [args…]     # fire-and-forget → prints jid(s), exits 0 (Client.Submit)
 papurika watch  <jid>…                   # block until jid(s) reach target state, then render (Client.Watch)
-papurika jobs   [--active] [--limit N] [--since DUR]   # job cache listing; --active = running now (jobs.active)
+papurika jobs   [--active] [--limit N] [--since DUR|TIME]  # job cache listing; --active = running now (jobs.active)
 papurika job    <jid>                     # one job's full normalized return (Client.Job)
 papurika kill   <jid>                     # saltutil.kill_job (Client.Kill)
 papurika events [--filter <tag>]          # tail the event bus (Client.Events)
@@ -131,10 +131,29 @@ no query parameters, and the `jobs.list_jobs` runner applies `start_time` only
 *after* materializing the whole cache (`salt/runners/jobs.py`) — and silently
 skips the filter entirely when python-dateutil is absent on the master, which is
 indistinguishable from "no jobs in that window". So these bound what you read
-and render, **not** what the master does. `--since` compares the jid's
-fixed-width UTC timestamp prefix, which salt mints from `_utc_now()`
-(`salt/utils/jid.py`) and papurika matches; a jid that does not parse is kept
-rather than hidden.
+and render, **not** what the master does.
+
+`--since` takes **either** a duration back from now (`2h`, `90m`) **or** an
+absolute ISO 8601 instant (`2026-10-23`, `2026-10-23T14:30`,
+`2026-10-23T14:30:00Z`, `2026-10-23T14:30:00+02:00`; a space may stand in for
+the `T`). A duration is what you want interactively; an absolute timestamp is
+what you want in a script or an after-the-fact investigation, where "2h ago"
+means something different every time it runs. Both resolve to one cutoff
+instant at flag-parse time, so nothing downstream knows which was typed.
+
+**A timestamp with no zone is read as UTC, not local time.** salt mints jids
+from `_utc_now()` (`salt/utils/jid.py`) and the `StartTime` this listing prints
+is that same UTC instant, so a timestamp copied out of the listing and pasted
+back into `--since` means what it looks like it means. An explicit offset is
+honored as given, and the stderr report always echoes the **resolved UTC
+cutoff** — `… jobs started before 2026-10-23T14:30:00Z not shown (--since 2h)`
+— so the interpretation is never left to guesswork. A negative duration is
+rejected rather than silently hiding everything, which would be
+indistinguishable from an empty cache.
+
+Matching is on the jid's fixed-width UTC timestamp prefix, the same property
+`sortJobRows` already relies on; a jid that does not parse is kept rather than
+hidden.
 
 ---
 

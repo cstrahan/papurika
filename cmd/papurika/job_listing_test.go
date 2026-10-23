@@ -18,7 +18,7 @@ func TestJobsListsEverythingByDefault(t *testing.T) {
 	if got := c.Flags().Lookup("limit").DefValue; got != "0" {
 		t.Errorf("--limit default = %q, want %q (no limit)", got, "0")
 	}
-	if got := c.Flags().Lookup("since").DefValue; got != "0s" {
+	if got := c.Flags().Lookup("since").DefValue; got != "" {
 		t.Errorf("--since default = %q, want no window", got)
 	}
 
@@ -26,7 +26,7 @@ func TestJobsListsEverythingByDefault(t *testing.T) {
 	for i := range rows {
 		rows[i].JID = fmt.Sprintf("2026102314%010d", i)
 	}
-	kept, agedOut, truncated := filterJobRows(rows, 0, noJobLimit, time.Now())
+	kept, agedOut, truncated := filterJobRows(rows, time.Time{}, noJobLimit)
 	if len(kept) != len(rows) || agedOut != 0 || truncated != 0 {
 		t.Errorf("kept %d of %d (agedOut %d, truncated %d); want all", len(kept), len(rows), agedOut, truncated)
 	}
@@ -41,7 +41,7 @@ func TestFilterJobRows(t *testing.T) {
 		{JID: "not-a-jid"},
 	}
 
-	kept, agedOut, truncated := filterJobRows(rows, time.Hour, 0, now)
+	kept, agedOut, truncated := filterJobRows(rows, now.Add(-time.Hour), 0)
 	if agedOut != 2 {
 		t.Errorf("agedOut = %d, want 2", agedOut)
 	}
@@ -53,7 +53,7 @@ func TestFilterJobRows(t *testing.T) {
 		t.Errorf("kept = %+v, want the recent job plus the unparseable one", kept)
 	}
 
-	kept, _, truncated = filterJobRows(rows, 0, 2, now)
+	kept, _, truncated = filterJobRows(rows, time.Time{}, 2)
 	if len(kept) != 2 || truncated != 2 {
 		t.Errorf("limit: kept %d truncated %d, want 2 and 2", len(kept), truncated)
 	}

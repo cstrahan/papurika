@@ -84,7 +84,9 @@ papurika runner manage.up
   live progress. `--batch-mode server` uses salt's `local_batch` instead: durable
   across a client death, but it returns no jid and cannot stream.
 - `papurika jobs` lists the master's whole job cache; narrow it with `--limit 50`
-  or `--since 2h` (whatever they drop is reported on stderr).
+  or `--since` — which takes a duration (`2h`) or an ISO 8601 timestamp
+  (`2026-10-23`, `2026-10-23T14:30:00Z`; no zone means UTC). Whatever they drop
+  is reported on stderr.
 
 `papurika profiles` lists what's configured, which profile the next command
 would use, and where each password comes from — without printing any password

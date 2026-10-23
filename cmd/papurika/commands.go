@@ -370,7 +370,7 @@ func newJobCmd() *cobra.Command {
 func newJobsCmd() *cobra.Command {
 	var active bool
 	var limit int
-	var since time.Duration
+	since := &sinceFlag{}
 	c := &cobra.Command{
 		Use:   "jobs",
 		Short: "List jobs from the master job cache (--active: only those running now)",
@@ -389,12 +389,19 @@ func newJobsCmd() *cobra.Command {
 			"bounds how long papurika waits, not the runner, which keeps going on the " +
 			"master and stays reachable by its jid.\n\n" +
 			"By default the whole cache is listed. --limit N (newest first) and " +
-			"--since DUR narrow it, and whatever they drop is reported on stderr, " +
+			"--since narrow it, and whatever they drop is reported on stderr, " +
 			"never silently. Both filter client-side, because GET /jobs takes no " +
 			"query parameters and the jobs.list_jobs runner filters only after " +
 			"reading the whole cache anyway — so they bound what you read, not what " +
 			"the master does. On a master with a large job cache the read itself can " +
-			"take minutes however you filter.",
+			"take minutes however you filter.\n\n" +
+			"--since accepts either a duration back from now (2h, 90m) or an " +
+			"absolute ISO 8601 timestamp (2026-10-23, 2026-10-23T14:30, " +
+			"2026-10-23T14:30:00Z, 2026-10-23T14:30:00+02:00). A timestamp with no " +
+			"zone is read as UTC, because that is what salt mints jids in and what " +
+			"the StartTime column shows — so a timestamp copied out of this listing " +
+			"means what it looks like. The stderr report echoes the resolved UTC " +
+			"cutoff either way.",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cl, err := buildClient()
@@ -439,7 +446,7 @@ func newJobsCmd() *cobra.Command {
 	}
 	c.Flags().BoolVar(&active, "active", false, "only jobs running right now (runner jobs.active)")
 	c.Flags().IntVar(&limit, "limit", noJobLimit, "show at most N jobs, newest first (default: all)")
-	c.Flags().DurationVar(&since, "since", 0, "only jobs started within this window (e.g. 2h); compares the jid's UTC timestamp")
+	c.Flags().Var(since, "since", "only jobs started at or after this point: a duration back from now (2h, 90m) or an ISO 8601 timestamp (2026-10-23, 2026-10-23T14:30:00Z); a timestamp with no zone is read as UTC")
 	return c
 }
 
@@ -456,11 +463,15 @@ const noJobLimit = 0
 // dropped, and renders the rest. Nothing is ever dropped silently: a listing
 // that quietly omits jobs reads as "there are no more", which is how an
 // operator concludes a job never ran.
-func writeFilteredJobs(cmd *cobra.Command, rows []jobRow, since time.Duration, limit int) error {
+func writeFilteredJobs(cmd *cobra.Command, rows []jobRow, since *sinceFlag, limit int) error {
 	total := len(rows)
-	kept, agedOut, truncated := filterJobRows(rows, since, limit, time.Now())
+	kept, agedOut, truncated := filterJobRows(rows, since.cutoff, limit)
 	if agedOut > 0 {
-		fmt.Fprintf(os.Stderr, "papurika: %d of %d jobs older than %s not shown (--since)\n", agedOut, total, since)
+		// Name the resolved instant, not just the flag: "--since 2026-10-23"
+		// and "--since 36h" both land somewhere specific, and the operator
+		// should not have to work out where.
+		fmt.Fprintf(os.Stderr, "papurika: %d of %d jobs started before %s not shown (--since %s)\n",
+			agedOut, total, since.cutoff.UTC().Format(time.RFC3339), since.raw)
 	}
 	if truncated > 0 {
 		fmt.Fprintf(os.Stderr, "papurika: showing the newest %d jobs; %d more not shown (raise or drop --limit)\n", limit, truncated)

@@ -54,7 +54,7 @@ Add entries here as you go, under these headings (drop the ones you don't use):
   which cannot be detected from `success`: a runner called with missing
   arguments reports `success: true` and puts the usage text in its return
   value.
-- **`papurika jobs --limit N` and `--since DUR`** — bound a listing that is
+- **`papurika jobs --limit N` and `--since DUR|TIME`** — bound a listing that is
   otherwise the master's *entire* job cache. Both are **opt-in**: the default
   is still to list everything, because a default cap would silently answer a
   narrower question than the one asked. Anything either flag drops is reported
@@ -65,6 +65,14 @@ Add entries here as you go, under these headings (drop the ones you don't use):
   logging only on the master, when python-dateutil is missing there. `--since`
   compares the jid's fixed-width UTC timestamp prefix, which is how salt mints
   them.
+
+  `--since` accepts **either** a duration back from now (`2h`, `90m`) **or** an
+  absolute ISO 8601 instant (`2026-10-23`, `2026-10-23T14:30`,
+  `2026-10-23T14:30:00Z`, `2026-10-23T14:30:00+02:00`). A timestamp with **no
+  zone is read as UTC**, matching what salt mints jids in and what the
+  `StartTime` column prints, so a timestamp copied out of the listing means
+  what it looks like; the stderr report echoes the resolved UTC cutoff either
+  way. A negative duration is rejected rather than silently hiding every job.
 - **`error` object in the `papurika.dev/result/v1` schema** — `{kind, message}`,
   present whenever a run ended in a request-level failure. `kind` is a stable
   vocabulary (`timeout`, `interrupted`, `auth_failure`, `auth_denied`,
