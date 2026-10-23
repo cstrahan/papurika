@@ -147,7 +147,7 @@ func WithDeadline(d time.Duration) RunOption       // hard wall-clock deadline (
 func WithSaltTimeout(d time.Duration) RunOption    // settle window: initial quiet before the first find_job re-check
 func WithGatherTimeout(d time.Duration) RunOption  // settle window: quiet period (extended per return) between re-checks
 func WithOnUpdate(fn func(Update)) RunOption        // streaming progress (alt to a channel)
-func WithClientBatch(size string, o ...BatchOption) RunOption // §F
+func WithServerBatch() RunOption                   // §F: JobSpec.Batch via salt's local_batch (no jid)
 func WithKillOnCancel(bool) RunOption              // §C; default false
 ```
 
@@ -294,10 +294,16 @@ flagged missing). That `Pending` vs `NoResponse` distinction is the actionable
 signal on interrupt.
 
 **Multiple jids:** a client-side-batched run (§F) fans out to several jids;
-`Result.JIDs()` returns them all and `Minions` is unified across them.
+`Result.JIDs()` returns them all and `Minions` is unified across them. The
+merged `CommandResult` carries the first in `JID` and the rest in `ExtraJIDs`,
+so a single-jid consumer is unaffected while nothing is lost; they are sorted,
+not ordered by which chunk happened to finish first. The CLI names every one of
+them in the pretty header, the `resume:` line, `summary.jids`, and one ndjson
+`submitted` line per chunk.
 
-**CLI mapping** ([cli.md](cli.md) §E): the CLI uses `signal.NotifyContext` for
-SIGINT; first `Ctrl-C` cancels ctx → `Run` returns partial `Result` + error → the
+**CLI mapping** ([cli.md](cli.md) §E): the CLI installs its own SIGINT/SIGTERM
+handler (not `signal.NotifyContext`, which cannot implement the
+second-signal escape); the first signal cancels ctx → `Run` returns partial `Result` + error → the
 CLI renders the partial result **to stdout** with the jid in the `(jid …)` header
 (pretty) / `summary.jids` (json), a `· PARTIAL` marker, and a `resume: papurika
 watch <jid>` line — the jid rides out on the result. stderr gets just one terse
@@ -370,8 +376,17 @@ essentially instantly — no deadlock. CLI: `papurika watch [--for all-returned|
 ## F. Batching strategy
 
 Default **client-side**; **server-side `local_batch`** on explicit opt-in
-(`--batch-mode server`). Either way the engine normalizes the shape so callers
-never see per-chunk fan-out.
+(`WithServerBatch()` / `--batch-mode server`). Either way the engine normalizes
+the shape so callers never see per-chunk fan-out.
+
+**`JobSpec.Batch` is the size; the mode is an option.** This holds in the
+library and the CLI alike, so the two cannot drift: `spec.Batch = "10"` (or
+`--batch 10`) says *how big*, and `WithServerBatch()` (or `--batch-mode
+server`) says *how*. `JobSpec.Batch` is therefore no longer a verbatim copy of
+salt's lowstate `batch` key — that role belongs to **`Command.Batch`**, which
+`Exec` sends untouched, and the two-tier split in library.md §A is exactly
+what makes this safe: `Command` mirrors salt, `JobSpec` is the engine's
+convenience input and may mean something the engine implements itself.
 
 **Why client-side is the default.** Server-side batching cannot produce a jid —
 not "does not bother to", *cannot*: the sync response carries none (verified,
@@ -408,7 +423,7 @@ nor has a jid to correlate.)
 client-side batching** — it's the only mechanism that can, which is why it is
 the default.
 
-**Client-side (default).** `WithClientBatch(size, …)`: resolve target → static
+**Client-side (default).** Set `spec.Batch`: resolve target → static
 minion list (a discovery `test.ping` or key list), chunk it, and fan out one
 `local_async` per chunk through the **same `Execution` machinery** (each chunk is a
 tracked jid). The engine merges all chunk `Result`s into one unified `Result`
@@ -418,10 +433,18 @@ fragility (dies with the process), and N× API load (`pepper_design_analysis.md`
 §2.12 / §3.1). It's also the only batch option if we ever support tornado.
 
 ```go
-func WithClientBatch(size string) RunOption      // chunk the target, fan out async per chunk
+spec.Batch = "10"                                 // or "25%" — the size, in either mode
+func WithServerBatch() RunOption                  // use salt's local_batch instead (no jid, no progress)
 func WithBatchConcurrency(n int) RunOption        // cap chunks gathered at once (default 8; GPG-pillar politeness)
 // not yet implemented: fail-fast threshold, inter-chunk pause.
 ```
+
+**`Submit` rejects `WithServerBatch`** with an error wrapping `ErrUnsupported`.
+`local_batch` is a synchronous call that returns no jid, so "fire and forget,
+here are the jids" is not a thing it can do. Before this was explicit, `Submit`
+silently *dropped* the batch size and published one job to the entire
+target — the caller asked to limit the blast radius and got the opposite, with
+nothing on any stream to say so.
 
 `WithBatchConcurrency` is **client-side only** — server-side `local_batch` has no
 separate concurrency knob (the batch size *is* the concurrency; the master
@@ -434,13 +457,18 @@ each chunk submit is one `Job`), so live progress and NDJSON streaming work. The
 **server-side-batch** path is a single blocking call that does *not* fire those
 callbacks — its results materialize all at once when the call returns, so there's
 no live progress there (consistent with the buffered-response finding above).
-**Library default** (unchanged — the library stays explicit): `spec.Batch != ""`
-and no `WithClientBatch` ⇒ server-side; `WithClientBatch` ⇒ client-side; no batch
-⇒ a single `local_async`. **CLI default:** `--batch N` adds `WithClientBatch` and
-leaves `spec.Batch` empty, so the client-side path is what you get unless
-`--batch-mode server` sets `spec.Batch` instead. The choice lives in the CLI
-because it is a UX default, not a library semantic — a library caller asking for
-`spec.Batch` means `local_batch` and should get it.
+**Default, library and CLI alike:** `spec.Batch != ""` ⇒ client-side fan-out;
+`spec.Batch != ""` + `WithServerBatch()` ⇒ salt's `local_batch`; no batch ⇒ a
+single `local_async`. The CLI is a thin pass-through — `--batch N` sets
+`spec.Batch`, `--batch-mode server` adds `WithServerBatch()` — so there is no
+layer at which the two disagree about what a batch size means.
+
+An earlier revision flipped only the CLI, on the reasoning that this was a UX
+default rather than a library semantic. That was wrong in a way worth
+recording: the never-lose-a-jid rule is a property of the *engine*, not of the
+command line, and leaving the library defaulted to a mode that structurally
+cannot produce a jid meant every non-CLI caller kept the footgun — with no
+stderr to warn them, because a library has none.
 
 ---
 

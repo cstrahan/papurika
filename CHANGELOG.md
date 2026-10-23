@@ -94,13 +94,28 @@ Add entries here as you go, under these headings (drop the ones you don't use):
   the one thing papurika exists to keep. Client-side batching keeps a
   recoverable jid per chunk and streams live progress.
 
-  **Migration:** pass `--batch-mode server` to restore the old behavior. It is
+  This now holds in the **library** too, not just the CLI: `JobSpec.Batch`
+  batches client-side in both `Run` and `Submit`, and the new
+  `WithServerBatch()` opts into `local_batch`. `JobSpec.Batch` is the batch
+  *size* in either mode — it is no longer a verbatim copy of salt's lowstate
+  `batch` key, a role that belongs to `Command.Batch`, which `Exec` still sends
+  untouched. An earlier revision of this change flipped only the CLI; that left
+  every non-CLI caller with the footgun and no stderr to warn them, since a
+  library has none.
+
+  **Migration:** pass `--batch-mode server` (CLI) or `WithServerBatch()`
+  (library) to restore the old behavior. It is
   still the right choice for a very large fleet or an unattended run that must
   survive the client process, because client-side batching resolves the target
   up front, orchestrates from this process, and costs N× API calls — it now
   prints what you are giving up on stderr. `--batch-mode` is also now a real
   flag (the design had always specified it); `--client-batch` is a hidden,
   deprecated no-op alias that warns.
+- **`WithClientBatch(size)` is removed.** Client-side batching is the default,
+  so the option was redundant with `JobSpec.Batch`, which carries the size in
+  both modes. **Migration:** `Run(ctx, spec, WithClientBatch("10"))` becomes
+  `spec.Batch = "10"; Run(ctx, spec)`. `WithBatchConcurrency` is unchanged and
+  still applies to client-side batching only.
 - **The low-level `local`/`local-async`/`local-subset`/`ssh` subcommands no
   longer accept `--batch`, `--batch-mode` or `--batch-concurrency`**, and
   `local-batch` accepts only a plain `--batch`. Those flags never did anything
@@ -118,6 +133,29 @@ Add entries here as you go, under these headings (drop the ones you don't use):
 
 ### Fixed
 
+- **`Client.Submit` silently discarded `JobSpec.Batch` and published one job to
+  the entire target.** It branched only on the client-batch option, so a spec
+  carrying a batch size fell through to a single `local_async` — with `batch`
+  riding along in the lowstate, where salt accepts it on that client and
+  ignores it (verified directly against the API: `{"client":"local_async",
+  "tgt":"*","batch":"1"}` returns one jid naming every minion). The caller
+  asked to limit the blast radius and got the opposite, with nothing on any
+  stream to say so, and the same spec batched correctly under `Run`. `Submit`
+  now batches client-side, and rejects `WithServerBatch()` with an error
+  wrapping `ErrUnsupported` (the CLI catches `submit --batch-mode server` at
+  flag-validation time instead, exiting 64 — it is an impossible combination,
+  not a runtime failure) — `local_batch` is synchronous and returns no jid,
+  so there is nothing for a fire-and-forget call to hand back.
+- **A client-side-batched `run` reported only the first chunk's jid.**
+  `runClientBatch` merges every chunk into one unified `CommandResult`, but
+  recorded just one jid in it, so an interrupted batched run handed back one
+  recoverable job out of N — the never-lose-a-jid rule, broken on what is now
+  the default batching path. The merged result now carries the rest in
+  `CommandResult.ExtraJIDs` (sorted, so the order does not depend on which
+  chunk finished first); `Result.JIDs()` unions both, and the CLI names every
+  jid in the pretty header, the `resume:` line, `summary.jids`, and one ndjson
+  `submitted` line per chunk. **Schema:** `extra_jids` is a new optional
+  per-command field; `summary.jids` was always meant to be complete and now is.
 - **SIGTERM produced no output at all — no partial result, no jid, nothing.**
   Only SIGINT was handled, so anything running papurika under `timeout(1)`, a
   CI job, or a supervisor got zero bytes and lost the jid of a job that was

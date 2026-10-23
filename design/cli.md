@@ -462,8 +462,8 @@ result keeps normal-path output far less noisy. Worth it.
 | `--timeout DUR` | **hard** wall-clock deadline (ctx); hitting it → exit 124 | — |
 | `--salt-timeout DUR` | settle window: initial wait for returns | — |
 | `--gather-timeout DUR` | settle window: quiet period (extended per return) before settling non-responders → exit per `--fail` | — |
-| `--batch N\|N%` | batching | — (client-side) / `batch` (+ `local_batch`) under `--batch-mode server` |
-| `--batch-mode client\|server` | **default `client`**: chunk + fan out, keeping jids and live progress. `server` is salt's `local_batch`: no jid, no progress (warned on stderr) | selects path |
+| `--batch N\|N%` | batch size (both modes) | `JobSpec.Batch` |
+| `--batch-mode client\|server` | **default `client`**: chunk + fan out, keeping jids and live progress. `server` is salt's `local_batch`: no jid, no progress (warned on stderr) | adds `WithServerBatch()` |
 | `--batch-concurrency N` | max client-side batch chunks gathered at once (default 8; ignored under `--batch-mode server`) | — |
 | `--subset N` | subset targeting | `local_subset` |
 | `--async` / `--detach` | fire-and-forget on any verb (= `submit`) | `*_async` |
@@ -484,7 +484,10 @@ but you have to ask for it, and saying so prints the tradeoff on stderr. The cos
 of the flip is that batching now resolves the target client-side and orchestrates
 from this process, so it dies with the process and costs N× API calls; `--batch-mode
 server` remains the durable/large-fleet choice. (`--client-batch`, which
-previously opted *in* to this, is now a hidden no-op alias that warns.) The
+previously opted *in* to this, is now a hidden no-op alias that warns.) The CLI
+is a thin pass-through to the same library default — `--batch N` sets
+`JobSpec.Batch` and `--batch-mode server` adds `WithServerBatch()` — so the two
+tiers cannot disagree about what a batch size means (async.md §F). The
 batching flags are high-level-only: the low-level `local-batch` subcommand takes a
 plain `--batch` and nothing else, per the tiering contract in §A.
 

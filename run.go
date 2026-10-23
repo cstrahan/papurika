@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand/v2"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -65,8 +66,8 @@ type runConfig struct {
 	onUpdate         func(Update)
 	onSubmit         func(Job)
 	killOnCancel     bool
-	clientBatch      string // non-empty => client-side batching at this size
-	batchConcurrency int    // max client-batch chunks gathered concurrently
+	serverBatch      bool // true => JobSpec.Batch goes through salt's local_batch
+	batchConcurrency int  // max client-batch chunks gathered concurrently
 }
 
 // defaultRunConfig imposes no timeouts. There is no default hard deadline
@@ -107,12 +108,20 @@ func WithOnSubmit(fn func(Job)) RunOption { return func(c *runConfig) { c.onSubm
 // the job running, jid recoverable).
 func WithKillOnCancel(v bool) RunOption { return func(c *runConfig) { c.killOnCancel = v } }
 
-// WithClientBatch switches to client-side batching at the given size ("10",
-// "25%"): resolve the target, chunk it, fan out async per chunk, merge.
-func WithClientBatch(size string) RunOption { return func(c *runConfig) { c.clientBatch = size } }
+// WithServerBatch routes JobSpec.Batch through salt's own local_batch instead
+// of papurika's client-side fan-out (the default).
+//
+// The master orchestrates the waves and the run survives this process dying,
+// which is the right trade for a very large fleet or an unattended job. The
+// cost is severe and inherent to salt-api, not to papurika: the call is a
+// synchronous POST whose entire response is buffered until the job completes,
+// so there is **no jid and no progress** (verified — see async.md §F). That is
+// why it is opt-in, and why Submit rejects it outright: "fire and forget, here
+// are the jids" is not something local_batch can do.
+func WithServerBatch() RunOption { return func(c *runConfig) { c.serverBatch = true } }
 
 // WithBatchConcurrency caps how many client-side-batch chunks are gathered at
-// once (default 8; n < 1 is treated as 1). It applies to WithClientBatch only:
+// once (default 8; n < 1 is treated as 1). It applies to client-side batching only:
 // server-side local_batch has no separate concurrency knob — there the batch
 // size IS the concurrency (the master serializes the waves), so tune that with
 // the batch size instead. Lower it to be gentle on the master (e.g. GPG-pillar
@@ -127,11 +136,20 @@ func buildRunConfig(opts []RunOption) runConfig {
 	return c
 }
 
-// Submit fires an async job (or client-side-batched jobs) and returns
-// immediately with the jid(s). No gathering is performed.
+// Submit fires an async job (or batched jobs) and returns immediately with the
+// jid(s). No gathering is performed.
+//
+// WithServerBatch is rejected here. salt's local_batch is a synchronous call
+// that returns no jid at all, so there is nothing for Submit to hand back —
+// and the old behavior, silently dropping the batch size and publishing one
+// job to the whole target, was worse than any error: the caller asked to limit
+// the blast radius and got the opposite.
 func (c *Client) Submit(ctx context.Context, spec JobSpec, opts ...RunOption) (*Submission, error) {
 	cfg := buildRunConfig(opts)
-	if cfg.clientBatch != "" {
+	if spec.Batch != "" {
+		if cfg.serverBatch {
+			return nil, fmt.Errorf("%w: Submit cannot use server-side batching — salt's local_batch is synchronous and returns no jid; drop WithServerBatch to batch client-side, or use Run", ErrUnsupported)
+		}
 		return c.submitClientBatch(ctx, spec, cfg)
 	}
 	job, err := c.submitOne(ctx, spec)
@@ -272,9 +290,9 @@ func (c *Client) Run(ctx context.Context, spec JobSpec, opts ...RunOption) (res 
 		defer cancel()
 	}
 
-	// Server-side batch is a synchronous POST (one jid, master-orchestrated). It
-	// blocks until done; we decode the merged per-chunk result.
-	if spec.Batch != "" && cfg.clientBatch == "" {
+	// Server-side batch (opt-in): a synchronous POST, master-orchestrated. It
+	// blocks until done and carries no jid; we decode the merged per-chunk result.
+	if spec.Batch != "" && cfg.serverBatch {
 		cmd := spec.command(ClientLocalBatch)
 		r, e := c.Exec(ctx, cmd)
 		if e != nil {
@@ -283,8 +301,9 @@ func (c *Client) Run(ctx context.Context, spec JobSpec, opts ...RunOption) (res 
 		return r, nil
 	}
 
-	// Client-side batch: fan out async per chunk through the same gather.
-	if cfg.clientBatch != "" {
+	// Client-side batch (default): fan out async per chunk through the same
+	// gather, so every chunk has a recoverable jid and progress streams.
+	if spec.Batch != "" {
 		return c.runClientBatch(ctx, spec, cfg)
 	}
 
@@ -633,7 +652,7 @@ func (c *Client) submitClientBatch(ctx context.Context, spec JobSpec, cfg runCon
 		return nil, err
 	}
 	sub := &Submission{}
-	for _, chunk := range chunkTargets(targets, cfg.clientBatch) {
+	for _, chunk := range chunkTargets(targets, spec.Batch) {
 		js := spec
 		js.Target = strings.Join(chunk, ",")
 		js.TgtType = TgtList
@@ -655,12 +674,18 @@ func (c *Client) runClientBatch(ctx context.Context, spec JobSpec, cfg runConfig
 	if err != nil {
 		return &Result{}, err
 	}
-	chunks := chunkTargets(targets, cfg.clientBatch)
+	chunks := chunkTargets(targets, spec.Batch)
 	merged := CommandResult{Client: ClientLocal, Fun: spec.Fun, Minions: map[string]MinionResult{}}
 	var mu sync.Mutex
 	sem := make(chan struct{}, max(1, cfg.batchConcurrency))
 	var wg sync.WaitGroup
 	var canceled bool
+	// Every chunk is its own job. Keeping only the first jid — as this once
+	// did — handed an interrupted batched run one recoverable job out of N,
+	// which is precisely what the engine promises never to happen
+	// (async.md §C). Chunks finish in nondeterministic order, so these are
+	// sorted before being split into JID + ExtraJIDs.
+	var chunkJIDs []string
 
 	for _, chunk := range chunks {
 		wg.Add(1)
@@ -685,8 +710,8 @@ func (c *Client) runClientBatch(ctx context.Context, spec JobSpec, cfg runConfig
 			for id, m := range cr.Minions {
 				merged.Minions[id] = m
 			}
-			if merged.JID == "" {
-				merged.JID = cr.JID
+			if cr.JID != "" {
+				chunkJIDs = append(chunkJIDs, cr.JID)
 			}
 			if cr.Reason == ReasonCanceled || cr.Reason == ReasonDeadline {
 				canceled = true
@@ -695,6 +720,10 @@ func (c *Client) runClientBatch(ctx context.Context, spec JobSpec, cfg runConfig
 		}(chunk)
 	}
 	wg.Wait()
+	sort.Strings(chunkJIDs)
+	if len(chunkJIDs) > 0 {
+		merged.JID, merged.ExtraJIDs = chunkJIDs[0], chunkJIDs[1:]
+	}
 	res := &Result{Commands: []CommandResult{merged}}
 	if canceled {
 		if errors.Is(ctx.Err(), context.DeadlineExceeded) {

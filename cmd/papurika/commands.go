@@ -31,17 +31,20 @@ const (
 // local_batch rather than papurika's client-side fan-out.
 func (t *targeting) serverBatch() bool { return t.batchMode == batchModeServer }
 
-// batchOpts returns the client-side-batch RunOptions implied by the flags —
-// empty unless a --batch size was given and the mode is client-side.
+// batchOpts returns the RunOptions implied by the batching flags. The SIZE is
+// not among them — it rides on JobSpec.Batch, in both modes; these only select
+// the mode and tune the client-side fan-out.
 func (t *targeting) batchOpts() []papurika.RunOption {
-	if t.batch == "" || t.serverBatch() {
+	if t.batch == "" {
 		return nil
 	}
-	opts := []papurika.RunOption{papurika.WithClientBatch(t.batch)}
-	if t.batchConcurrency > 0 {
-		opts = append(opts, papurika.WithBatchConcurrency(t.batchConcurrency))
+	if t.serverBatch() {
+		return []papurika.RunOption{papurika.WithServerBatch()}
 	}
-	return opts
+	if t.batchConcurrency > 0 {
+		return []papurika.RunOption{papurika.WithBatchConcurrency(t.batchConcurrency)}
+	}
+	return nil
 }
 
 // registerSelectors adds only the tgt_type flags. Low-level (one client = one
@@ -218,6 +221,12 @@ func newSubmitCmd() *cobra.Command {
 		Short: "Fire-and-forget: submit async and print the jid(s)",
 		Args:  cobra.MinimumNArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Caught here rather than let through to the library error, because
+			// it is a flag combination that can never work, not a runtime
+			// failure: exit 64, before any warning or network call.
+			if tg.batch != "" && tg.serverBatch() {
+				return usageErr("submit cannot use --batch-mode server: salt's local_batch is synchronous and returns no jid, so there is nothing to fire and forget; drop --batch-mode server to batch client-side, or use `papurika run`")
+			}
 			spec, err := specFromArgs(tg, args)
 			if err != nil {
 				return err
@@ -543,19 +552,8 @@ func specFromArgs(tg *targeting, args []string) (papurika.JobSpec, error) {
 	pos, kw := parseArgs(args[2:])
 	return papurika.JobSpec{
 		Target: args[0], TgtType: tt, Fun: args[1],
-		Arg: pos, Kwarg: kw, Batch: batchIfServer(tg),
+		Arg: pos, Kwarg: kw, Batch: tg.batch,
 	}, nil
-}
-
-// batchIfServer returns the lowstate `batch` field, which is only set when the
-// user explicitly asked for salt-side batching. Client-side batching (the
-// default) is driven by WithClientBatch instead and must leave this empty, or
-// salt would batch the chunks again.
-func batchIfServer(tg *targeting) string {
-	if tg.serverBatch() {
-		return tg.batch
-	}
-	return ""
 }
 
 // commandFromMap converts a raw lowstate dict into a Command (best-effort; unknown
@@ -612,7 +610,7 @@ func newStateCmd() *cobra.Command {
 			if len(pos) > 0 {
 				fun, arg = "state.apply", pos
 			}
-			spec := papurika.JobSpec{Target: args[0], TgtType: tt, Fun: fun, Arg: arg, Kwarg: kw, Batch: batchIfServer(tg)}
+			spec := papurika.JobSpec{Target: args[0], TgtType: tt, Fun: fun, Arg: arg, Kwarg: kw, Batch: tg.batch}
 			cl, err := buildClient()
 			if err != nil {
 				return err

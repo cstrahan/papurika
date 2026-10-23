@@ -94,14 +94,15 @@ type errorView struct {
 }
 
 type commandView struct {
-	Index    int              `json:"index"`
-	Client   string           `json:"client"`
-	Fun      string           `json:"fun"`
-	JID      string           `json:"jid,omitempty"`
-	Targeted []string         `json:"targeted,omitempty"`
-	Minions  []minionView     `json:"minions,omitempty"`
-	Value    *json.RawMessage `json:"value,omitempty"`
-	Retcode  *int             `json:"retcode,omitempty"`
+	Index     int              `json:"index"`
+	Client    string           `json:"client"`
+	Fun       string           `json:"fun"`
+	JID       string           `json:"jid,omitempty"`
+	ExtraJIDs []string         `json:"extra_jids,omitempty"`
+	Targeted  []string         `json:"targeted,omitempty"`
+	Minions   []minionView     `json:"minions,omitempty"`
+	Value     *json.RawMessage `json:"value,omitempty"`
+	Retcode   *int             `json:"retcode,omitempty"`
 }
 
 type minionView struct {
@@ -114,7 +115,7 @@ type minionView struct {
 func toView(res *papurika.Result, okPred func(papurika.MinionResult) bool) resultView {
 	v := resultView{Schema: "papurika.dev/result/v1"}
 	for i, c := range res.Commands {
-		cv := commandView{Index: i, Client: string(c.Client), Fun: c.Fun, JID: c.JID, Targeted: c.Targeted, Retcode: c.Retcode}
+		cv := commandView{Index: i, Client: string(c.Client), Fun: c.Fun, JID: c.JID, ExtraJIDs: c.ExtraJIDs, Targeted: c.Targeted, Retcode: c.Retcode}
 		ids := make([]string, 0, len(c.Minions))
 		for id := range c.Minions {
 			ids = append(ids, id)
@@ -272,6 +273,15 @@ func isNoMatch(res *papurika.Result) bool {
 
 func defaultOK(m papurika.MinionResult) bool { return m.OK() }
 
+// commandJIDs is every jid behind one CommandResult: the primary plus any
+// extras a client-side-batched run merged into it.
+func commandJIDs(c papurika.CommandResult) []string {
+	if c.JID == "" {
+		return nil
+	}
+	return append([]string{c.JID}, c.ExtraJIDs...)
+}
+
 // render writes the result in the chosen mode to w (stdout). Only the pretty
 // path consults opts (color/changes-only/verbose); the machine formats ignore it.
 func render(w io.Writer, res *papurika.Result, mode outputMode, opts renderOpts) error {
@@ -360,6 +370,11 @@ func writeNDJSON(w io.Writer, res *papurika.Result) error {
 		if c.JID != "" || len(c.Targeted) > 0 {
 			_ = enc.Encode(ndjsonSubmit{Type: "submitted", JID: c.JID, Targeted: c.Targeted})
 		}
+		// A batched run has more jobs behind this one merged result; each needs
+		// a line, or the stream carries fewer jids than the run created.
+		for _, j := range c.ExtraJIDs {
+			_ = enc.Encode(ndjsonSubmit{Type: "submitted", JID: j})
+		}
 		for _, id := range sortedMinionIDs(c.Minions) {
 			_ = enc.Encode(minionLine(c.JID, c.Minions[id]))
 		}
@@ -442,8 +457,12 @@ func renderCommand(w io.Writer, c papurika.CommandResult, opts renderOpts, g gly
 		c.Reason == papurika.ReasonDeadline ||
 		c.Reason == papurika.ReasonStreamFatal
 	head := c.Fun
-	if c.JID != "" {
-		head = fmt.Sprintf("%s  (jid %s)", c.Fun, c.JID)
+	if jids := commandJIDs(c); len(jids) == 1 {
+		head = fmt.Sprintf("%s  (jid %s)", c.Fun, jids[0])
+	} else if len(jids) > 1 {
+		// A client-side-batched run is several jobs behind one merged view.
+		// Naming only the first would make the others unrecoverable.
+		head = fmt.Sprintf("%s  (jids %s)", c.Fun, strings.Join(jids, " "))
 	}
 	if incomplete {
 		head += "  · " + g.yellow("PARTIAL")
@@ -477,8 +496,8 @@ func renderCommand(w io.Writer, c papurika.CommandResult, opts renderOpts, g gly
 	}
 
 	// The recovery affordance lives on stdout (the result), not stderr.
-	if incomplete && c.JID != "" {
-		fmt.Fprintf(w, "  %s\n\n", g.dim("resume: papurika watch "+c.JID))
+	if incomplete && len(commandJIDs(c)) > 0 {
+		fmt.Fprintf(w, "  %s\n\n", g.dim("resume: papurika watch "+strings.Join(commandJIDs(c), " ")))
 	}
 }
 

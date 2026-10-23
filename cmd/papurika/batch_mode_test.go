@@ -18,19 +18,28 @@ func TestBatchDefaultsToClientSide(t *testing.T) {
 	}
 
 	tg := &targeting{batch: "10", batchMode: batchModeClient}
-	if got := batchIfServer(tg); got != "" {
-		t.Errorf("lowstate batch = %q, want empty under client-side batching", got)
-	}
-	if len(tg.batchOpts()) == 0 {
-		t.Error("client-side batching must produce a WithClientBatch option")
+	if opts := tg.batchOpts(); len(opts) != 0 {
+		t.Errorf("client-side batching needs no RunOption beyond the size on the spec, got %d", len(opts))
 	}
 
 	srv := &targeting{batch: "10", batchMode: batchModeServer}
-	if got := batchIfServer(srv); got != "10" {
-		t.Errorf("lowstate batch = %q, want 10 under --batch-mode server", got)
+	if len(srv.batchOpts()) != 1 {
+		t.Error("--batch-mode server must add WithServerBatch")
 	}
-	if len(srv.batchOpts()) != 0 {
-		t.Error("server-side batching must not add client-batch options")
+}
+
+// The size travels on JobSpec.Batch in BOTH modes, so the library and the CLI
+// agree on what a batch size means.
+func TestBatchSizeRidesOnTheSpec(t *testing.T) {
+	for _, mode := range []string{batchModeClient, batchModeServer} {
+		tg := &targeting{batch: "10", batchMode: mode}
+		spec, err := specFromArgs(tg, []string{"*", "test.ping"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if spec.Batch != "10" {
+			t.Errorf("mode %s: spec.Batch = %q, want %q", mode, spec.Batch, "10")
+		}
 	}
 }
 

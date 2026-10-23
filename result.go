@@ -168,6 +168,14 @@ type CommandResult struct {
 	JID      string   `json:"jid,omitempty"`
 	Targeted []string `json:"targeted,omitempty"`
 
+	// ExtraJIDs holds the remaining jids when ONE CommandResult covers several
+	// jobs — a client-side-batched run, where each chunk is its own job but the
+	// per-minion results are merged into a single unified view (async.md §F).
+	// JID stays the first chunk's, so single-jid consumers are unaffected;
+	// Result.JIDs() unions both, which is what makes the "never lose a jid"
+	// guarantee hold for a batched run. Nil in the ordinary one-job case.
+	ExtraJIDs []string `json:"extra_jids,omitempty"`
+
 	// local / local_batch: per-minion outcomes (nil for runner/wheel).
 	Minions map[string]MinionResult `json:"minions,omitempty"`
 
@@ -197,6 +205,11 @@ func (r *Result) JIDs() []string {
 	for _, c := range r.Commands {
 		if c.JID != "" {
 			seen[c.JID] = struct{}{}
+		}
+		for _, j := range c.ExtraJIDs {
+			if j != "" {
+				seen[j] = struct{}{}
+			}
 		}
 	}
 	return sortedKeys(seen)

@@ -239,7 +239,17 @@ type JobSpec struct {
 	Fun     string
 	Arg     []any
 	Kwarg   map[string]any
-	Batch   string
+
+	// Batch is the batch size ("10", "25%"). It is the SIZE only — the mode is
+	// chosen by WithServerBatch. By default the engine batches client-side:
+	// it resolves the target, chunks it, and fans out one async job per chunk,
+	// so every chunk has a recoverable jid and progress streams.
+	//
+	// Note this is NOT a verbatim copy of salt's lowstate `batch` key, unlike
+	// Command.Batch, which Exec sends untouched. JobSpec is the engine's
+	// convenience input; batching client-side is something the engine does
+	// itself.
+	Batch string
 
 	// ResendOnUnknown allows papurika to send this job again when it cannot
 	// determine whether a lost submit reached the minions. See
