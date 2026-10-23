@@ -75,14 +75,6 @@ papurika runner manage.up
   piped). JSON is the stable `papurika.dev/result/v1` schema — pipe it to `jq`,
   or unmarshal it in Go with the [`schema`](schema/) package:
 
-  ```
-
-  `papurika schema` prints the JSON Schema (draft 2020-12) for that document —
-  no network, no credentials — so the binary describes its own output:
-
-  ```sh
-  papurika schema > result-v1.schema.json
-  papurika run '*' test.ping -o json | check-jsonschema --schemafile result-v1.schema.json -
   ```go
   var doc schema.Result
   json.Unmarshal(out, &doc)
@@ -92,6 +84,14 @@ papurika runner manage.up
           if !m.OK() { /* status + retcode, per the documented rule */ }
       }
   }
+  ```
+
+  `papurika schema` prints the JSON Schema (draft 2020-12) for that document —
+  no network, no credentials — so the binary describes its own output:
+
+  ```sh
+  papurika schema > result-v1.schema.json
+  papurika run '*' test.ping -o json | check-jsonschema --schemafile result-v1.schema.json -
   ```
 - Targeting selectors mirror the `salt` CLI: `-L -E -G --grain-pcre -I
   --pillar-pcre -R -C -N`.

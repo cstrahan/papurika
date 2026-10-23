@@ -54,9 +54,9 @@ fail validation against an older copy of the schema, which is precisely the
 breakage the versioning exists to prevent.
 
 The rest of this section describes `profiles`. It reads the config file and
-nothing else, so it works on a box that has never authenticated. It answers "what can this install connect to, and
-which endpoint am I about to hit", which is otherwise only discoverable by
-reading TOML by hand.
+nothing else, so it works on a box that has never authenticated. It answers
+"what can this install connect to, and which endpoint am I about to hit",
+which is otherwise only discoverable by reading TOML by hand.
 
 It prints **no password value, ever** — not from `password` (reported as
 present-and-plaintext, value withheld) and not by resolving `password_command`
