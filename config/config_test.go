@@ -90,6 +90,11 @@ password_command = ["printf", "fromcmd"]
 `)
 	cfg, _ := Load(path)
 
+	// PAPURIKA_PASSWORD outranks both of the config-file sources, and the
+	// repo's own dev instructions tell you to export it — so without this the
+	// suite fails for anyone set up to run papurika by hand.
+	t.Setenv("PAPURIKA_PASSWORD", "")
+
 	// password_command beats plaintext password.
 	r, err := cfg.Resolve("p", Overrides{})
 	if err != nil {
