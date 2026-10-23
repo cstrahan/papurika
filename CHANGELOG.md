@@ -25,6 +25,13 @@ Add entries here as you go, under these headings (drop the ones you don't use):
 ### Security    — vulnerability fixes
 -->
 
+## [0.4.0] - 2026-10-23
+
+Adds `papurika profiles`, so "what can this install connect to, and which
+endpoint am I about to hit" is answerable without reading TOML by hand — and
+without printing any password. **One breaking change:** the last-resort profile
+name is now `default` rather than `main`.
+
 ### Added
 
 - **`papurika profiles`** — lists the configured profiles, which one the current
@@ -217,7 +224,8 @@ First public release. Pre-1.0: expect breaking changes while the design settles.
   deadline (exit 124). An unanswered probe is no longer taken as evidence that a
   minion is down.
 
-[Unreleased]: https://github.com/cstrahan/papurika/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/cstrahan/papurika/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/cstrahan/papurika/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/cstrahan/papurika/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/cstrahan/papurika/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/cstrahan/papurika/releases/tag/v0.1.0
