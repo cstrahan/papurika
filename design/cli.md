@@ -25,7 +25,7 @@ papurika state  <tgt> <sls|highstate>   # state.apply / state.highstate wrapper
 papurika ping   <tgt>                    # test.ping + up/down classification (Client.Ping)
 papurika submit <tgt> <fun> [args…]     # fire-and-forget → prints jid(s), exits 0 (Client.Submit)
 papurika watch  <jid>…                   # block until jid(s) reach target state, then render (Client.Watch)
-papurika jobs   [--active]               # job cache listing; --active = running now (jobs.active)
+papurika jobs   [--active] [--limit N] [--since DUR]   # job cache listing; --active = running now (jobs.active)
 papurika job    <jid>                     # one job's full normalized return (Client.Job)
 papurika kill   <jid>                     # saltutil.kill_job (Client.Kill)
 papurika events [--filter <tag>]          # tail the event bus (Client.Events)
@@ -118,6 +118,23 @@ papurika job 20260627222843908511                # recover a job after a dropped
 (§C/§E), not a stderr echo. `watch`/`run` are
 **return-immediately-if-already-there** (async.md §E): a jid already in its target
 state renders and exits without blocking.
+
+**`jobs` lists everything unless you narrow it.** `GET /jobs` returns the
+master's *entire* job cache — tens of thousands of rows on a real master, and a
+read that can take minutes there before a byte reaches us. `--limit N` (newest
+first) and `--since DUR` bound what you read, and they are **opt-in**: a default
+cap would make the command silently answer a narrower question than it was
+asked, and a listing that omits jobs reads as "there are no more" — which is how
+an operator concludes a job never ran. For the same reason, whatever those flags
+*do* drop is reported on stderr. Both filter **client-side**: `GET /jobs` takes
+no query parameters, and the `jobs.list_jobs` runner applies `start_time` only
+*after* materializing the whole cache (`salt/runners/jobs.py`) — and silently
+skips the filter entirely when python-dateutil is absent on the master, which is
+indistinguishable from "no jobs in that window". So these bound what you read
+and render, **not** what the master does. `--since` compares the jid's
+fixed-width UTC timestamp prefix, which salt mints from `_utc_now()`
+(`salt/utils/jid.py`) and papurika matches; a jid that does not parse is kept
+rather than hidden.
 
 ---
 
@@ -264,7 +281,8 @@ Strict separation so `--output json | jq` is always clean:
   watch <jid>` line when a run is cut short), `summary.jids` in json/yaml, the
   ndjson `submitted` line. Nothing else on stdout.
 - **stderr** — *everything else*: progress, per-minion streaming ticks, warnings
-  (deprecated flag, version skew, `--batch-mode server`), auth/connection errors, and the human summary
+  (deprecated flag, version skew, `--batch-mode server`, a truncated `jobs`
+  listing), auth/connection errors, and the human summary
   line **when `--output json`** (so stdout stays one pure JSON document; in pretty
   mode the summary footer is part of the stdout render). On interrupt/deadline it
   gets **one terse line** — jid-free in pretty (the jid is already on stdout,

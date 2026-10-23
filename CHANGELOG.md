@@ -54,6 +54,17 @@ Add entries here as you go, under these headings (drop the ones you don't use):
   which cannot be detected from `success`: a runner called with missing
   arguments reports `success: true` and puts the usage text in its return
   value.
+- **`papurika jobs --limit N` and `--since DUR`** — bound a listing that is
+  otherwise the master's *entire* job cache. Both are **opt-in**: the default
+  is still to list everything, because a default cap would silently answer a
+  narrower question than the one asked. Anything either flag drops is reported
+  on stderr rather than silently omitted, since a truncated listing otherwise
+  reads as "there are no more jobs". Both filter client-side: `GET /jobs` takes
+  no query parameters, and the `jobs.list_jobs` runner applies `start_time`
+  only after materializing the whole cache — and skips the filter entirely,
+  logging only on the master, when python-dateutil is missing there. `--since`
+  compares the jid's fixed-width UTC timestamp prefix, which is how salt mints
+  them.
 - **`error` object in the `papurika.dev/result/v1` schema** — `{kind, message}`,
   present whenever a run ended in a request-level failure. `kind` is a stable
   vocabulary (`timeout`, `interrupted`, `auth_failure`, `auth_denied`,

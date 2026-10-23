@@ -83,6 +83,8 @@ papurika runner manage.up
 - `--batch N` batches **client-side**, which is what keeps a recoverable jid and
   live progress. `--batch-mode server` uses salt's `local_batch` instead: durable
   across a client death, but it returns no jid and cannot stream.
+- `papurika jobs` lists the master's whole job cache; narrow it with `--limit 50`
+  or `--since 2h` (whatever they drop is reported on stderr).
 
 `papurika profiles` lists what's configured, which profile the next command
 would use, and where each password comes from — without printing any password

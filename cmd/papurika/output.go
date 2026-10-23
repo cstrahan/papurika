@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/cstrahan/papurika"
 	"github.com/cstrahan/papurika/state"
@@ -1297,6 +1298,46 @@ func activeJobRows(jobs map[string]papurika.ActiveJob) []jobRow {
 func sortJobRows(rows []jobRow) []jobRow {
 	sort.Slice(rows, func(i, j int) bool { return rows[i].JID > rows[j].JID })
 	return rows
+}
+
+// jidCutoff renders a time as the lowest jid that could have been minted at or
+// after it. Salt mints jids from _utc_now() as %Y%m%d%H%M%S%f (salt/utils/jid.py
+// gen_jid), and so does papurika (jid.go), so the fixed-width prefix orders
+// lexicographically exactly as it does chronologically — the same property
+// sortJobRows already depends on.
+func jidCutoff(t time.Time) string {
+	return t.UTC().Format("20060102150405") + "000000"
+}
+
+// filterJobRows applies --since and --limit, returning the kept rows and how
+// many were dropped by each. Rows must already be sorted newest-first.
+//
+// Filtering is client-side on purpose. The obvious alternative, the
+// jobs.list_jobs runner with start_time, applies its filter AFTER materializing
+// the whole cache (salt/runners/jobs.py), so it saves no master-side work — and
+// it silently skips the filter entirely when python-dateutil is missing on the
+// master, which looks identical to "no jobs in that window".
+func filterJobRows(rows []jobRow, since time.Duration, limit int, now time.Time) (kept []jobRow, agedOut, truncated int) {
+	kept = rows
+	if since > 0 {
+		cutoff := jidCutoff(now.Add(-since))
+		keep := make([]jobRow, 0, len(kept))
+		for _, r := range kept {
+			// An unparseable jid is kept rather than hidden: dropping rows we
+			// cannot date would silently under-report.
+			if len(r.JID) >= 20 && r.JID[:20] < cutoff {
+				continue
+			}
+			keep = append(keep, r)
+		}
+		agedOut = len(kept) - len(keep)
+		kept = keep
+	}
+	if limit > 0 && len(kept) > limit {
+		truncated = len(kept) - limit
+		kept = kept[:limit]
+	}
+	return kept, agedOut, truncated
 }
 
 // writeJobListing renders a job listing in the selected output mode. Job

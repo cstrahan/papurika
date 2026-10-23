@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/cstrahan/papurika"
 	"github.com/spf13/cobra"
@@ -357,6 +358,8 @@ func newJobCmd() *cobra.Command {
 
 func newJobsCmd() *cobra.Command {
 	var active bool
+	var limit int
+	var since time.Duration
 	c := &cobra.Command{
 		Use:   "jobs",
 		Short: "List jobs from the master job cache (--active: only those running now)",
@@ -373,7 +376,14 @@ func newJobsCmd() *cobra.Command {
 			"It runs the runner asynchronously and collects the result off the event " +
 			"bus, so that wait does not hold a salt-api worker thread. --timeout " +
 			"bounds how long papurika waits, not the runner, which keeps going on the " +
-			"master and stays reachable by its jid.",
+			"master and stays reachable by its jid.\n\n" +
+			"By default the whole cache is listed. --limit N (newest first) and " +
+			"--since DUR narrow it, and whatever they drop is reported on stderr, " +
+			"never silently. Both filter client-side, because GET /jobs takes no " +
+			"query parameters and the jobs.list_jobs runner filters only after " +
+			"reading the whole cache anyway — so they bound what you read, not what " +
+			"the master does. On a master with a large job cache the read itself can " +
+			"take minutes however you filter.",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cl, err := buildClient()
@@ -407,23 +417,47 @@ func newJobsCmd() *cobra.Command {
 					}
 					return emit(nil, jerr)
 				}
-				if err := writeJobListing(cmd.OutOrStdout(), activeJobRows(jobs)); err != nil {
-					return err
-				}
-				return &exitErr{code: exitOK}
+				return writeFilteredJobs(cmd, activeJobRows(jobs), since, limit)
 			}
 			jobs, jerr := cl.Jobs(cmd.Context())
 			if jerr != nil {
 				return emit(nil, jerr)
 			}
-			if err := writeJobListing(cmd.OutOrStdout(), cachedJobRows(jobs)); err != nil {
-				return err
-			}
-			return &exitErr{code: exitOK}
+			return writeFilteredJobs(cmd, cachedJobRows(jobs), since, limit)
 		},
 	}
 	c.Flags().BoolVar(&active, "active", false, "only jobs running right now (runner jobs.active)")
+	c.Flags().IntVar(&limit, "limit", noJobLimit, "show at most N jobs, newest first (default: all)")
+	c.Flags().DurationVar(&since, "since", 0, "only jobs started within this window (e.g. 2h); compares the jid's UTC timestamp")
 	return c
+}
+
+// noJobLimit is the default for `papurika jobs --limit`: show everything.
+//
+// A real master's job cache is tens of thousands of rows, so a cap is often
+// what you want — but it has to be asked for. Defaulting to one would mean the
+// command silently answers a narrower question than it was asked, and a
+// listing that omits jobs is how an operator concludes a job never ran. Reach
+// for --limit or --since when you want less.
+const noJobLimit = 0
+
+// writeFilteredJobs applies --since/--limit, reports on stderr whatever they
+// dropped, and renders the rest. Nothing is ever dropped silently: a listing
+// that quietly omits jobs reads as "there are no more", which is how an
+// operator concludes a job never ran.
+func writeFilteredJobs(cmd *cobra.Command, rows []jobRow, since time.Duration, limit int) error {
+	total := len(rows)
+	kept, agedOut, truncated := filterJobRows(rows, since, limit, time.Now())
+	if agedOut > 0 {
+		fmt.Fprintf(os.Stderr, "papurika: %d of %d jobs older than %s not shown (--since)\n", agedOut, total, since)
+	}
+	if truncated > 0 {
+		fmt.Fprintf(os.Stderr, "papurika: showing the newest %d jobs; %d more not shown (raise or drop --limit)\n", limit, truncated)
+	}
+	if err := writeJobListing(cmd.OutOrStdout(), kept); err != nil {
+		return err
+	}
+	return &exitErr{code: exitOK}
 }
 
 func newKillCmd() *cobra.Command {
