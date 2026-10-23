@@ -25,6 +25,23 @@ Add entries here as you go, under these headings (drop the ones you don't use):
 ### Security    — vulnerability fixes
 -->
 
+## [0.5.0] - 2026-10-23
+
+Hardens the never-lose-a-jid guarantee and turns the JSON output into a real,
+importable contract. Most of this came out of an external review of 0.4.0,
+which found the guarantee broken in four places: SIGTERM produced no output at
+all, a timeout mid-request exited 69 instead of 124, `papurika job` reported a
+still-running job as failed, and `--output json` wrote zero bytes on a failure.
+
+**Breaking:** `--batch` and `JobSpec.Batch` now batch **client-side**, because
+salt's server-side batching returns no jid at all — `--batch 10` silently
+discarded the one thing papurika exists to keep. Opt back in with
+`--batch-mode server` / `WithServerBatch()`; `WithClientBatch` is removed, and
+the low-level subcommands no longer take the batching flags.
+
+Also new: the public `schema` package and `papurika schema`, which print a
+JSON Schema for papurika's own output, so an installed binary describes itself.
+
 ### Added
 
 - **`papurika jobs --active`** — list only jobs running right now (runner
@@ -478,7 +495,8 @@ First public release. Pre-1.0: expect breaking changes while the design settles.
   deadline (exit 124). An unanswered probe is no longer taken as evidence that a
   minion is down.
 
-[Unreleased]: https://github.com/cstrahan/papurika/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/cstrahan/papurika/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/cstrahan/papurika/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/cstrahan/papurika/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/cstrahan/papurika/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/cstrahan/papurika/compare/v0.1.0...v0.2.0
