@@ -21,8 +21,9 @@ type JobMeta struct {
 }
 
 // JobResult is the normalized view of GET /jobs/<jid>: the metadata plus a
-// CommandResult whose Minions include synthesized no-response entries for any
-// targeted minion absent from the returns.
+// CommandResult whose Minions include synthesized PENDING entries for any
+// targeted minion absent from the returns — the job cache cannot distinguish
+// "still working" from "down", so it never claims no-response.
 type JobResult struct {
 	Meta     JobMeta
 	Result   CommandResult
@@ -138,10 +139,18 @@ func decodeJob(jid string, body []byte) (*JobResult, error) {
 		}
 	}
 
-	// Synthesize no-response for targeted minions absent from the returns.
+	// Synthesize PENDING — not no-response — for targeted minions absent from
+	// the returns.
+	//
+	// A job-cache read carries no evidence about why a minion is missing: a
+	// still-running job and a dead minion look identical in /jobs/<jid>. Calling
+	// that "noresponse" told an operator checking on an in-flight job that it had
+	// failed. Only the gather earns the stronger claim, by probing with
+	// saltutil.find_job (run.go) — which is also where pending is promoted to
+	// no-response once the settle window closes.
 	for _, id := range info.Minions {
 		if _, ok := jr.Result.Minions[id]; !ok {
-			jr.Result.Minions[id] = MinionResult{ID: id, Status: StatusNoResponse}
+			jr.Result.Minions[id] = MinionResult{ID: id, Status: StatusPending}
 		}
 	}
 

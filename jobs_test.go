@@ -126,3 +126,33 @@ func TestJobsSurvivesAnOddTarget(t *testing.T) {
 		t.Errorf("Target = %q, want the raw text preserved", got)
 	}
 }
+
+// An in-flight job is indistinguishable from a dead minion in the job cache —
+// GET /jobs/<jid> simply omits whoever has not answered yet. decodeJob must
+// therefore report PENDING, not no-response: only the gather, which probes
+// with saltutil.find_job, has the evidence to call a minion down.
+//
+// Captured shape: a two-minion job where only one has returned.
+const jobDetailPartial = `{"info": [{"jid": "20261023133607966019_51e09a3583",
+  "Function": "test.sleep", "Arguments": [30], "Target": "*",
+  "Target-type": "glob", "User": "saltdev",
+  "Minions": ["builtin.minion", "builtin.minion2"],
+  "StartTime": "2026, Oct 23 13:36:07.966019",
+  "Result": {"builtin.minion": {"return": true, "retcode": 0, "success": true}}}],
+  "return": [{"builtin.minion": true}]}`
+
+func TestDecodeJobMarksUnreturnedMinionsPending(t *testing.T) {
+	jr, err := decodeJob("20261023133607966019_51e09a3583", []byte(jobDetailPartial))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := jr.Result.Minions["builtin.minion2"].Status; got != StatusPending {
+		t.Errorf("unreturned minion status = %v, want %v", got, StatusPending)
+	}
+	if got := jr.Result.Minions["builtin.minion"].Status; got != StatusResponded {
+		t.Errorf("returned minion status = %v, want %v", got, StatusResponded)
+	}
+	if jr.Complete {
+		t.Error("a job with an outstanding minion is not complete")
+	}
+}

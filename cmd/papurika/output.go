@@ -73,6 +73,11 @@ type summaryView struct {
 	Succeeded  int      `json:"succeeded"`
 	Failed     int      `json:"failed"`
 	NoResponse int      `json:"noresponse"`
+	// Pending is minions with no terminal outcome yet: an in-flight job read
+	// from the cache, or a run cut short before they returned. Kept apart from
+	// NoResponse because the evidence differs — a non-responder was probed with
+	// saltutil.find_job and found absent, a pending minion was never judged.
+	Pending int `json:"pending"`
 }
 
 type commandView struct {
@@ -111,7 +116,9 @@ func toView(res *papurika.Result, okPred func(papurika.MinionResult) bool) resul
 			cv.Minions = append(cv.Minions, minionView{ID: id, Status: m.Status.String(), Retcode: m.Retcode, Return: ret})
 			v.Summary.Targeted++
 			switch {
-			case m.Status == papurika.StatusNoResponse || m.Status == papurika.StatusPending:
+			case m.Status == papurika.StatusPending:
+				v.Summary.Pending++
+			case m.Status == papurika.StatusNoResponse:
 				v.Summary.NoResponse++
 			case okPred(m):
 				v.Summary.Returned++
@@ -142,9 +149,14 @@ func outcome(res *papurika.Result, s summaryView) string {
 		return "ok"
 	}
 	switch {
-	case s.Failed == 0 && s.NoResponse == 0:
+	case s.Failed == 0 && s.NoResponse == 0 && s.Pending == 0:
 		return "ok"
-	case s.Succeeded == 0:
+	// Nothing has gone wrong yet — the job simply is not finished. Reporting
+	// this as "failed" is what made `papurika job <jid>` alarming to run on a
+	// healthy long job.
+	case s.Failed == 0 && s.NoResponse == 0:
+		return "pending"
+	case s.Succeeded == 0 && s.Pending == 0:
 		return "failed"
 	default:
 		return "partial"
@@ -381,7 +393,7 @@ func renderCommand(w io.Writer, c papurika.CommandResult, opts renderOpts, g gly
 }
 
 func renderExecMinions(w io.Writer, c papurika.CommandResult, g glyphs) {
-	var ok, fail, nr int
+	var ok, fail, nr, pend int
 	for _, id := range sortedMinionIDs(c.Minions) {
 		m := c.Minions[id]
 		switch {
@@ -390,7 +402,7 @@ func renderExecMinions(w io.Writer, c papurika.CommandResult, g glyphs) {
 			nr++
 		case m.Status == papurika.StatusPending:
 			fmt.Fprintf(w, "  %s %s   (pending)\n", g.dim("⋯"), id)
-			nr++
+			pend++
 		default:
 			renderMinionValue(w, m, g)
 			if m.OK() {
@@ -400,7 +412,13 @@ func renderExecMinions(w io.Writer, c papurika.CommandResult, g glyphs) {
 			}
 		}
 	}
-	fmt.Fprintf(w, "%d targeted · %d ok · %d failed · %d no-response\n\n", len(c.Minions), ok, fail, nr)
+	// Pending is its own bucket: counting it as "no-response" contradicted the
+	// per-minion line right above, which already said "(pending)".
+	line := fmt.Sprintf("%d targeted · %d ok · %d failed · %d no-response", len(c.Minions), ok, fail, nr)
+	if pend > 0 {
+		line += fmt.Sprintf(" · %d pending", pend)
+	}
+	fmt.Fprintf(w, "%s\n\n", line)
 }
 
 // renderMinionValue renders one minion's exec return in full — never truncated.
@@ -502,12 +520,16 @@ func useHighstate(c papurika.CommandResult) bool {
 }
 
 func renderStateMinions(w io.Writer, c papurika.CommandResult, opts renderOpts, g glyphs) {
-	var totStates, totOK, totChanged, totFailed, totSkipped, totWould, compileErr, nr int
+	var totStates, totOK, totChanged, totFailed, totSkipped, totWould, compileErr, nr, pend int
 	for _, id := range sortedMinionIDs(c.Minions) {
 		m := c.Minions[id]
 		if m.Status != papurika.StatusResponded {
 			fmt.Fprintf(w, "  %s %s   (%s)\n", g.dim("⋯"), id, m.Status)
-			nr++
+			if m.Status == papurika.StatusPending {
+				pend++
+			} else {
+				nr++
+			}
 			continue
 		}
 		rc := 0
@@ -655,6 +677,9 @@ func renderStateMinions(w io.Writer, c papurika.CommandResult, opts renderOpts, 
 	}
 	if nr > 0 {
 		parts = append(parts, fmt.Sprintf("%d no-response", nr))
+	}
+	if pend > 0 {
+		parts = append(parts, fmt.Sprintf("%d pending", pend))
 	}
 	fmt.Fprintf(w, "%s\n\n", strings.Join(parts, " · "))
 }
@@ -1100,6 +1125,16 @@ func exitCode(res *papurika.Result, err error, policy failPolicy, allowNoRespons
 	if !allowNoResponse {
 		notOK += s.NoResponse
 	}
+	// Pending is only benign while the job is genuinely still open — a cache
+	// snapshot of a job that is running (`papurika job <jid>`), where nothing has
+	// failed and exiting non-zero would be a lie. If the gather ENDED with
+	// minions still pending (a jid aged out mid-run, Reason=stream_fatal), those
+	// minions never will return, and that is a failure.
+	if !abandonedPending(res) {
+		// still open: pending costs nothing
+	} else if !allowNoResponse {
+		notOK += s.Pending
+	}
 	switch policy {
 	case failNone:
 		return exitOK
@@ -1114,6 +1149,23 @@ func exitCode(res *papurika.Result, err error, policy failPolicy, allowNoRespons
 		}
 		return exitOK
 	}
+}
+
+// abandonedPending reports whether any command finished with minions still
+// pending — i.e. the gather gave up rather than the job merely being in flight.
+// Only then do pending minions count against the exit policy.
+func abandonedPending(res *papurika.Result) bool {
+	for _, c := range res.Commands {
+		if c.Reason == papurika.ReasonNone {
+			continue // never terminated: the job is still running
+		}
+		for _, m := range c.Minions {
+			if m.Status == papurika.StatusPending {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // jobRow is one line of a job listing, flattened so the cached and active

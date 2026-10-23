@@ -246,10 +246,21 @@ non-wheel command; wheel is already wrapped). It gives a uniform per-minion
 | `local_async` / `POST /minions` `{jid,minions}` | `JID` + `Targeted`; `Minions` empty until gathered |
 | `runner` bare / full_return `{data:{return,success}}` | `Value` ← `data.return` (or bare); `Success` ← `data.success` |
 | `wheel` `{tag,data:{return,success}}` | `Value` ← `data.return`; `Success` ← `data.success` |
-| `GET /jobs/<jid>` `{info:[meta+Result],return:[…]}` | per-minion from `info[0].Result`; `Targeted` ← `info[0].Minions`; **non-responders = Targeted − Result keys** ⇒ `StatusNoResponse`; `info[0].Error` ⇒ `ErrJobNotFound` |
+| `GET /jobs/<jid>` `{info:[meta+Result],return:[…]}` | per-minion from `info[0].Result`; `Targeted` ← `info[0].Minions`; **outstanding = Targeted − Result keys** ⇒ `StatusPending` (see below); `info[0].Error` ⇒ `ErrJobNotFound` |
 
 The three ways "no response" surfaces (sync string / async omission / missing `ret`
 event) all fold into `StatusNoResponse` — callers never pattern-match English.
+
+**`StatusNoResponse` is a claim; `StatusPending` is the absence of one.** A
+job-cache read carries no evidence about *why* a minion is missing from
+`info[0].Result` — a job still running and a minion that is down look identical
+there. So `Job`/`decodeJob` synthesizes `StatusPending`, never `StatusNoResponse`:
+asserting down-ness from that shape told callers of `Client.Job` that a perfectly
+healthy in-flight job had failed. Only the gather earns the stronger claim, by
+probing with `saltutil.find_job` and promoting pending → no-response when the
+settle window closes (`async.md` §G). Internal consumers of `Job` (the gather's
+poll, `Watch`, `pollMaster`) read only `StatusResponded`, so the distinction costs
+them nothing.
 
 ### B.1 State returns (`state/`)
 

@@ -149,7 +149,8 @@ streaming + jids while batching.
 {
   "schema": "papurika.dev/result/v1",
   "summary": { "outcome": "partial",
-               "targeted": 2, "returned": 1, "succeeded": 1, "failed": 0, "noresponse": 1 },
+               "targeted": 2, "returned": 1, "succeeded": 1, "failed": 0,
+               "noresponse": 1, "pending": 0 },
   "commands": [
     { "index": 0, "client": "local", "fun": "test.ping",
       "tgt": "*", "tgt_type": "glob", "jid": "20260627222840835836",
@@ -168,6 +169,18 @@ nothing is hidden and scripts branch on `retcode`. `jid`, raw `return`, and `out
 (e.g. `"highstate"`) are preserved verbatim. `local_batch`'s per-chunk fan-out is
 already merged into one `minions[]` by the library before rendering.
 
+**`pending` vs `noresponse` is an evidence distinction, and the summary keeps
+them in separate buckets.** `noresponse` is a *claim*: the gather's settle window
+elapsed and a `saltutil.find_job` probe found the minion not running the job
+(async.md §G). `pending` is the absence of a claim — the minion has not answered
+*yet*. A bare job-cache read can only ever produce `pending`, because
+`GET /jobs/<jid>` simply omits whoever has not returned and says nothing about
+why; so `papurika job <jid>` on a job that is still running reports
+`outcome: pending` and exits **0**, since nothing has failed. Pending counts
+against the exit policy only when the gather *ended* with minions still pending
+(`reason: stream_fatal` — the jid aged out mid-run), because those will never
+return.
+
 ### Pretty (native renderers, selected off `fun`/`out`)
 
 The pretty renderer is specified in full in its own companion doc,
@@ -182,8 +195,10 @@ digest.
 test.ping  (jid 20260627222840835836)
   ✓ builtin.minion        True
   ⋯ builtin.minion2        (no response)
-2 targeted · 1 ok · 1 no-response
+2 targeted · 1 ok · 0 failed · 1 no-response
 ```
+(a `· N pending` segment is appended when any minion is pending, so the footer
+never contradicts the per-minion `(pending)` lines above it)
 
 `run '*' cmd.run 'exit 7'`:
 ```
@@ -310,6 +325,12 @@ underlying error in `Cause` and unwraps to *both* it and `Kind`, so
 ([library.md](library.md) §C). Collapsing the two, as an earlier version did,
 made `--timeout` exit 69 when the master was slow to answer and 124 only when it
 was slow to *gather* — the same clock, two codes.
+
+**Pending is not a failure.** Minions with no terminal outcome (`status:
+pending`) count against the policy only when the gather ENDED with them still
+pending — a `stream_fatal` jid that aged out mid-run. A job that is merely still
+running, which is what `papurika job <jid>` reads out of the cache, exits **0**:
+nothing has failed yet. See §B.
 
 **Down minion → 1, not 124.** A genuinely-down minion is a *normal* partial
 completion: the gather **settle window** (async.md §B) elapses, the minion is

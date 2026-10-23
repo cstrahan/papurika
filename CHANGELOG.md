@@ -54,13 +54,31 @@ Add entries here as you go, under these headings (drop the ones you don't use):
   which cannot be detected from `success`: a runner called with missing
   arguments reports `success: true` and puts the usage text in its return
   value.
+- **`summary.pending` in the result schema** — minions with no terminal outcome
+  yet, kept separate from `summary.noresponse`. See **Fixed**, below.
 - **`papurika.APIError.Cause`** — the underlying failure (the `net/url` error,
   or the context error) behind a sentinel. `Unwrap` now returns both it and
   `Kind`, so `errors.Is(err, context.DeadlineExceeded)` works on a timed-out
   request.
 
+### Changed
+
+- **`papurika job <jid>` on a job that is still running now exits 0**, reporting
+  `outcome: pending`, instead of exiting 1 with `outcome: failed`. See **Fixed**.
+
 ### Fixed
 
+- **`papurika job <jid>` reported a still-running job as failed.** Minions that
+  had not answered yet were synthesized as `noresponse` — indistinguishable
+  from a dead minion — giving `outcome: failed` and exit 1 for a perfectly
+  healthy long job, at the moment the command exists to reassure an operator.
+  A job-cache read carries no evidence about *why* a minion is missing, so it
+  now reports `pending`; only the gather, which probes with
+  `saltutil.find_job`, promotes that to `noresponse`. `pending` counts against
+  the exit policy only when a gather *ended* with minions still pending (a jid
+  that aged out mid-run), because those will never return. The pretty footer
+  reports pending in its own bucket instead of contradicting the
+  `(pending)` lines above it.
 - **A deadline or a Ctrl-C that landed mid-request exited 69, not 124/130.**
   The transport built its cancellation error as a bare `ErrTransport`,
   discarding `ctx.Err()`, so `--timeout` gave 124 when the *gather* ran out of
