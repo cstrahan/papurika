@@ -1,8 +1,11 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 
@@ -295,7 +298,14 @@ func newJobsCmd() *cobra.Command {
 			"With --active, list only jobs executing right now (runner jobs.active), " +
 			"including which minions are still working and under what pid. The job " +
 			"cache holds finished jobs too, so \"what is running\" is only answerable " +
-			"with --active.",
+			"with --active.\n\n" +
+			"--active is a live query, not a cache read: it asks every minion what " +
+			"it is running. That is fast when every minion answers (~0.3s), but any " +
+			"minion that does NOT answer costs the master's full timeout + " +
+			"gather_job_timeout — 15s by default, however few are missing. A fleet " +
+			"with dead hosts in it pays that on every call. Bound it with --timeout, " +
+			"which is passed to salt-api as the runner's own timeout so the master " +
+			"stops waiting when you do.",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cl, err := buildClient()
@@ -303,8 +313,25 @@ func newJobsCmd() *cobra.Command {
 				return err
 			}
 			if active {
-				jobs, jerr := cl.ActiveJobs(cmd.Context())
+				ctx := cmd.Context()
+				if flagTimeout > 0 {
+					var cancel context.CancelFunc
+					ctx, cancel = context.WithTimeout(ctx, flagTimeout)
+					defer cancel()
+				}
+				// Say so before blocking: a silent 15s read looks like a hang.
+				fmt.Fprintln(os.Stderr, "papurika: asking every minion what it is running (jobs.active); any minion that does not answer costs ~15s")
+				jobs, jerr := cl.ActiveJobs(ctx)
 				if jerr != nil {
+					// A 504 here is the master still waiting on minions when our
+					// --timeout cut it off. Say that, rather than leaving the
+					// user with a bare gateway error after taking our advice.
+					var ae *papurika.APIError
+					if errors.As(jerr, &ae) && ae.StatusCode == http.StatusGatewayTimeout {
+						fmt.Fprintf(os.Stderr,
+							"papurika: the master was still waiting on minions when --timeout (%s) elapsed; "+
+								"raise it, or accept ~15s while any minion is unreachable\n", flagTimeout)
+					}
 					return emit(nil, jerr)
 				}
 				if err := writeJobListing(cmd.OutOrStdout(), activeJobRows(jobs)); err != nil {

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
 // JobMeta is the metadata salt records for a job.
@@ -221,8 +222,28 @@ type ActiveJob struct {
 // Salt reports the running set as a list of single-key maps,
 // [{"m2": 19816}, {"m1": 19815}], which this folds into one map so callers
 // never walk that shape.
+//
+// **This is not a cache read.** The runner fans out a live saltutil.running to
+// every minion. It returns as soon as they have all answered — measured at
+// ~0.3s against a responsive fleet — but **any minion that does not answer
+// costs the master's full `timeout` + `gather_job_timeout`**, 5s + 10s by
+// default. Measured: one stopped-but-key-accepted minion takes the call from
+// 0.3s to 15.3s. A fleet with dead hosts in it therefore pays ~15s on every
+// call, which is most real fleets — the same fact that makes papurika compute
+// liveness itself rather than asking.
+//
+// A deadline on ctx is passed to salt-api as the runner's own timeout, so the
+// server stops waiting when the caller does rather than being left to finish a
+// fan-out nobody is listening for. Without one, papurika waits as long as
+// salt-api takes.
 func (c *Client) ActiveJobs(ctx context.Context) (map[string]ActiveJob, error) {
-	res, err := c.Exec(ctx, Runner("jobs.active"))
+	cmd := Runner("jobs.active")
+	if dl, ok := ctx.Deadline(); ok {
+		if secs := int(time.Until(dl).Seconds()); secs > 0 {
+			cmd.Extra = map[string]any{"timeout": secs}
+		}
+	}
+	res, err := c.Exec(ctx, cmd)
 	if err != nil {
 		return nil, err
 	}

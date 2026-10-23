@@ -862,6 +862,39 @@ encoding. Client-supplied jids (above) are the real remedy.
 
 ---
 
+## `jobs.active` cost is set by *non-responding* minions — verified 2026-10-23, 3008.3
+
+`runner jobs.active` is **not a cache read**. `salt/runners/jobs.py` `active()`
+does `client.cmd("*", "saltutil.running", timeout=__opts__["timeout"])` — a live
+fan-out to the whole fleet — then one job-cache `get_jid` per active job.
+
+Timed against the one-minion container, `POST / {"client":"runner","fun":"jobs.active"}`:
+
+| fleet state | wall time |
+|---|---|
+| minion responsive | **0.29s** |
+| minion stopped, key still accepted | **15.32s** |
+
+So it returns as soon as every targeted minion has answered, and **any minion
+that does not answer costs the master's full `timeout` + `gather_job_timeout`**
+(5s + 10s by default). It is not a flat floor and it does not scale with fleet
+size — one dead host is enough to pay the whole window. Most real fleets have
+one, which is the same fact that makes computing liveness ourselves the right
+call.
+
+**A client can bound it.** `NetapiClient.runner(fun, timeout=None, …)` passes
+`timeout` to `RunnerClient.cmd_sync`, so a `timeout` in the runner lowstate
+caps how long salt-api waits — verified: `{"client":"runner",
+"fun":"jobs.active","timeout":3}` → **HTTP 504 in 3.08s**. Note the timeout is
+consumed by the netapi method signature and never reaches `active()`, which
+takes no timeout parameter of its own.
+
+Beware the cold-start artifact: the first `jobs.active` after a container comes
+up also measured ~15s, because the minion had not finished connecting. Measure
+twice.
+
+---
+
 ## `Target` is `string | []string` — `out/04d_runner_jobs_list_jobs.json`
 
 In every job-metadata shape (`GET /jobs`, `GET /jobs/<jid>`, `runner

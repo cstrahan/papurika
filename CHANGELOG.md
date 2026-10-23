@@ -48,6 +48,13 @@ Add entries here as you go, under these headings (drop the ones you don't use):
   degrades to its raw text rather than failing the listing.
 - **`papurika jobs` ignored `--output`**, always printing JSON. It now renders
   in the selected mode like every other command.
+- **`jobs --active` looked like it hung.** It is a live fan-out to every
+  minion, and any minion that does not answer costs the master's full
+  `timeout` + `gather_job_timeout` (~15s), so on a fleet with a dead host it
+  always pays that — while papurika sat silent for up to its 120s HTTP
+  timeout. It now says what it is doing before blocking, and `--timeout` is
+  passed to salt-api as the runner's own timeout so the master stops waiting
+  when you do, with a hint explaining the resulting 504.
 
 ## [0.4.0] - 2026-10-23
 
