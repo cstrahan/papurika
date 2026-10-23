@@ -27,6 +27,7 @@ github.com/cstrahan/papurika
 ├── envelope.go      (unexported) per-client-type wire decoders -> unified model
 ├── transport.go     (unexported) pooled *http.Client, retry, classify, re-auth
 ├── config/          PUBLIC  Config, Profile, Load, Resolve, SecretSource
+├── schema/          PUBLIC  papurika.dev/result/v1 JSON document (§B.2)
 ├── state/           PUBLIC  typed decoder for state.apply returns (§B.1)
 └── internal/
     ├── sse/         shared /events stream (fan-out, reconnect)  (async.md)
@@ -301,6 +302,28 @@ salt's own verdict and is cheaper and more trustworthy than re-deriving one by
 scanning sub-states.
 
 ---
+
+### B.2 The output document (`schema/`)
+
+`Result` and friends are the **engine's** model: maps keyed by minion id, Go
+enums, unexported raw bytes, free to change. `schema.Result` is the
+**consumer's**: sorted slices, string enums, explicit counts, and a version to
+migrate against. `schema.FromResult` is the one-way door between them, and
+keeping them apart is what lets the first evolve without breaking the second.
+
+The package is the single definition of `papurika.dev/result/v1` — the version
+constant, the types, the status/outcome/error-kind vocabularies, and the
+`outcome` computation. It previously lived as unexported structs inside the CLI
+binary, which meant the "stable contract scripts consume" could not be imported
+by a Go consumer, had its version string duplicated per emit site, and was
+guarded by nothing but review. `schema_test.go` now pins the exact JSON field
+set, so adding a field is a visible diff and renaming or removing one fails.
+
+`--output yaml` is the same types through `sigs.k8s.io/yaml`, so it is the same
+schema by construction. **NDJSON is not this schema** — it is a separate
+streaming shape (`submitted` / `minion` / `value` / `error` / `summary` lines)
+that embeds `schema.Summary` in its trailing line but is otherwise its own
+thing, and is versioned only by the CLI.
 
 ## C. Error taxonomy (idiomatic Go errors)
 

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/cstrahan/papurika"
+	"github.com/cstrahan/papurika/schema"
 )
 
 func pendingResult(reason papurika.CompletionReason) *papurika.Result {
@@ -25,7 +26,7 @@ func pendingResult(reason papurika.CompletionReason) *papurika.Result {
 // healthy long job — the exact moment `papurika job <jid>` exists to reassure.
 func TestPendingJobIsNotAFailure(t *testing.T) {
 	res := pendingResult(papurika.ReasonNone)
-	v := toView(res, defaultOK)
+	v := schema.FromResult(res)
 	if v.Summary.Pending != 1 {
 		t.Errorf("summary.pending = %d, want 1", v.Summary.Pending)
 	}

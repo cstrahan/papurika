@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/cstrahan/papurika"
+	"github.com/cstrahan/papurika/schema"
 	"github.com/cstrahan/papurika/state"
 	sigsyaml "sigs.k8s.io/yaml"
 )
@@ -58,154 +59,6 @@ const (
 	exitTerminated  = 143
 )
 
-// resultView is the stable papurika.dev/result/v1 JSON schema.
-type resultView struct {
-	Schema   string        `json:"schema"`
-	Summary  summaryView   `json:"summary"`
-	Commands []commandView `json:"commands"`
-	Error    *errorView    `json:"error,omitempty"`
-}
-
-type summaryView struct {
-	Outcome string `json:"outcome"`
-	// JIDs carries every jid the run touched, so stdout (json/yaml) always holds
-	// the recoverable jid(s) — the "never lose a jid" guarantee on the machine
-	// path, mirroring the pretty per-command (jid …) header.
-	JIDs       []string `json:"jids,omitempty"`
-	Targeted   int      `json:"targeted"`
-	Returned   int      `json:"returned"`
-	Succeeded  int      `json:"succeeded"`
-	Failed     int      `json:"failed"`
-	NoResponse int      `json:"noresponse"`
-	// Pending is minions with no terminal outcome yet: an in-flight job read
-	// from the cache, or a run cut short before they returned. Kept apart from
-	// NoResponse because the evidence differs — a non-responder was probed with
-	// saltutil.find_job and found absent, a pending minion was never judged.
-	Pending int `json:"pending"`
-}
-
-// errorView reports a request-level failure (auth/transport/malformed) inside
-// the result document, so `--output json` always yields something parseable.
-// Writing nothing at all on failure — as this once did — meant json.load()
-// raised on exactly the runs a script most needs to inspect.
-type errorView struct {
-	Kind    string `json:"kind"`
-	Message string `json:"message"`
-}
-
-type commandView struct {
-	Index     int              `json:"index"`
-	Client    string           `json:"client"`
-	Fun       string           `json:"fun"`
-	JID       string           `json:"jid,omitempty"`
-	ExtraJIDs []string         `json:"extra_jids,omitempty"`
-	Targeted  []string         `json:"targeted,omitempty"`
-	Minions   []minionView     `json:"minions,omitempty"`
-	Value     *json.RawMessage `json:"value,omitempty"`
-	Retcode   *int             `json:"retcode,omitempty"`
-}
-
-type minionView struct {
-	ID      string          `json:"id"`
-	Status  string          `json:"status"`
-	Retcode *int            `json:"retcode"`
-	Return  json.RawMessage `json:"return"`
-}
-
-func toView(res *papurika.Result, okPred func(papurika.MinionResult) bool) resultView {
-	v := resultView{Schema: "papurika.dev/result/v1"}
-	for i, c := range res.Commands {
-		cv := commandView{Index: i, Client: string(c.Client), Fun: c.Fun, JID: c.JID, ExtraJIDs: c.ExtraJIDs, Targeted: c.Targeted, Retcode: c.Retcode}
-		ids := make([]string, 0, len(c.Minions))
-		for id := range c.Minions {
-			ids = append(ids, id)
-		}
-		sort.Strings(ids)
-		for _, id := range ids {
-			m := c.Minions[id]
-			ret := m.Value.Raw()
-			if len(ret) == 0 {
-				ret = json.RawMessage("null")
-			}
-			cv.Minions = append(cv.Minions, minionView{ID: id, Status: m.Status.String(), Retcode: m.Retcode, Return: ret})
-			v.Summary.Targeted++
-			switch {
-			case m.Status == papurika.StatusPending:
-				v.Summary.Pending++
-			case m.Status == papurika.StatusNoResponse:
-				v.Summary.NoResponse++
-			case okPred(m):
-				v.Summary.Returned++
-				v.Summary.Succeeded++
-			default:
-				v.Summary.Returned++
-				v.Summary.Failed++
-			}
-		}
-		if c.Minions == nil && !c.Value.IsZero() {
-			raw := c.Value.Raw()
-			cv.Value = &raw
-		}
-		v.Commands = append(v.Commands, cv)
-	}
-	v.Summary.Outcome = outcome(res, v.Summary)
-	v.Summary.JIDs = res.JIDs()
-	if v.Commands == nil {
-		v.Commands = []commandView{} // a consumer iterating commands must not get null
-	}
-	return v
-}
-
-// errorKind names a request-level failure in the stable vocabulary the v1
-// schema exposes. It is deliberately coarser than the sentinel set — scripts
-// branch on the exit code; this is for the human reading the JSON.
-func errorKind(err error) string {
-	switch {
-	case errors.Is(err, context.DeadlineExceeded):
-		return "timeout"
-	case errors.Is(err, context.Canceled):
-		return "interrupted"
-	case errors.Is(err, papurika.ErrAuthFailure):
-		return "auth_failure"
-	case errors.Is(err, papurika.ErrAuthDenied):
-		return "auth_denied"
-	case errors.Is(err, papurika.ErrMalformed):
-		return "malformed"
-	case errors.Is(err, papurika.ErrServerError):
-		return "server_error"
-	case errors.Is(err, papurika.ErrJobNotFound):
-		return "job_not_found"
-	case errors.Is(err, papurika.ErrNotFound):
-		return "not_found"
-	case errors.Is(err, papurika.ErrUnsupported):
-		return "unsupported"
-	case errors.Is(err, papurika.ErrTransport):
-		return "transport"
-	default:
-		return "error"
-	}
-}
-
-func newErrorView(err error) *errorView {
-	if err == nil {
-		return nil
-	}
-	return &errorView{Kind: errorKind(err), Message: err.Error()}
-}
-
-// errorOnlyView is the document emitted when a run failed with nothing
-// gathered. It is a valid papurika.dev/result/v1 document whose outcome says
-// "error" outright, so it can be parsed like any other and cannot be mistaken
-// for a successful empty run.
-func errorOnlyView(err error) resultView {
-	return resultView{
-		Schema:   "papurika.dev/result/v1",
-		Summary:  summaryView{Outcome: "error"},
-		Commands: []commandView{},
-		Error:    newErrorView(err),
-	}
-}
-
 // renderErrorOnly writes the content-less-failure document in the machine
 // formats. pretty and raw emit nothing — the message is already on stderr, and
 // a human does not need a stub document.
@@ -214,64 +67,17 @@ func renderErrorOnly(w io.Writer, mode outputMode, err error) {
 	case outputJSON:
 		enc := json.NewEncoder(w)
 		enc.SetIndent("", "  ")
-		_ = enc.Encode(errorOnlyView(err))
+		_ = enc.Encode(schema.FromError(err))
 	case outputYAML:
-		if b, merr := sigsyaml.Marshal(errorOnlyView(err)); merr == nil {
+		if b, merr := sigsyaml.Marshal(schema.FromError(err)); merr == nil {
 			_, _ = w.Write(b)
 		}
 	case outputNDJSON:
 		enc := json.NewEncoder(w)
 		_ = enc.Encode(ndjsonError{Type: "error", Error: err.Error()})
-		_ = enc.Encode(ndjsonSummary{Type: "summary", summaryView: errorOnlyView(err).Summary})
+		_ = enc.Encode(ndjsonSummary{Type: "summary", Summary: schema.FromError(err).Summary})
 	}
 }
-
-func outcome(res *papurika.Result, s summaryView) string {
-	if s.Targeted == 0 {
-		// A local command that matched no minion is "nomatch" (consistent with
-		// exit 2); a runner/wheel command (value-bearing, no minions) is "ok".
-		if isNoMatch(res) {
-			return "nomatch"
-		}
-		return "ok"
-	}
-	switch {
-	case s.Failed == 0 && s.NoResponse == 0 && s.Pending == 0:
-		return "ok"
-	// Nothing has gone wrong yet — the job simply is not finished. Reporting
-	// this as "failed" is what made `papurika job <jid>` alarming to run on a
-	// healthy long job.
-	case s.Failed == 0 && s.NoResponse == 0:
-		return "pending"
-	case s.Succeeded == 0 && s.Pending == 0:
-		return "failed"
-	default:
-		return "partial"
-	}
-}
-
-// isNoMatch reports whether every command is a local-family command that matched
-// no minion (no per-minion results and no value) — i.e. the target hit nothing.
-func isNoMatch(res *papurika.Result) bool {
-	if res == nil || len(res.Commands) == 0 {
-		return false
-	}
-	for _, c := range res.Commands {
-		switch c.Client {
-		case papurika.ClientLocal, papurika.ClientLocalAsync, papurika.ClientLocalBatch, papurika.ClientLocalSubset, papurika.ClientSSH:
-			// A jid or a targeted set means something WAS dispatched (e.g. an async
-			// submit) — not a no-match.
-			if len(c.Minions) > 0 || !c.Value.IsZero() || c.JID != "" || len(c.Targeted) > 0 {
-				return false
-			}
-		default:
-			return false // runner/wheel are never "no match"
-		}
-	}
-	return true
-}
-
-func defaultOK(m papurika.MinionResult) bool { return m.OK() }
 
 // commandJIDs is every jid behind one CommandResult: the primary plus any
 // extras a client-side-batched run merged into it.
@@ -289,14 +95,14 @@ func render(w io.Writer, res *papurika.Result, mode outputMode, opts renderOpts)
 	case outputJSON:
 		enc := json.NewEncoder(w)
 		enc.SetIndent("", "  ")
-		v := toView(res, defaultOK)
-		v.Error = newErrorView(opts.err)
+		v := schema.FromResult(res)
+		v.Error = schema.NewError(opts.err)
 		return enc.Encode(v)
 	case outputYAML:
 		// sigs.k8s.io/yaml round-trips via JSON, so the json tags (and the v1
 		// schema) carry over verbatim.
-		v := toView(res, defaultOK)
-		v.Error = newErrorView(opts.err)
+		v := schema.FromResult(res)
+		v.Error = schema.NewError(opts.err)
 		b, err := sigsyaml.Marshal(v)
 		if err != nil {
 			return err
@@ -344,8 +150,8 @@ type ndjsonValue struct {
 }
 
 type ndjsonSummary struct {
-	Type        string `json:"type"` // "summary"
-	summaryView        // carries jids (see summaryView.JIDs)
+	Type           string `json:"type"` // "summary"
+	schema.Summary        // carries jids (see schema.Summary.JIDs)
 }
 
 type ndjsonError struct {
@@ -386,8 +192,8 @@ func writeNDJSON(w io.Writer, res *papurika.Result) error {
 			_ = enc.Encode(ndjsonValue{Type: "value", JID: c.JID, Fun: c.Fun, Retcode: c.Retcode, Success: c.Success, Return: ret})
 		}
 	}
-	v := toView(res, defaultOK)
-	return enc.Encode(ndjsonSummary{Type: "summary", summaryView: v.Summary})
+	v := schema.FromResult(res)
+	return enc.Encode(ndjsonSummary{Type: "summary", Summary: v.Summary})
 }
 
 // ndjsonStreamer drives the streaming NDJSON path for run/state/ping. It emits a
@@ -436,8 +242,8 @@ func (s *ndjsonStreamer) finish(res *papurika.Result, err error) {
 	if err != nil && !resultHasContent(res) {
 		_ = s.enc.Encode(ndjsonError{Type: "error", Error: err.Error()})
 	}
-	v := toView(res, defaultOK)
-	_ = s.enc.Encode(ndjsonSummary{Type: "summary", summaryView: v.Summary})
+	v := schema.FromResult(res)
+	_ = s.enc.Encode(ndjsonSummary{Type: "summary", Summary: v.Summary})
 }
 
 func renderPretty(w io.Writer, res *papurika.Result, opts renderOpts) error {
@@ -1221,10 +1027,10 @@ func exitCode(res *papurika.Result, err error, policy failPolicy, allowNoRespons
 		return exitOK
 	}
 
-	view := toView(res, defaultOK)
+	view := schema.FromResult(res)
 	s := view.Summary
 	if s.Targeted == 0 {
-		if isNoMatch(res) {
+		if s.Outcome == schema.OutcomeNoMatch {
 			return exitNoMatch // local target hit nothing
 		}
 		return exitOK // runner/wheel value

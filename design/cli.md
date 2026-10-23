@@ -181,6 +181,14 @@ lines emitted at the end with no `submitted`/jid line. Client-side batching (the
 
 ### JSON (`papurika.dev/result/v1`)
 
+**Defined in the `schema` package** ([library.md](library.md) §B.2), not in the
+CLI: `schema.Version`, the types, the status/outcome/error-kind constants, and
+`schema.FromResult`, which is the only thing that builds a document. A Go
+consumer imports it and unmarshals directly; `schema.Minion.OK()` is the
+per-minion ok rule from §D, so nobody has to reimplement it. The field set is
+pinned by a test, so adding a field is a reviewable diff and renaming or
+removing one fails the build.
+
 ```json
 {
   "schema": "papurika.dev/result/v1",

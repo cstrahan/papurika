@@ -67,7 +67,7 @@ These are stated **once here** and referenced elsewhere — not re-litigated per
 | `full_return: true` | always injected by the client | uniform envelope + surfaces `retcode` |
 | Liveness | computed (`targeted − returned`); never `manage.status` | `manage.status` broken in 3008 |
 | Batching default | server-side `local_batch` (normalized); client-side opt-in | durability/one-JID vs interactive control |
-| JSON output schema | versioned `papurika.dev/result/v1` | stable contract for scripts |
+| JSON output schema | versioned `papurika.dev/result/v1`, defined in the public `schema/` package | stable contract for scripts — importable, and its field set pinned by a test |
 
 ## Architecture / layering
 

@@ -54,6 +54,25 @@ Add entries here as you go, under these headings (drop the ones you don't use):
   which cannot be detected from `success`: a runner called with missing
   arguments reports `success: true` and puts the usage text in its return
   value.
+- **`schema` package** (`github.com/cstrahan/papurika/schema`) — the
+  `papurika.dev/result/v1` output document, now importable. A Go consumer can
+  unmarshal papurika's own `--output json` without hand-writing the types:
+  `schema.Result`, `Summary`, `Command`, `Minion` and `Error` (which implements
+  `error`), plus `schema.Version` and string constants for every status,
+  outcome and error kind. `schema.Minion.OK()` is the documented per-minion ok
+  rule (`responded` with a zero *or absent* retcode), so nobody has to
+  reimplement the half that is easy to get wrong.
+
+  The document previously lived as unexported structs inside the CLI binary:
+  not importable, with the version string duplicated per emit site, and guarded
+  by nothing but code review. `schema.FromResult` is now the only thing that
+  builds one, and a test pins the exact JSON field set — adding a field is a
+  reviewable diff, renaming or removing one fails. No output changed: the
+  rendered bytes are identical before and after, verified across json/yaml/
+  ndjson for normal, failing, no-match, runner, error and batched runs.
+
+  Note NDJSON is **not** this schema. It is a separate streaming shape that
+  embeds `schema.Summary` in its trailing line and is versioned only by the CLI.
 - **`papurika jobs --limit N` and `--since DUR|TIME`** — bound a listing that is
   otherwise the master's *entire* job cache. Both are **opt-in**: the default
   is still to list everything, because a default cap would silently answer a

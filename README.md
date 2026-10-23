@@ -71,8 +71,20 @@ papurika watch 20260628031054512551        # block until it finishes
 papurika runner manage.up
 ```
 
-- `--output pretty|json|raw` (defaults: pretty on a TTY, json when piped). JSON is
-  the stable `papurika.dev/result/v1` schema — pipe it to `jq`.
+- `--output pretty|json|yaml|ndjson|raw` (defaults: pretty on a TTY, json when
+  piped). JSON is the stable `papurika.dev/result/v1` schema — pipe it to `jq`,
+  or unmarshal it in Go with the [`schema`](schema/) package:
+
+  ```go
+  var doc schema.Result
+  json.Unmarshal(out, &doc)
+  if doc.Error != nil { return doc.Error }   // *Error implements error
+  for _, c := range doc.Commands {
+      for _, m := range c.Minions {
+          if !m.OK() { /* status + retcode, per the documented rule */ }
+      }
+  }
+  ```
 - Targeting selectors mirror the `salt` CLI: `-L -E -G --grain-pcre -I
   --pillar-pcre -R -C -N`.
 - Exit code reflects **all** minions/commands: `--fail any|all|none`,

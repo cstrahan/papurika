@@ -26,10 +26,14 @@ Also valuable: `research/pepper_design_analysis.md` (what we're improving on) an
 
 ## Repo shape
 
-- **Root `*.go` + `cmd/papurika/` + `config/` + `internal/{sse,tokencache}/`** —
+- **Root `*.go` + `cmd/papurika/` + `config/` + `schema/` + `state/` +
+  `internal/{sse,tokencache}/`** —
   the client itself.
-  - Public import contract = package **`papurika`** + **`config`**. Keep it small
-    and stable. `internal/` and all unexported code are free to change.
+  - Public import contract = packages **`papurika`**, **`config`**, **`state`**
+    and **`schema`**. Keep it small and stable. `internal/` and all unexported
+    code are free to change. **`schema`** is the `papurika.dev/result/v1` output
+    document — its JSON field set is pinned by a test, so adding a field is a
+    reviewable diff and renaming/removing one is a v2.
   - **`envelope.go` and `transport.go` are unexported code in the *root* package,
     not `internal/`** — they produce the public `Result`/error types, so a separate
     package would create an import cycle. (See `design/library.md` §A.)

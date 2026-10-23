@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/cstrahan/papurika"
+	"github.com/cstrahan/papurika/schema"
 )
 
 func intp(n int) *int { return &n }
@@ -93,7 +94,7 @@ func TestExitCodeNoMatch(t *testing.T) {
 		t.Errorf("empty local result = %d, want %d (no match)", got, exitNoMatch)
 	}
 	// The JSON outcome must agree with the exit code (not the misleading "ok").
-	if got := toView(empty, defaultOK).Summary.Outcome; got != "nomatch" {
+	if got := schema.FromResult(empty).Summary.Outcome; got != "nomatch" {
 		t.Errorf("no-match outcome = %q, want nomatch", got)
 	}
 }
@@ -104,7 +105,7 @@ func TestRunnerValueOutcomeOK(t *testing.T) {
 		Client: papurika.ClientRunner, Fun: "manage.up",
 		Value: papurika.NewRawValue(json.RawMessage(`["m1"]`)),
 	}}}
-	if got := toView(runnerRes, defaultOK).Summary.Outcome; got != "ok" {
+	if got := schema.FromResult(runnerRes).Summary.Outcome; got != "ok" {
 		t.Errorf("runner outcome = %q, want ok", got)
 	}
 	if got := exitCode(runnerRes, nil, failAny, false); got != exitOK {
@@ -284,11 +285,11 @@ func TestRenderJSONSchema(t *testing.T) {
 	if err := render(&buf, r, outputJSON, renderOpts{}); err != nil {
 		t.Fatal(err)
 	}
-	var v resultView
+	var v schema.Result
 	if err := json.Unmarshal(buf.Bytes(), &v); err != nil {
 		t.Fatal(err)
 	}
-	if v.Schema != "papurika.dev/result/v1" {
+	if v.Schema != schema.Version {
 		t.Errorf("schema = %q", v.Schema)
 	}
 	if v.Summary.Outcome != "ok" || v.Summary.Succeeded != 1 {
@@ -557,7 +558,7 @@ func TestJSONSummaryCarriesJIDs(t *testing.T) {
 	if err := render(&buf, r, outputJSON, renderOpts{}); err != nil {
 		t.Fatal(err)
 	}
-	var v resultView
+	var v schema.Result
 	if err := json.Unmarshal(buf.Bytes(), &v); err != nil {
 		t.Fatal(err)
 	}

@@ -10,6 +10,7 @@ import (
 
 	"github.com/cstrahan/papurika"
 	"github.com/cstrahan/papurika/config"
+	"github.com/cstrahan/papurika/schema"
 	"github.com/spf13/cobra"
 )
 
@@ -293,7 +294,7 @@ func emit(res *papurika.Result, err error) error {
 			err:         err,
 		})
 	}
-	if err == nil && isNoMatch(res) {
+	if err == nil && schema.IsNoMatch(res) {
 		fmt.Fprintln(os.Stderr, "papurika: no minions matched the target")
 	}
 	// Interrupt / deadline: the jid(s) are already on stdout (pretty header or

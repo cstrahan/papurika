@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/cstrahan/papurika"
+	"github.com/cstrahan/papurika/schema"
 )
 
 // A request-level failure must still produce a parseable document in the
@@ -22,7 +23,7 @@ func TestErrorEnvelopeIsParseable(t *testing.T) {
 	if jerr := json.Unmarshal(buf.Bytes(), &v); jerr != nil {
 		t.Fatalf("error output is not valid JSON (%v): %q", jerr, buf.String())
 	}
-	if v["schema"] != "papurika.dev/result/v1" {
+	if v["schema"] != schema.Version {
 		t.Errorf("schema = %v", v["schema"])
 	}
 	if sum := v["summary"].(map[string]any); sum["outcome"] != "error" {
