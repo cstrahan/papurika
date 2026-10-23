@@ -862,6 +862,50 @@ encoding. Client-supplied jids (above) are the real remedy.
 
 ---
 
+## `jobs.active` has a second cost: one job-cache read per active job
+
+The fleet gather below is only half of it. After collecting
+`saltutil.running`, `active()` loops over every jid it found and calls
+`<returner>.get_jid(jid)`. For `local_cache` that is an `os.listdir` of the
+jid directory plus a file open + msgpack load **per minion that has already
+returned for that job**. Total work is therefore
+`active_jobs × returns_so_far_per_job`, read off disk, every call.
+
+Measured on a 6-minion fleet with all minions healthy (so the gather floor is
+~0.3s and the rest is this loop):
+
+| active jobs | `jobs.active` |
+|---|---|
+| 0 | 0.39s |
+| 5 | 0.42s |
+| 15 | 0.60s |
+| 35 | 1.31s |
+| 60 | 1.18s |
+
+Small here because six minions can only contribute six returns per job. On a
+real fleet the per-job term is the number of hosts that have finished — a
+fleet-wide `state.apply` with most hosts done and a few still running is the
+worst case, since every one of those completed returns is re-read on every
+`jobs.active` call.
+
+**It is not a version regression.** `active()` is functionally identical
+between **3004.2** and **3008.3** (f-string cosmetics only), as is the
+`get_iter_returns` re-ping loop, so this cost model applies across all of
+them.
+
+Two things it is *not*, both checked:
+
+- **Not proportional to dead minions.** 0/1/2/3/4/5 dead out of six measured
+  0.34 / 15.31 / 15.39 / 15.37 / 15.34 / 15.36s — one unreachable minion buys
+  the whole window and more are free.
+- **Not extended by slow minions.** Freezing five minions with `SIGSTOP` and
+  thawing them at t=8s completed the call at 8.3s, not 15s: a minion that
+  eventually answers costs only the time it takes. The re-ping loop extends
+  the window only for a minion that answers `find_job` while never returning
+  the job itself, which `saltutil.running` does not produce.
+
+---
+
 ## Making a dead minion cheap — master-side levers (verified 2026-10-23, 3008.3)
 
 The ~15s a non-responding minion costs every fleet-wide gather is a *master*
