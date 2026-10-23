@@ -11,6 +11,12 @@ Reproducible probe + raw captures:
 
 ## TL;DR — don't trust `manage.*` for liveness
 
+> Two independent reasons, both field-confirmed: the `status` family
+> mis-reports dead minions as up on 3008.0/3008.1 (§5), and the `present`
+> family silently omits any minion whose connection address differs from its
+> grains — NAT, floating IPs, cross-network masters (§2). papurika computes
+> liveness itself (`targeted − returned`) and asks salt for neither.
+
 | tool | mechanism | sends a ping? | blocks | reliable for liveness? |
 |------|-----------|---------------|--------|------------------------|
 | `manage.status` / `up` / `down` | live `test.ping` (`_ping`) | **yes** | `timeout + gather_job_timeout` (~15s) | **NO** — reports every key-accepted minion as `up` (bug, see below) |
@@ -94,6 +100,35 @@ cache and by IP matching.
   their IPs) are only as fresh as the grains cache — updated when a minion
   authenticates / refreshes grains / pillar is compiled, not continuously. A
   minion whose IP changed without a grains refresh can be mis-classified.
+
+### The IP match breaks completely across NAT — confirmed in a real fleet
+
+Step 4 is not a rounding error, it is a **structural failure for any fleet
+where a minion connects from an address different from the one in its
+grains** — NAT, floating IPs, or a master in one network managing minions in
+another. The master sees the translated source address on :4505; the minion's
+grains report its private address; they never match, so the minion is absent
+from `present`/`alived`/`joined` *while being perfectly reachable*.
+
+Observed on a production master managing minions across two networks:
+`manage.present` returned only the handful of minions **local to the master's
+own network**, while `salt -C '<remote-minion>' test.ping` answered `true`
+immediately. Thousands of reachable minions simply did not appear.
+
+The failure is **silent and one-directional** — it under-reports, so it reads
+as "those minions are down" rather than as a broken check. Upstream discussion:
+[saltstack/salt#68081](https://github.com/saltstack/salt/discussions/68081),
+where `mattp-` identifies the same cause (the `ss`-vs-grains IP comparison).
+
+`detect_remote_minions` does **not** fix this: it defaults to `False` and keys
+on `remote_minions_port`, default **22** — a salt-ssh scenario, not NAT.
+
+⇒ **`present` is therefore not a usable "is this minion alive" check in
+general**, on top of the `status` family already being unusable. To count
+connected minions without a fleet gather, read the master's socket table
+directly (`ss -tn state established '( sport = :4505 )'`) — that is the same
+data `connected_ids` starts from, minus the grains-matching step that breaks.
+It yields a count, not minion ids, which is enough for sizing a fan-out.
 
 ## 3. Settings that matter
 
