@@ -130,6 +130,109 @@ directly (`ss -tn state established '( sport = :4505 )'`) — that is the same
 data `connected_ids` starts from, minus the grains-matching step that breaks.
 It yields a count, not minion ids, which is enough for sizing a fan-out.
 
+### 2b. Why this is not fixed upstream — and why the obvious fix does not exist
+
+Upstream bug: **[saltstack/salt#66295 — "[BUG] Minion behind NAT incorrectly
+shows not connected"](https://github.com/saltstack/salt/issues/66295)**. Open
+since April 2024, severity-medium, milestone pushed repeatedly (Argon v3008.5
+as of Oct 2026), **no maintainer response and no PR**. Same diagnosis: the
+master compares `ss` output against minion-reported interface IPs.
+
+**Every id-level presence path bottoms out in the same check.** There is no
+alternative source to fall back on:
+
+| entry point | source |
+|---|---|
+| `manage.present` / `alived` / `joined` / `allowed` / `reaped` | `connected_ids()` |
+| `wheel minions.connected` | `con_cache` if enabled, **else** `connected_ids()` |
+| `con_cache` itself | `CacheWorker.run()` → `connected_ids()`, **wholesale replace** |
+| `presence_events` | `connected_ids()` on `loop_interval` |
+
+`con_cache` deserves spelling out because it looks like a workaround and is
+not. The master *does* record the correct id at authentication —
+`master.py`, `self.cache_cli.put_cache([load["id"]])` — which is NAT-safe,
+because auth carries the id. But `CacheWorker.run()`
+(`salt/utils/master.py`) then does
+`list(CkMinions(self.opts).connected_ids())` and **replaces the whole list**
+on a timer. Correct ids go in; the broken matcher sweeps them out again.
+
+**The obvious fix — "record the source IP seen at auth and match on that too"
+— is not implementable on the 0MQ transport.** Checked: the auth handler
+receives only the decoded payload (`handle_message(self, stream, payload)` →
+`self.message_handler(payload)` in `salt/transport/zeromq.py`), and the ROUTER
+socket sits behind a `zmq_device` proxying to workers over an internal DEALER,
+so the original peer is several hops gone by then. A ROUTER identity frame is
+a ZeroMQ identity, not an address. **The master has the minion id and no
+address at auth time.**
+
+That is the real reason the bug has sat for years: on 0MQ pub/sub, 4505
+connections are anonymous at the protocol level, so IP matching is the only
+handle anyone has found. Don't spend time rediscovering the auth-time-IP fix.
+
+Nor is "stop `CacheWorker` clobbering the auth-recorded ids" sufficient on its
+own: nothing would ever *remove* an entry, so a minion that died an hour ago
+stays "connected" forever. That trades silent under-reporting for silent
+over-reporting — the same failure mode as the `manage.status` regression in
+§5, which is worse, not better.
+
+#### The TCP transport already does this correctly
+
+The IP-matching problem is specific to **ZeroMQ**. On a `transport: tcp`
+master, presence is tracked *in the transport*, by authenticated minion id,
+per connection — and the maintenance loop deliberately skips its
+`connected_ids()` polling in that case:
+
+```python
+# salt/master.py — Maintenance.__init__
+if self.opts.get("presence_events", False):
+    tcp_only = all(t == "tcp" for t, _ in iter_transport_opts(self.opts))
+    if not tcp_only:
+        # For a TCP only transport, the presence events will be
+        # handled in the transport code.
+        self.presence_events = True
+```
+
+```python
+# salt/channel/server.py — presence_callback
+if not self.aes_funcs.verify_minion(load["id"], load["tok"]):
+    return
+subscriber.id_ = load["id"]
+self._add_client_present(subscriber)        # self.present[id_] = {client}
+```
+
+The subscriber announces its **id** over the authenticated channel on connect,
+and `remove_presence_callback` fires on disconnect — so `present` is a real,
+id-keyed, connect/disconnect-driven set. No grains, no addresses, NAT
+irrelevant.
+
+⇒ So "correct presence" is not architecturally impossible in salt; it is
+**absent from the 0MQ transport specifically**, because 0MQ pub/sub gives the
+master no per-subscriber identity to hang it on. Switching transport is a
+large change with its own consequences and is **not** a casual recommendation
+— but it is the one existing configuration where presence is trustworthy, and
+it is the shape any 0MQ fix would have to imitate.
+
+**Candidate fixes, if anyone takes this up** (none attempted here):
+
+1. *Configurable match grains.* `connected_ids` hardcodes `grains["ipv4"]` /
+   `["ipv6"]`. An option listing which grain keys to match would let a NAT'd
+   fleet surface its public address from cloud metadata and have presence
+   work. Contained and backward-compatible, but needs operator setup — a
+   mitigation with a config story, not a cure.
+2. *Make the failure loud.* `connected_ids` can see it has established
+   connections matching no cached minion. Logging that count turns a
+   confidently wrong answer into a detectable one. No behaviour change;
+   highest value per unit of risk.
+3. *id-keyed `last_seen`.* Track when the master last heard from each id on
+   4506 (auth, returns, mine, pings) and define presence as "heard from within
+   N seconds" — never touches IPs, so NAT-proof. But it is only meaningful
+   with `ping_interval` enabled (default **0**), so an idle minion looks dead.
+   A design change needing maintainer buy-in before anyone writes it.
+
+⇒ None of this changes papurika's position: compute liveness as
+`targeted − returned` (§4). It is noted here so the next person does not
+re-derive the dead end.
+
 ## 3. Settings that matter
 
 | setting | default | effect |
@@ -139,9 +242,9 @@ It yields a count, not minion ids, which is enough for sizing a fan-out.
 | `minion_data_cache` | True | gates `connected_ids` (cache family); off → `present/alived` return `∅` |
 | `cache` | `localfs` | backing store for the grains cache `connected_ids` reads |
 | `publish_port` | 4505 | the port whose TCP table `connected_ids` inspects |
-| `detect_remote_minions` / `remote_minions_port` | False / 4505 | also count minions connected to a remote port |
+| `detect_remote_minions` / `remote_minions_port` | False / **22** | also count minions connected to a remote port. The default is **22** — this targets a salt-ssh-style setup, **not** NAT; it does not help with §2b |
 | `presence_events` | False | if True, master emits `salt/presence/{present,change}` events on `loop_interval` — a separate, event-driven presence signal a client could subscribe to (not used by `manage.*`) |
-| `con_cache` | False | runs a `ConCache` process tracking connected minion ids for fast master-side minion-list checks (prod sets this True); orthogonal to `connected_ids`, which reads the live TCP table directly |
+| `con_cache` | False | runs a `ConCache` process caching connected minion **ids**. **NOT orthogonal to `connected_ids`** — see §2b: it is periodically rebuilt *from* `connected_ids`, so it inherits the same IP-matching bug on a timer |
 
 ## 4. Recommendation for the CLI
 
