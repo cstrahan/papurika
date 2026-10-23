@@ -270,18 +270,27 @@ func isTTY(f *os.File) bool {
 // It also prints a recovery banner to stderr on interruption/timeout so the jid
 // is never lost.
 func emit(res *papurika.Result, err error) error {
-	// Pure failure (auth/transport/malformed with nothing gathered): print the
-	// error to stderr and emit nothing to stdout — don't render a misleading
-	// empty "ok" result.
+	mode := resolveOutput()
+	// Pure failure (auth/transport/malformed with nothing gathered): the message
+	// goes to stderr, and the MACHINE formats still get a well-formed document
+	// whose outcome is "error".
+	//
+	// Emitting nothing at all — as this once did — meant `--output json` produced
+	// zero bytes on exactly the runs a script most needs to inspect, so
+	// json.load() raised instead of reporting the failure. pretty and raw still
+	// print nothing: a human already has the stderr line, and a stub document
+	// would only be noise.
 	if err != nil && !resultHasContent(res) {
 		fmt.Fprintf(os.Stderr, "papurika: %v\n", err)
+		renderErrorOnly(os.Stdout, mode, err)
 		return &exitErr{code: exitCode(res, err, policy(), flagAllowNR)}
 	}
 	if res != nil {
-		_ = render(os.Stdout, res, resolveOutput(), renderOpts{
+		_ = render(os.Stdout, res, mode, renderOpts{
 			color:       useColor(),
 			changesOnly: flagChangesOnly,
 			verbose:     flagVerbose > 0,
+			err:         err,
 		})
 	}
 	if err == nil && isNoMatch(res) {
@@ -300,7 +309,7 @@ func emit(res *papurika.Result, err error) error {
 		switch {
 		case len(jids) == 0:
 			// nothing to recover
-		case resolveOutput() == outputPretty:
+		case mode == outputPretty:
 			fmt.Fprintf(os.Stderr, "papurika: %s — partial result above; jid(s) recoverable\n", what)
 		default:
 			fmt.Fprintf(os.Stderr, "papurika: %s — resume: papurika watch %s\n", what, joinJIDs(jids))

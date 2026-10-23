@@ -28,9 +28,10 @@ const (
 
 // renderOpts controls the pretty renderer (see design/cli-output-format.md).
 type renderOpts struct {
-	color       bool // ANSI color enabled
-	changesOnly bool // highstate: hide clean (ok, unchanged) states
-	verbose     bool // show every state's duration / fuller detail
+	color       bool  // ANSI color enabled
+	changesOnly bool  // highstate: hide clean (ok, unchanged) states
+	verbose     bool  // show every state's duration / fuller detail
+	err         error // request-level failure to report alongside a partial result
 }
 
 // failPolicy decides how minion outcomes collapse to an exit code.
@@ -60,6 +61,7 @@ type resultView struct {
 	Schema   string        `json:"schema"`
 	Summary  summaryView   `json:"summary"`
 	Commands []commandView `json:"commands"`
+	Error    *errorView    `json:"error,omitempty"`
 }
 
 type summaryView struct {
@@ -78,6 +80,15 @@ type summaryView struct {
 	// NoResponse because the evidence differs — a non-responder was probed with
 	// saltutil.find_job and found absent, a pending minion was never judged.
 	Pending int `json:"pending"`
+}
+
+// errorView reports a request-level failure (auth/transport/malformed) inside
+// the result document, so `--output json` always yields something parseable.
+// Writing nothing at all on failure — as this once did — meant json.load()
+// raised on exactly the runs a script most needs to inspect.
+type errorView struct {
+	Kind    string `json:"kind"`
+	Message string `json:"message"`
 }
 
 type commandView struct {
@@ -136,7 +147,80 @@ func toView(res *papurika.Result, okPred func(papurika.MinionResult) bool) resul
 	}
 	v.Summary.Outcome = outcome(res, v.Summary)
 	v.Summary.JIDs = res.JIDs()
+	if v.Commands == nil {
+		v.Commands = []commandView{} // a consumer iterating commands must not get null
+	}
 	return v
+}
+
+// errorKind names a request-level failure in the stable vocabulary the v1
+// schema exposes. It is deliberately coarser than the sentinel set — scripts
+// branch on the exit code; this is for the human reading the JSON.
+func errorKind(err error) string {
+	switch {
+	case errors.Is(err, context.DeadlineExceeded):
+		return "timeout"
+	case errors.Is(err, context.Canceled):
+		return "interrupted"
+	case errors.Is(err, papurika.ErrAuthFailure):
+		return "auth_failure"
+	case errors.Is(err, papurika.ErrAuthDenied):
+		return "auth_denied"
+	case errors.Is(err, papurika.ErrMalformed):
+		return "malformed"
+	case errors.Is(err, papurika.ErrServerError):
+		return "server_error"
+	case errors.Is(err, papurika.ErrJobNotFound):
+		return "job_not_found"
+	case errors.Is(err, papurika.ErrNotFound):
+		return "not_found"
+	case errors.Is(err, papurika.ErrUnsupported):
+		return "unsupported"
+	case errors.Is(err, papurika.ErrTransport):
+		return "transport"
+	default:
+		return "error"
+	}
+}
+
+func newErrorView(err error) *errorView {
+	if err == nil {
+		return nil
+	}
+	return &errorView{Kind: errorKind(err), Message: err.Error()}
+}
+
+// errorOnlyView is the document emitted when a run failed with nothing
+// gathered. It is a valid papurika.dev/result/v1 document whose outcome says
+// "error" outright, so it can be parsed like any other and cannot be mistaken
+// for a successful empty run.
+func errorOnlyView(err error) resultView {
+	return resultView{
+		Schema:   "papurika.dev/result/v1",
+		Summary:  summaryView{Outcome: "error"},
+		Commands: []commandView{},
+		Error:    newErrorView(err),
+	}
+}
+
+// renderErrorOnly writes the content-less-failure document in the machine
+// formats. pretty and raw emit nothing — the message is already on stderr, and
+// a human does not need a stub document.
+func renderErrorOnly(w io.Writer, mode outputMode, err error) {
+	switch mode {
+	case outputJSON:
+		enc := json.NewEncoder(w)
+		enc.SetIndent("", "  ")
+		_ = enc.Encode(errorOnlyView(err))
+	case outputYAML:
+		if b, merr := sigsyaml.Marshal(errorOnlyView(err)); merr == nil {
+			_, _ = w.Write(b)
+		}
+	case outputNDJSON:
+		enc := json.NewEncoder(w)
+		_ = enc.Encode(ndjsonError{Type: "error", Error: err.Error()})
+		_ = enc.Encode(ndjsonSummary{Type: "summary", summaryView: errorOnlyView(err).Summary})
+	}
 }
 
 func outcome(res *papurika.Result, s summaryView) string {
@@ -193,11 +277,15 @@ func render(w io.Writer, res *papurika.Result, mode outputMode, opts renderOpts)
 	case outputJSON:
 		enc := json.NewEncoder(w)
 		enc.SetIndent("", "  ")
-		return enc.Encode(toView(res, defaultOK))
+		v := toView(res, defaultOK)
+		v.Error = newErrorView(opts.err)
+		return enc.Encode(v)
 	case outputYAML:
 		// sigs.k8s.io/yaml round-trips via JSON, so the json tags (and the v1
 		// schema) carry over verbatim.
-		b, err := sigsyaml.Marshal(toView(res, defaultOK))
+		v := toView(res, defaultOK)
+		v.Error = newErrorView(opts.err)
+		b, err := sigsyaml.Marshal(v)
 		if err != nil {
 			return err
 		}

@@ -54,6 +54,11 @@ Add entries here as you go, under these headings (drop the ones you don't use):
   which cannot be detected from `success`: a runner called with missing
   arguments reports `success: true` and puts the usage text in its return
   value.
+- **`error` object in the `papurika.dev/result/v1` schema** — `{kind, message}`,
+  present whenever a run ended in a request-level failure. `kind` is a stable
+  vocabulary (`timeout`, `interrupted`, `auth_failure`, `auth_denied`,
+  `malformed`, `server_error`, `job_not_found`, `not_found`, `unsupported`,
+  `transport`, `error`). Additive: existing consumers are unaffected.
 - **`summary.pending` in the result schema** — minions with no terminal outcome
   yet, kept separate from `summary.noresponse`. See **Fixed**, below.
 - **`papurika.APIError.Cause`** — the underlying failure (the `net/url` error,
@@ -68,6 +73,13 @@ Add entries here as you go, under these headings (drop the ones you don't use):
 
 ### Fixed
 
+- **`--output json` wrote zero bytes on a request-level failure**, so
+  `json.load()` raised instead of reporting the failure, on exactly the runs a
+  script most needs to inspect. json/yaml now emit a well-formed
+  `papurika.dev/result/v1` document with `summary.outcome: "error"`, empty
+  `commands`, and the new `error` object; ndjson emits an `error` line plus a
+  summary line. `pretty` and `raw` still emit nothing to stdout, and the
+  message stays on stderr in every mode.
 - **`papurika job <jid>` reported a still-running job as failed.** Minions that
   had not answered yet were synthesized as `noresponse` — indistinguishable
   from a dead minion — giving `outcome: failed` and exit 1 for a perfectly

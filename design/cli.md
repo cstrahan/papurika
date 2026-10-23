@@ -181,6 +181,13 @@ against the exit policy only when the gather *ended* with minions still pending
 (`reason: stream_fatal` — the jid aged out mid-run), because those will never
 return.
 
+**`error` object.** Any run that ends in a request-level failure carries an
+`error: {kind, message}` alongside the rest of the document; `kind` is one of
+`timeout | interrupted | auth_failure | auth_denied | malformed | server_error |
+job_not_found | not_found | unsupported | transport | error`. When the failure
+left *nothing* gathered, the document is still emitted, with
+`summary.outcome: "error"` and `commands: []` — see §C.
+
 ### Pretty (native renderers, selected off `fun`/`out`)
 
 The pretty renderer is specified in full in its own companion doc,
@@ -264,6 +271,18 @@ Strict separation so `--output json | jq` is always clean:
   human-readable), or a single `resume: papurika watch <jid>` in the machine
   formats (where a human can't eyeball stdout). No multi-line jid banner, no
   per-submit jid echo — the result carries the jid (§E).
+
+**A request-level failure still writes a document, in the machine formats.**
+"Results only on stdout" used to mean *nothing* on stdout when auth failed or
+the clock ran out with nothing gathered — so `--output json` produced zero
+bytes on exactly the runs a script most needs to inspect, and `json.load()`
+raised instead of reporting the failure. json/yaml now emit a well-formed
+`papurika.dev/result/v1` document with `summary.outcome: "error"`, empty
+`commands`, and the `error` object (§B); ndjson emits an `{"type":"error",…}`
+line followed by a summary line. **pretty and raw still emit nothing** — a human
+already has the stderr line, and a stub document is only noise. The failure
+message itself stays on stderr in every mode, so this adds to stdout without
+taking anything off stderr.
 - **Progress / streaming** → stderr, and **only when stderr is a TTY**. Piped or
   `--output json`, progress is suppressed unless `-v`. So
   `papurika run '*' fun --output json > out.json` yields a clean parseable file
