@@ -64,7 +64,9 @@ Add entries here as you go, under these headings (drop the ones you don't use):
 - **Interrupting `jobs --active` lost the jid**, reporting a bare "context
   canceled" for a runner that was still going on the master — a violation of
   the never-lose-a-jid rule introduced with the command. The jid now rides out
-  on a `JobError` and the CLI prints the `papurika job <jid>` recovery hint.
+  on a `JobError`, and the CLI says to look it up **once the runner finishes**:
+  unlike a local job, a runner is written to the job cache only on completion,
+  so `papurika job <jid>` reports not-found for as long as it is running.
 - **`jobs --active` looked like it hung.** It is a live fan-out to every
   minion, and any minion that does not answer costs the master's full
   `timeout` + `gather_job_timeout` (~15s), so on a fleet with a dead host it

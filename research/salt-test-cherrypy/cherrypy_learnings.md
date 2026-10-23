@@ -913,11 +913,22 @@ on 3008.3:
 - **`/ret` payload** (the inner `data` object):
   `{fun, jid, user, fun_args, _stamp, return, success}`. The runner's actual
   value is at **`return`**; `fun` is prefixed (`runner.jobs.active`).
-- **`GET /jobs/<jid>` resolves a runner jid**, so the event bus is not the only
-  way to see the result and a missed `/ret` can be reconciled by polling — the
-  same belt-and-braces the local gather uses. The envelope is nested one deeper
-  than for a local job: `info[0].Result.master.return` (and
-  `return[0].master`), keyed by the pseudo-minion **`master`**.
+- **`GET /jobs/<jid>` resolves a runner jid — but only once the runner has
+  FINISHED.** Timed against a ~15s `jobs.active`, the jid returns
+  `"Cannot contact returner or no job with this jid"` at t≈1/3/6/10s and
+  resolves from t≈14s. This is the **opposite of a local job**, where
+  `save_load` runs inside `_prep_pub` *before* `_send_pub`, so the jid is
+  resolvable from the moment it is published.
+
+  Two consequences. A poll is still a valid backstop for a missed `/ret` — the
+  envelope is nested one deeper than a local job,
+  `info[0].Result.master.return` (and `return[0].master`), keyed by the
+  pseudo-minion **`master`** — but a gather must treat not-found as *keep
+  waiting*, where the local gather treats it as fatal. And a runner submit
+  **cannot be reconciled** the way a local one can: while it runs, "no job with
+  this jid" is indistinguishable from "never started", so there is no moment at
+  which absence proves anything. A running runner's only trace is its
+  `salt/run/<jid>/new` event.
 
 ### `success: true` does not mean the runner worked
 

@@ -155,6 +155,12 @@ func (c *Client) gatherMaster(ctx context.Context, cmd Command, jid, prefix stri
 
 // pollMaster checks the job cache for a finished master job. The runner's
 // envelope sits at return[0].master for this shape.
+//
+// Any error — ErrJobNotFound included — means "keep waiting", which is the
+// opposite of the local gather, where a missing jid is fatal. A runner is
+// written to the job cache only when it COMPLETES (verified: a 15s runner
+// 404s for its whole execution), so not-found is the normal state of a runner
+// that is still going, not evidence that it aged out.
 func (c *Client) pollMaster(ctx context.Context, cmd Command, jid string) (*Result, bool) {
 	jr, err := c.Job(ctx, jid)
 	if err != nil || jr == nil {

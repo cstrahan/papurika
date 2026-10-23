@@ -592,9 +592,14 @@ before its nominal expiry.
    is implemented, and the provably-unexecuted failures are now retried for every
    command POST without any opt-in. An allowlist is still open — and is less
    pressing now that the common transient cases are covered by default.)*
-3. ~~**Reconciling an ambiguous submit**~~ — **settled and implemented**; see
-   [async.md](async.md) §C.1–C.2. The engine mints the jid, reconciles against
-   `/jobs/<jid>`, and adopts or re-sends. Still open underneath it: `runner` and
-   `wheel` reach the master via `cmd_sync`, which takes no client jid, so those
-   paths cannot be reconciled — should they grow an equivalent, or stay
-   send-once?
+3. ~~**Reconciling an ambiguous submit**~~ — **settled and implemented** for
+   local jobs; see [async.md](async.md) §C.1–C.2. The engine mints the jid,
+   reconciles against `/jobs/<jid>`, and adopts or re-sends.
+
+   Still open for master-side jobs, and now with a known reason it is hard: a
+   runner is written to the job cache only when it **completes** (verified —
+   `cherrypy_learnings.md`), so while one is running "no job with this jid" is
+   indistinguishable from "never started". The local trick works precisely
+   because `save_load` precedes `_send_pub`; runners have no equivalent moment.
+   Reconciling one would mean tracking `salt/run/<jid>/new` off the event bus
+   instead — which only helps a client that was already listening.

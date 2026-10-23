@@ -329,8 +329,13 @@ func newJobsCmd() *cobra.Command {
 					// reachable rather than implying it was lost.
 					var je *papurika.JobError
 					if errors.As(jerr, &je) && je.JID != "" {
+						// A runner lands in the job cache only when it
+						// finishes, so `job <jid>` answers "not found" until
+						// then. Don't send anyone to a command that cannot
+						// work yet.
 						fmt.Fprintf(os.Stderr,
-							"papurika: stopped waiting; the runner is still going on the master — `papurika job %s`\n",
+							"papurika: stopped waiting; the runner is still going on the master. "+
+								"Once it finishes: `papurika job %s` (until then that reports not-found)\n",
 							je.JID)
 					}
 					return emit(nil, jerr)
