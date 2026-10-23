@@ -49,9 +49,12 @@ makes the output safe to log, paste into a ticket, or pipe to automation.
 Two things it surfaces that are otherwise easy to get wrong:
 
 - **Which profile this invocation would use, and why** — `--profile`, then
-  `PAPURIKA_PROFILE`, then `default_profile`, then a fallback to a profile
-  literally named `main`. That last case is the surprising one, so it says so,
-  and flags when the selected profile is not defined at all.
+  `PAPURIKA_PROFILE`, then `default_profile`, then a profile named `default`
+  (the convention the AWS CLI established: a lone profile called `default` just
+  works, with no config key pointing at it). Note the ordering — an explicit
+  `default_profile` outranks the convention, so a config with both
+  `default_profile = "prod"` and a `[profiles.default]` uses `prod`. It also
+  flags when the selected profile is not defined at all.
 - **A plaintext password in the config file**, warned on stderr. The JSON form
   carries the same fact as `secret.plaintext`, so stdout stays pure data.
 

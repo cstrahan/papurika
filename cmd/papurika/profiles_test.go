@@ -138,12 +138,12 @@ func TestProfilesSelectionSources(t *testing.T) {
 			t.Errorf("selected = %+v", d.Selected)
 		}
 	})
-	// The surprising one: no default_profile means a profile named "main" that
-	// probably doesn't exist. Say so rather than letting it fail later.
-	t.Run("fallback to main", func(t *testing.T) {
+	// No default_profile falls back to a profile named "default", which may not
+	// exist. Say so rather than letting it fail later.
+	t.Run("fallback to default", func(t *testing.T) {
 		t.Setenv("PAPURIKA_PROFILE", "")
 		d := buildProfilesDoc(&config.Config{Profiles: map[string]config.Profile{"a": {}}}, "")
-		if d.Selected.Name != "main" || d.Selected.Source != "fallback" || d.Selected.Exists {
+		if d.Selected.Name != config.DefaultProfileName || d.Selected.Source != "fallback" || d.Selected.Exists {
 			t.Errorf("selected = %+v", d.Selected)
 		}
 		var warn bytes.Buffer

@@ -139,9 +139,9 @@ func TestSelectProfileAgreesWithResolve(t *testing.T) {
 	cfg := &Config{
 		DefaultProfile: "prod",
 		Profiles: map[string]Profile{
-			"prod": {MasterURL: "https://prod:8000"},
-			"lab":  {MasterURL: "https://lab:8000"},
-			"main": {MasterURL: "https://main:8000"},
+			"prod":    {MasterURL: "https://prod:8000"},
+			"lab":     {MasterURL: "https://lab:8000"},
+			"default": {MasterURL: "https://default:8000"},
 		},
 	}
 	for _, tc := range []struct {
@@ -172,12 +172,12 @@ func TestSelectProfileAgreesWithResolve(t *testing.T) {
 		})
 	}
 
-	// With nothing to go on, both land on "main".
+	// With nothing to go on, both land on DefaultProfileName.
 	t.Run("fallback", func(t *testing.T) {
 		t.Setenv("PAPURIKA_PROFILE", "")
-		bare := &Config{Profiles: map[string]Profile{"main": {MasterURL: "https://m:8000"}}}
+		bare := &Config{Profiles: map[string]Profile{DefaultProfileName: {MasterURL: "https://m:8000"}}}
 		sel := bare.SelectProfile("")
-		if sel.Name != "main" || sel.Source != "fallback" || !sel.Exists {
+		if sel.Name != DefaultProfileName || sel.Source != "fallback" || !sel.Exists {
 			t.Errorf("SelectProfile = %+v", sel)
 		}
 		r, err := bare.Resolve("", Overrides{})
@@ -188,4 +188,45 @@ func TestSelectProfileAgreesWithResolve(t *testing.T) {
 			t.Errorf("Resolve used %q but SelectProfile reported %q", r.Profile, sel.Name)
 		}
 	})
+}
+
+// Naming the fallback "default" puts it one letter from the default_profile
+// setting, so the ordering between them has to be unambiguous: an explicit
+// statement outranks the convention.
+func TestExplicitDefaultProfileOutranksTheDefaultNamedProfile(t *testing.T) {
+	t.Setenv("PAPURIKA_PROFILE", "")
+	cfg := &Config{
+		DefaultProfile: "prod",
+		Profiles: map[string]Profile{
+			"prod":             {MasterURL: "https://prod:8000"},
+			DefaultProfileName: {MasterURL: "https://default:8000"},
+		},
+	}
+	sel := cfg.SelectProfile("")
+	if sel.Name != "prod" || sel.Source != "default_profile" {
+		t.Errorf("SelectProfile = %+v, want prod via default_profile", sel)
+	}
+	r, err := cfg.Resolve("", Overrides{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r.MasterURL != "https://prod:8000" {
+		t.Errorf("Resolve used %q, want the prod endpoint", r.MasterURL)
+	}
+}
+
+// A lone profile named "default" works with no config key pointing at it —
+// the ergonomic win the name is for.
+func TestLoneDefaultProfileNeedsNoDefaultProfileKey(t *testing.T) {
+	t.Setenv("PAPURIKA_PROFILE", "")
+	cfg := &Config{Profiles: map[string]Profile{
+		DefaultProfileName: {MasterURL: "https://only:8000", User: "me"},
+	}}
+	r, err := cfg.Resolve("", Overrides{})
+	if err != nil {
+		t.Fatalf("a lone [profiles.default] should resolve with no default_profile: %v", err)
+	}
+	if r.MasterURL != "https://only:8000" || r.Profile != DefaultProfileName {
+		t.Errorf("Resolve = %+v", r)
+	}
 }

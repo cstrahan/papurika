@@ -40,6 +40,21 @@ Add entries here as you go, under these headings (drop the ones you don't use):
 - **`config.Config.SelectProfile`** — reports which profile a given explicit
   choice resolves to and why. `Resolve` now uses it, so anything reporting the
   selection agrees with what actually runs.
+- **`config.DefaultProfileName`** — the profile name used when nothing else
+  selects one.
+
+### Changed
+
+- **The last-resort profile name is now `default`, was `main`** (breaking).
+  Follows the convention the AWS CLI established: a lone profile called
+  `default` just works, with no config key pointing at it. Note the ordering is
+  unchanged — an explicit `default_profile` still outranks it, so a config with
+  both `default_profile = "prod"` and a `[profiles.default]` section uses
+  `prod`.
+
+  *Migration:* rename `[profiles.main]` to `[profiles.default]`, or set
+  `default_profile = "main"` explicitly. Only affects configs that relied on
+  the fallback; anything naming its profile explicitly is unaffected.
 
 ## [0.3.0] - 2026-10-21
 

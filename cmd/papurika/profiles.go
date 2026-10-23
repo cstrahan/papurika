@@ -201,6 +201,9 @@ func renderProfiles(w io.Writer, doc profilesDoc, g glyphs) {
 	}
 
 	fmt.Fprintln(w)
+	if doc.DefaultProfile != "" {
+		fmt.Fprintf(w, "%s\n", g.dim("* = default_profile"))
+	}
 	fmt.Fprintf(w, "%s\n", g.dim(selectionLine(doc)))
 }
 
@@ -219,12 +222,12 @@ func secretLine(s secretSumry, g glyphs) string {
 func selectionLine(doc profilesDoc) string {
 	s := doc.Selected
 	why := map[string]string{
-		"explicit":        "from --profile",
-		"env":             "from PAPURIKA_PROFILE",
-		"default_profile": "from default_profile",
-		"fallback":        "no default_profile set, so falling back to \"main\"",
+		"explicit":        "selected by --profile",
+		"env":             "selected by PAPURIKA_PROFILE",
+		"default_profile": "selected by default_profile",
+		"fallback":        "nothing selects one, so using the conventional name",
 	}[s.Source]
-	line := fmt.Sprintf("* default · this invocation would use %q (%s)", s.Name, why)
+	line := fmt.Sprintf("→ this invocation would use %q (%s)", s.Name, why)
 	if !s.Exists {
 		line += " — which is not defined"
 	}

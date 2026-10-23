@@ -45,7 +45,7 @@ type Profile struct {
 //
 // The "why" matters because the fallback is easy to be surprised by: with no
 // explicit choice, no PAPURIKA_PROFILE and no default_profile, papurika looks
-// for a profile literally named "main", which may not exist.
+// for a profile named DefaultProfileName, which may not exist.
 type ProfileSelection struct {
 	Name   string
 	Source string // "explicit" | "env" | "default_profile" | "fallback"
@@ -64,7 +64,7 @@ func (c *Config) SelectProfile(explicit string) ProfileSelection {
 	case c.DefaultProfile != "":
 		sel = ProfileSelection{Name: c.DefaultProfile, Source: "default_profile"}
 	default:
-		sel = ProfileSelection{Name: "main", Source: "fallback"}
+		sel = ProfileSelection{Name: DefaultProfileName, Source: "fallback"}
 	}
 	_, sel.Exists = c.Profiles[sel.Name]
 	return sel
@@ -94,6 +94,16 @@ type Overrides struct {
 	Timeout   string
 	Password  string // explicit secret (e.g. --password / prompt); beats config
 }
+
+// DefaultProfileName is the profile used when nothing else selects one — no
+// --profile, no PAPURIKA_PROFILE, no default_profile setting. Named to match
+// the convention the AWS CLI established: a lone profile called "default" just
+// works, with no config key pointing at it.
+//
+// Note it is the *last* resort. An explicit default_profile outranks it, so a
+// config with both default_profile = "prod" and a [profiles.default] section
+// uses prod — the explicit statement wins over the convention.
+const DefaultProfileName = "default"
 
 const (
 	defaultEauth   = "pam"
