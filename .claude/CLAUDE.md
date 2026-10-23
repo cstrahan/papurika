@@ -33,7 +33,9 @@ Also valuable: `research/pepper_design_analysis.md` (what we're improving on) an
     and **`schema`**. Keep it small and stable. `internal/` and all unexported
     code are free to change. **`schema`** is the `papurika.dev/result/v1` output
     document — its JSON field set is pinned by a test, so adding a field is a
-    reviewable diff and renaming/removing one is a v2.
+    reviewable diff and renaming/removing one is a v2. It also generates the
+    JSON Schema behind `papurika schema`; the rendered copy is committed at
+    `schema/testdata/result-v1.schema.json` (`go test ./schema -update`).
   - **`envelope.go` and `transport.go` are unexported code in the *root* package,
     not `internal/`** — they produce the public `Result`/error types, so a separate
     package would create an import cycle. (See `design/library.md` §A.)

@@ -316,8 +316,30 @@ constant, the types, the status/outcome/error-kind vocabularies, and the
 `outcome` computation. It previously lived as unexported structs inside the CLI
 binary, which meant the "stable contract scripts consume" could not be imported
 by a Go consumer, had its version string duplicated per emit site, and was
-guarded by nothing but review. `schema_test.go` now pins the exact JSON field
-set, so adding a field is a visible diff and renaming or removing one fails.
+guarded by nothing but review. A hand-written descriptor
+(`v1Objects` in `jsonschema.go`) carries what reflection cannot know — what
+each property *means*, that `retcode` is null-when-unreported and that this
+differs from zero, that `return` is arbitrary salt output — and the tests
+cross-check it against the Go structs **in both directions**, so it cannot
+drift from the types it claims to describe. That is what makes it trustworthy
+enough to generate from.
+
+From it, `schema.JSONSchema()` renders a **JSON Schema (draft 2020-12)**,
+exposed as `papurika schema` so an installed binary describes its own output.
+The rendered schema is committed as `schema/testdata/result-v1.schema.json`
+and compared on every run (`go test ./schema -update` to regenerate), so any
+change to the contract — a property, a type, a description, a known
+vocabulary value — is a reviewable diff rather than something a reader has to
+reconstruct from a Go literal.
+
+**The schema is permissive exactly where v1 is permissive.** It leaves
+`additionalProperties` unconstrained and advertises known `status` / `outcome`
+/ `error.kind` values as `examples`, never `enum`. An `enum` would make a
+document from a newer papurika fail validation against an older copy of the
+schema — v1 gained the `pending` status *and* outcome in this very version, so
+this is not hypothetical — which is the exact breakage versioning exists to
+prevent. Go consumers that do want the closed, this-build set have the
+exported constants.
 
 `--output yaml` is the same types through `sigs.k8s.io/yaml`, so it is the same
 schema by construction. **NDJSON is not this schema** — it is a separate

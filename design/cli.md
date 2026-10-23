@@ -31,13 +31,30 @@ papurika kill   <jid>                     # saltutil.kill_job (Client.Kill)
 papurika events [--filter <tag>]          # tail the event bus (Client.Events)
 papurika key    list|accept|reject|delete|finger <match>
 papurika profiles                        # configured profiles + which one is selected (secrets redacted)
+papurika schema                          # JSON Schema for the result document (no network, no credentials)
 papurika server                          # netapi module, salt version, enabled clients for this endpoint
 papurika version                         # version, commit and build date (also --version)
 ```
 
-**`profiles` is the one command that touches no network and needs no
-credentials** — it reads the config file and nothing else, so it works on a box
-that has never authenticated. It answers "what can this install connect to, and
+**`profiles` and `schema` are the two commands that touch no network and need
+no credentials.** `schema` prints the JSON Schema (draft 2020-12) for
+`papurika.dev/result/v1`, generated from the same descriptor that pins the
+field set ([library.md](library.md) §B.2) — so an installed binary describes
+its own output, and what a consumer validates against is what that binary
+actually emits rather than whatever a doc says. `--output yaml` renders it as
+YAML; every other mode prints the schema itself, since a JSON Schema is
+already the artifact.
+
+The schema is deliberately **permissive in the two ways v1 is permissive**: it
+does not constrain `additionalProperties`, and it advertises the known values
+of `status`/`outcome`/`error.kind` as `examples` rather than `enum`. Both
+follow from the compatibility rule below — v1 may gain properties and
+vocabulary values — and an `enum` would make a document from a newer papurika
+fail validation against an older copy of the schema, which is precisely the
+breakage the versioning exists to prevent.
+
+The rest of this section describes `profiles`. It reads the config file and
+nothing else, so it works on a box that has never authenticated. It answers "what can this install connect to, and
 which endpoint am I about to hit", which is otherwise only discoverable by
 reading TOML by hand.
 

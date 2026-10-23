@@ -73,6 +73,26 @@ Add entries here as you go, under these headings (drop the ones you don't use):
 
   Note NDJSON is **not** this schema. It is a separate streaming shape that
   embeds `schema.Summary` in its trailing line and is versioned only by the CLI.
+- **`papurika schema`** — print the JSON Schema (draft 2020-12) describing
+  `papurika.dev/result/v1`. No network and no credentials, like `papurika
+  profiles`, so an installed binary describes its own output and a consumer
+  validates against what that binary actually emits. `--output yaml` renders
+  it as YAML.
+
+  It is generated from the same descriptor that pins the field set, which the
+  tests cross-check against the Go structs in both directions; the rendered
+  schema is committed at `schema/testdata/result-v1.schema.json` and compared
+  on every test run (`go test ./schema -update` to regenerate), so a contract
+  change is a reviewable diff. Verified: every output shape papurika produces
+  — exec, failing exec, highstate, runner, wheel, no-match, client- and
+  server-batched, grains, a pending job, and both error envelopes — validates
+  against it with a real Draft 2020-12 implementation.
+
+  The schema is permissive in the two ways v1 is: `additionalProperties` is
+  unconstrained, and the `status`/`outcome`/`error.kind` vocabularies appear
+  as `examples` rather than `enum`, so a document from a newer papurika still
+  validates against an older copy of the schema. (NDJSON is a different,
+  streaming shape and is not described.)
 - **`papurika jobs --limit N` and `--since DUR|TIME`** — bound a listing that is
   otherwise the master's *entire* job cache. Both are **opt-in**: the default
   is still to list everything, because a default cap would silently answer a

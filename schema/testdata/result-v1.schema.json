@@ -1,0 +1,226 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://papurika.dev/result/v1",
+  "title": "papurika result document",
+  "description": "The JSON document papurika's --output json|yaml emits. Within this version, properties may be ADDED and the open vocabularies may gain values, so a consumer must ignore what it does not recognize; nothing is renamed, removed, or redefined. --output ndjson is a different, streaming shape and is not described here.",
+  "$ref": "#/$defs/Result",
+  "$defs": {
+    "Command": {
+      "title": "Command",
+      "description": "One command's outcome. A minion-targeting command fills minions; a master-side (runner/wheel) command fills value instead and leaves minions absent. targeted == 0 distinguishes them.",
+      "type": "object",
+      "properties": {
+        "client": {
+          "description": "The salt-api client that ran it (local, local_async, local_batch, runner, wheel, ssh, ...).",
+          "type": "string"
+        },
+        "extra_jids": {
+          "description": "Remaining job ids when one command covers several jobs — a client-side-batched run, where each chunk is its own job merged into this view. Use summary.jids to get them all without special-casing.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "fun": {
+          "description": "The salt function that was run.",
+          "type": "string"
+        },
+        "index": {
+          "description": "Position of this command in the request.",
+          "type": "integer"
+        },
+        "jid": {
+          "description": "Job id, when the command produced one. Absent for synchronous clients, which salt-api does not give a jid.",
+          "type": "string"
+        },
+        "minions": {
+          "description": "Per-minion outcomes, sorted by id. Absent for a master-side command.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Minion"
+          }
+        },
+        "retcode": {
+          "description": "Command-level return code, when salt reported one.",
+          "type": "integer"
+        },
+        "targeted": {
+          "description": "Minion ids the job was dispatched to, as salt reported them.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "value": {
+          "description": "Return of a master-side (runner/wheel) command, verbatim. Any JSON."
+        }
+      },
+      "required": [
+        "index",
+        "client",
+        "fun"
+      ]
+    },
+    "Error": {
+      "title": "Error",
+      "description": "A request-level failure: authentication, transport, a malformed request, or the clock running out. Per-minion outcomes are never reported here — those are a minion status plus a retcode.",
+      "type": "object",
+      "properties": {
+        "kind": {
+          "description": "Failure class. Open vocabulary; \"error\" is the catch-all.",
+          "type": "string",
+          "examples": [
+            "timeout",
+            "interrupted",
+            "auth_failure",
+            "auth_denied",
+            "malformed",
+            "server_error",
+            "job_not_found",
+            "not_found",
+            "unsupported",
+            "transport",
+            "error"
+          ]
+        },
+        "message": {
+          "description": "Human-readable description. Not a stable string; branch on kind, or on the process exit code.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "message"
+      ]
+    },
+    "Minion": {
+      "title": "Minion",
+      "description": "One minion's outcome. A command that ran and failed is status \"responded\" with a non-zero retcode — failure is not a separate status, so \"the minion answered\" and \"the thing it ran worked\" stay separate questions.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Minion id.",
+          "type": "string"
+        },
+        "retcode": {
+          "description": "Return code, or null when the minion reported none. Null and 0 are different facts, which is why this property is always present rather than omitted.",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "return": {
+          "description": "The minion's return value, exactly as salt sent it. Any JSON — shape depends on the function; a state run returns a map of state id to result, or an array of error strings if the run never started."
+        },
+        "status": {
+          "description": "Whether and how the minion answered. Open vocabulary. \"noresponse\" is a claim (probed and found absent); \"pending\" is the absence of one (has not answered yet) — treating pending as failure reports a healthy in-flight job as broken.",
+          "type": "string",
+          "examples": [
+            "responded",
+            "noresponse",
+            "pending",
+            "error",
+            "notmatched"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "status",
+        "retcode",
+        "return"
+      ]
+    },
+    "Result": {
+      "title": "Result",
+      "description": "One papurika result document.",
+      "type": "object",
+      "properties": {
+        "commands": {
+          "description": "One entry per command in the request, in order. Never null; an empty document carries an empty array.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Command"
+          }
+        },
+        "error": {
+          "description": "Set when the request itself failed. Present both on a document that gathered nothing (summary.outcome is \"error\") and on a partial one that was cut short, where the outcome describes what was gathered and this says what stopped it.",
+          "$ref": "#/$defs/Error"
+        },
+        "schema": {
+          "description": "Schema identifier. Check this before trusting the rest of the document.",
+          "type": "string",
+          "const": "papurika.dev/result/v1"
+        },
+        "summary": {
+          "description": "Every minion of every command, folded into one set of counts.",
+          "$ref": "#/$defs/Summary"
+        }
+      },
+      "required": [
+        "schema",
+        "summary",
+        "commands"
+      ]
+    },
+    "Summary": {
+      "title": "Summary",
+      "description": "Aggregate counts across every command. targeted = returned + noresponse + pending; returned = succeeded + failed.",
+      "type": "object",
+      "properties": {
+        "failed": {
+          "description": "Minions that answered with a non-zero retcode or a per-minion error.",
+          "type": "integer"
+        },
+        "jids": {
+          "description": "Every job id the run touched, including each chunk of a batched run. These stay recoverable with `papurika watch \u003cjid\u003e` whatever else happened.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "noresponse": {
+          "description": "Minions probed with saltutil.find_job and found not running the job.",
+          "type": "integer"
+        },
+        "outcome": {
+          "description": "Overall outcome. Open vocabulary — branch on the values you handle and keep a default.",
+          "type": "string",
+          "examples": [
+            "ok",
+            "partial",
+            "failed",
+            "pending",
+            "nomatch",
+            "error"
+          ]
+        },
+        "pending": {
+          "description": "Minions with no terminal outcome yet. Distinct from noresponse: nothing has been concluded about them.",
+          "type": "integer"
+        },
+        "returned": {
+          "description": "Minions that answered, whether or not the command succeeded.",
+          "type": "integer"
+        },
+        "succeeded": {
+          "description": "Minions that answered with a zero or absent retcode.",
+          "type": "integer"
+        },
+        "targeted": {
+          "description": "Minions the command(s) were dispatched to. 0 for a master-side (runner/wheel) command.",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "outcome",
+        "targeted",
+        "returned",
+        "succeeded",
+        "failed",
+        "noresponse",
+        "pending"
+      ]
+    }
+  }
+}

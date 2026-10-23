@@ -30,40 +30,39 @@ func jsonKeys(t *testing.T, v any) []string {
 	return out
 }
 
-// The field set of papurika.dev/result/v1, pinned.
+// The descriptor in jsonschema.go claims to describe the v1 types. This is
+// what stops it from being a lie: every struct field must have a descriptor
+// entry with the identical json tag, in the same order, and vice versa.
 //
-// Within v1, fields may be ADDED — update the expectation below and note it in
-// the changelog. A field that is RENAMED, REMOVED, or has its omitempty
-// changed breaks every consumer silently; that is a v2, and this test is here
-// to make sure such a change is a deliberate one rather than a side effect.
+// That cross-check is the whole reason the descriptor can be trusted to
+// generate a JSON Schema. Adding a struct field without describing it fails
+// here; so does describing a field that does not exist.
 func TestV1FieldSetIsPinned(t *testing.T) {
-	cases := []struct {
-		name string
-		typ  any
-		want []string
-	}{
-		{"Result", Result{}, []string{
-			"schema", "summary", "commands", "error,omitempty",
-		}},
-		{"Summary", Summary{}, []string{
-			"outcome", "jids,omitempty", "targeted", "returned",
-			"succeeded", "failed", "noresponse", "pending",
-		}},
-		{"Command", Command{}, []string{
-			"index", "client", "fun", "jid,omitempty", "extra_jids,omitempty",
-			"targeted,omitempty", "minions,omitempty", "value,omitempty",
-			"retcode,omitempty",
-		}},
-		{"Minion", Minion{}, []string{
-			"id", "status", "retcode", "return",
-		}},
-		{"Error", Error{}, []string{"kind", "message"}},
+	for _, o := range v1Objects {
+		got := jsonKeys(t, o.goType)
+		want := make([]string, len(o.fields))
+		for i, f := range o.fields {
+			want[i] = f.tag
+		}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("%s: struct fields and schema descriptor disagree:\n struct     %q\n descriptor %q\n"+
+				"Adding a property is fine in v1 — describe it in v1Objects and note it in the changelog. "+
+				"Renaming or removing one is a v2.", o.name, got, want)
+		}
 	}
-	for _, c := range cases {
-		if got := jsonKeys(t, c.typ); !reflect.DeepEqual(got, c.want) {
-			t.Errorf("%s field set changed:\n got  %q\n want %q\n"+
-				"Adding a field is fine in v1 — update this list and the changelog. "+
-				"Renaming or removing one is a v2.", c.name, got, c.want)
+}
+
+// Every exported type in the package must be described. A new one that nobody
+// adds to v1Objects would be invisible in the JSON Schema while being very
+// visible in the output.
+func TestEveryV1TypeIsDescribed(t *testing.T) {
+	described := map[string]bool{}
+	for _, o := range v1Objects {
+		described[reflect.TypeOf(o.goType).Name()] = true
+	}
+	for _, want := range []string{"Result", "Summary", "Command", "Minion", "Error"} {
+		if !described[want] {
+			t.Errorf("type %s has no entry in v1Objects, so it is missing from the JSON Schema", want)
 		}
 	}
 }

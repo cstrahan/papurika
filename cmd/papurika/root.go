@@ -74,6 +74,7 @@ func newRootCmd() *cobra.Command {
 		newEventsCmd(),
 		newKeyCmd(),
 		newProfilesCmd(),
+		newSchemaCmd(),
 		newServerCmd(),
 		newVersionCmd(),
 		// low-level (one client = one subcommand)
