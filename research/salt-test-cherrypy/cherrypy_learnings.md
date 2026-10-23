@@ -862,6 +862,32 @@ encoding. Client-supplied jids (above) are the real remedy.
 
 ---
 
+## `Target` is `string | []string` — `out/04d_runner_jobs_list_jobs.json`
+
+In every job-metadata shape (`GET /jobs`, `GET /jobs/<jid>`, `runner
+jobs.list_jobs`, `runner jobs.active`) the **`Target` field is not consistently
+typed**: a string for most tgt_types, a **JSON array** for `tgt_type: list`.
+Both can appear in one response:
+
+```json
+"20260626233733357635": {"Function":"cmd.run","Target":["builtin.minion"],"Target-type":"list", …},
+"20260626233740111111": {"Function":"test.ping","Target":"*","Target-type":"glob", …}
+```
+
+A decoder declaring `Target string` fails the **whole response**, not just that
+entry. This bites harder than it looks, because **a client creates
+list-targeted jobs itself**: papurika's `saltutil.find_job` liveness probe uses
+`tgt_type: list`, so any master it has run a job against accumulates entries
+that poison the listing — and `/jobs/<jid>` for such a job fails too, which is
+the path `watch` and the gather's reconciliation depend on. Verified live on
+3008.3; captured on 3006 and 3008 (`out/04d`, `out-3006/02d`, `out-3006/04d`).
+
+Also in the same family: `runner jobs.active` reports its running set as a
+**list of single-key maps**, not a map —
+`"Running": [{"builtin.minion2": 19816}, {"builtin.minion": 19815}]`.
+
+---
+
 ## Errors & status codes observed
 
 - `POST /minions` → **202 Accepted** (everything else → 200).

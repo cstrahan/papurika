@@ -25,7 +25,7 @@ papurika state  <tgt> <sls|highstate>   # state.apply / state.highstate wrapper
 papurika ping   <tgt>                    # test.ping + up/down classification (Client.Ping)
 papurika submit <tgt> <fun> [args…]     # fire-and-forget → prints jid(s), exits 0 (Client.Submit)
 papurika watch  <jid>…                   # block until jid(s) reach target state, then render (Client.Watch)
-papurika jobs   [--active|--list]        # job listing (runner jobs.list_jobs / jobs.active)
+papurika jobs   [--active]               # job cache listing; --active = running now (jobs.active)
 papurika job    <jid>                     # one job's full normalized return (Client.Job)
 papurika kill   <jid>                     # saltutil.kill_job (Client.Kill)
 papurika events [--filter <tag>]          # tail the event bus (Client.Events)

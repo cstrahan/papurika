@@ -1115,3 +1115,101 @@ func exitCode(res *papurika.Result, err error, policy failPolicy, allowNoRespons
 		return exitOK
 	}
 }
+
+// jobRow is one line of a job listing, flattened so the cached and active
+// listings render through the same path.
+type jobRow struct {
+	JID       string         `json:"jid"`
+	Function  string         `json:"fun,omitempty"`
+	Target    string         `json:"target,omitempty"`
+	User      string         `json:"user,omitempty"`
+	StartTime string         `json:"start_time,omitempty"`
+	Running   map[string]int `json:"running,omitempty"`  // active listing only
+	Returned  []string       `json:"returned,omitempty"` // active listing only
+}
+
+func cachedJobRows(jobs map[string]papurika.JobMeta) []jobRow {
+	rows := make([]jobRow, 0, len(jobs))
+	for jid, m := range jobs {
+		rows = append(rows, jobRow{
+			JID: jid, Function: m.Function, Target: m.Target,
+			User: m.User, StartTime: m.StartTime,
+		})
+	}
+	return sortJobRows(rows)
+}
+
+func activeJobRows(jobs map[string]papurika.ActiveJob) []jobRow {
+	rows := make([]jobRow, 0, len(jobs))
+	for jid, a := range jobs {
+		rows = append(rows, jobRow{
+			JID: jid, Function: a.Function, Target: a.Target,
+			User: a.User, StartTime: a.StartTime,
+			Running: a.Running, Returned: a.Returned,
+		})
+	}
+	return sortJobRows(rows)
+}
+
+// sortJobRows orders newest first. A jid is a UTC timestamp, so sorting the
+// string descending is chronological.
+func sortJobRows(rows []jobRow) []jobRow {
+	sort.Slice(rows, func(i, j int) bool { return rows[i].JID > rows[j].JID })
+	return rows
+}
+
+// writeJobListing renders a job listing in the selected output mode. Job
+// listings are not per-minion Results, so they do not go through render().
+func writeJobListing(w io.Writer, rows []jobRow) error {
+	switch resolveOutput() {
+	case outputYAML:
+		b, err := json.Marshal(rows)
+		if err != nil {
+			return err
+		}
+		y, err := sigsyaml.JSONToYAML(b)
+		if err != nil {
+			return err
+		}
+		_, err = w.Write(y)
+		return err
+	case outputPretty:
+		renderJobListing(w, rows, glyphs{color: useColor()})
+		return nil
+	default: // json, ndjson, raw
+		enc := json.NewEncoder(w)
+		enc.SetIndent("", "  ")
+		return enc.Encode(rows)
+	}
+}
+
+func renderJobListing(w io.Writer, rows []jobRow, g glyphs) {
+	if len(rows) == 0 {
+		fmt.Fprintf(w, "%s\n", g.dim("no jobs"))
+		return
+	}
+	for _, r := range rows {
+		fmt.Fprintf(w, "%s  %s\n", r.JID, r.Function)
+		detail := fmt.Sprintf("target=%s user=%s", orDash(r.Target), orDash(r.User))
+		if r.StartTime != "" {
+			detail += "  " + r.StartTime
+		}
+		fmt.Fprintf(w, "  %s\n", g.dim(detail))
+		if len(r.Running) > 0 {
+			ids := make([]string, 0, len(r.Running))
+			for id := range r.Running {
+				ids = append(ids, id)
+			}
+			sort.Strings(ids)
+			parts := make([]string, len(ids))
+			for i, id := range ids {
+				parts[i] = fmt.Sprintf("%s(pid %d)", id, r.Running[id])
+			}
+			fmt.Fprintf(w, "  %s %s\n", g.cyan("running:"), strings.Join(parts, " "))
+		}
+		if len(r.Returned) > 0 {
+			fmt.Fprintf(w, "  %s %s\n", g.dim("returned:"), strings.Join(r.Returned, " "))
+		}
+	}
+	fmt.Fprintf(w, "\n%s\n", g.dim(plural(len(rows), "job")))
+}

@@ -287,25 +287,43 @@ func newJobCmd() *cobra.Command {
 }
 
 func newJobsCmd() *cobra.Command {
-	return &cobra.Command{
+	var active bool
+	c := &cobra.Command{
 		Use:   "jobs",
-		Short: "List jobs from the master job cache",
-		Args:  cobra.NoArgs,
+		Short: "List jobs from the master job cache (--active: only those running now)",
+		Long: "List jobs the master has recorded (runner jobs.list_jobs).\n\n" +
+			"With --active, list only jobs executing right now (runner jobs.active), " +
+			"including which minions are still working and under what pid. The job " +
+			"cache holds finished jobs too, so \"what is running\" is only answerable " +
+			"with --active.",
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cl, err := buildClient()
 			if err != nil {
 				return err
 			}
+			if active {
+				jobs, jerr := cl.ActiveJobs(cmd.Context())
+				if jerr != nil {
+					return emit(nil, jerr)
+				}
+				if err := writeJobListing(cmd.OutOrStdout(), activeJobRows(jobs)); err != nil {
+					return err
+				}
+				return &exitErr{code: exitOK}
+			}
 			jobs, jerr := cl.Jobs(cmd.Context())
 			if jerr != nil {
 				return emit(nil, jerr)
 			}
-			enc := json.NewEncoder(os.Stdout)
-			enc.SetIndent("", "  ")
-			_ = enc.Encode(jobs)
+			if err := writeJobListing(cmd.OutOrStdout(), cachedJobRows(jobs)); err != nil {
+				return err
+			}
 			return &exitErr{code: exitOK}
 		},
 	}
+	c.Flags().BoolVar(&active, "active", false, "only jobs running right now (runner jobs.active)")
+	return c
 }
 
 func newKillCmd() *cobra.Command {

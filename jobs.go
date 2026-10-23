@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 // JobMeta is the metadata salt records for a job.
@@ -46,12 +47,12 @@ func (c *Client) Jobs(ctx context.Context) (map[string]JobMeta, error) {
 	}
 	var env struct {
 		Return []map[string]struct {
-			Function  string `json:"Function"`
-			Arguments []any  `json:"Arguments"`
-			Target    string `json:"Target"`
-			TgtType   string `json:"Target-type"`
-			User      string `json:"User"`
-			StartTime string `json:"StartTime"`
+			Function  string     `json:"Function"`
+			Arguments []any      `json:"Arguments"`
+			Target    flexTarget `json:"Target"`
+			TgtType   string     `json:"Target-type"`
+			User      string     `json:"User"`
+			StartTime string     `json:"StartTime"`
 		} `json:"return"`
 	}
 	if err := json.Unmarshal(res.body, &env); err != nil {
@@ -62,7 +63,7 @@ func (c *Client) Jobs(ctx context.Context) (map[string]JobMeta, error) {
 		for jid, m := range env.Return[0] {
 			out[jid] = JobMeta{
 				JID: jid, Function: m.Function, Arguments: m.Arguments,
-				Target: m.Target, TgtType: m.TgtType, User: m.User, StartTime: m.StartTime,
+				Target: m.Target.String(), TgtType: m.TgtType, User: m.User, StartTime: m.StartTime,
 			}
 		}
 	}
@@ -76,7 +77,7 @@ func decodeJob(jid string, body []byte) (*JobResult, error) {
 			JID       string          `json:"jid"`
 			Function  string          `json:"Function"`
 			Arguments []any           `json:"Arguments"`
-			Target    string          `json:"Target"`
+			Target    flexTarget      `json:"Target"`
 			TgtType   string          `json:"Target-type"`
 			User      string          `json:"User"`
 			StartTime string          `json:"StartTime"`
@@ -105,7 +106,7 @@ func decodeJob(jid string, body []byte) (*JobResult, error) {
 	jr := &JobResult{
 		Meta: JobMeta{
 			JID: pickStr(info.JID, jid), Function: info.Function, Arguments: info.Arguments,
-			Target: info.Target, TgtType: info.TgtType, User: info.User,
+			Target: info.Target.String(), TgtType: info.TgtType, User: info.User,
 			StartTime: info.StartTime, Minions: info.Minions,
 		},
 		Result: CommandResult{
@@ -169,4 +170,101 @@ func pickStr(a, b string) string {
 		return a
 	}
 	return b
+}
+
+// flexTarget decodes salt's Target field, which is NOT consistently typed: a
+// string for most tgt_types ("*", "master") but a JSON list for
+// tgt_type=list (["m1","m2"]). Decoding it as a string fails the whole job,
+// and papurika creates list-targeted jobs itself — every saltutil.find_job
+// liveness probe is one — so a plain `string` here breaks the job cache
+// listing and /jobs/<jid> for anyone who has ever run a job.
+//
+// It never returns an error: one oddly-shaped field should not take down a
+// listing, so an unrecognized shape degrades to its raw text.
+type flexTarget struct{ s string }
+
+func (t *flexTarget) UnmarshalJSON(b []byte) error {
+	var one string
+	if json.Unmarshal(b, &one) == nil {
+		t.s = one
+		return nil
+	}
+	var many []string
+	if json.Unmarshal(b, &many) == nil {
+		t.s = strings.Join(many, ",")
+		return nil
+	}
+	t.s = strings.Trim(string(b), `"`)
+	return nil
+}
+
+func (t flexTarget) String() string { return t.s }
+
+// ActiveJob is one currently-running job, as reported by the jobs.active
+// runner. It is the same metadata GET /jobs carries, plus who is still working
+// on it.
+type ActiveJob struct {
+	JobMeta
+	// Running maps minion id to the pid executing the job there.
+	Running map[string]int `json:"running"`
+	// Returned lists minions that have already answered.
+	Returned []string `json:"returned,omitempty"`
+}
+
+// ActiveJobs lists jobs currently executing somewhere on the fleet, keyed by
+// jid (runner jobs.active).
+//
+// Distinct from Jobs, which lists the master's job *cache* — everything it has
+// recorded, finished or not. "What is running right now" is only answerable
+// here.
+//
+// Salt reports the running set as a list of single-key maps,
+// [{"m2": 19816}, {"m1": 19815}], which this folds into one map so callers
+// never walk that shape.
+func (c *Client) ActiveJobs(ctx context.Context) (map[string]ActiveJob, error) {
+	res, err := c.Exec(ctx, Runner("jobs.active"))
+	if err != nil {
+		return nil, err
+	}
+	if len(res.Commands) == 0 {
+		return map[string]ActiveJob{}, nil
+	}
+	raw := res.Commands[0].Value.Raw()
+	if len(raw) == 0 || string(raw) == "null" {
+		return map[string]ActiveJob{}, nil
+	}
+
+	var wire map[string]struct {
+		Function  string           `json:"Function"`
+		Arguments []any            `json:"Arguments"`
+		Target    flexTarget       `json:"Target"`
+		TgtType   string           `json:"Target-type"`
+		User      string           `json:"User"`
+		StartTime string           `json:"StartTime"`
+		Running   []map[string]int `json:"Running"`
+		Returned  []string         `json:"Returned"`
+	}
+	if err := json.Unmarshal(raw, &wire); err != nil {
+		return nil, apiError(ErrMalformed, http.StatusOK, "application/json", string(raw), ModuleUnknown)
+	}
+
+	out := make(map[string]ActiveJob, len(wire))
+	for jid, w := range wire {
+		running := map[string]int{}
+		for _, entry := range w.Running {
+			for minion, pid := range entry {
+				running[minion] = pid
+			}
+		}
+		out[jid] = ActiveJob{
+			JobMeta: JobMeta{
+				JID: jid, Function: w.Function, Arguments: w.Arguments,
+				Target: w.Target.String(), TgtType: w.TgtType, User: w.User,
+				StartTime: w.StartTime,
+			},
+			Running:  running,
+			Returned: w.Returned,
+		}
+	}
+	return out, nil
 }

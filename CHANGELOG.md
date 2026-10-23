@@ -25,6 +25,30 @@ Add entries here as you go, under these headings (drop the ones you don't use):
 ### Security    — vulnerability fixes
 -->
 
+### Added
+
+- **`papurika jobs --active`** — list only jobs running right now (runner
+  `jobs.active`), with the minions still working and their pids. The job cache
+  that plain `jobs` lists holds finished jobs too, so "what is running" was not
+  answerable from it. The design documented this flag; it was never built.
+- **`papurika.Client.ActiveJobs`** — the library equivalent, folding salt's
+  `Running: [{"m2": 19816}, {"m1": 19815}]` list-of-single-key-maps into a
+  `map[string]int` of minion to pid.
+
+### Fixed
+
+- **`papurika jobs` and `papurika job <jid>` failed with "malformed request" on
+  any master that had ever run a list-targeted job.** Salt types the `Target`
+  field as a string for most tgt_types but as a **list** for `tgt_type: list`,
+  and papurika decoded it as a string, failing the entire response. papurika
+  creates such jobs itself — every `saltutil.find_job` liveness probe is
+  list-targeted — so this degraded on its own after the first `run`. It also
+  broke `/jobs/<jid>`, which `watch` and the gather's reconciliation depend on,
+  silently falling back to events only. An unrecognized `Target` shape now
+  degrades to its raw text rather than failing the listing.
+- **`papurika jobs` ignored `--output`**, always printing JSON. It now renders
+  in the selected mode like every other command.
+
 ## [0.4.0] - 2026-10-23
 
 Adds `papurika profiles`, so "what can this install connect to, and which
