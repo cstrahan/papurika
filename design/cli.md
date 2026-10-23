@@ -30,8 +30,33 @@ papurika job    <jid>                     # one job's full normalized return (Cl
 papurika kill   <jid>                     # saltutil.kill_job (Client.Kill)
 papurika events [--filter <tag>]          # tail the event bus (Client.Events)
 papurika key    list|accept|reject|delete|finger <match>
+papurika profiles                        # configured profiles + which one is selected (secrets redacted)
 papurika version                         # version, commit and build date (also --version)
 ```
+
+**`profiles` is the one command that touches no network and needs no
+credentials** — it reads the config file and nothing else, so it works on a box
+that has never authenticated. It answers "what can this install connect to, and
+which endpoint am I about to hit", which is otherwise only discoverable by
+reading TOML by hand.
+
+It prints **no password value, ever** — not from `password` (reported as
+present-and-plaintext, value withheld) and not by resolving `password_command`
+(the argv is shown, since naming where a secret lives is not the secret, and
+hiding it would make the command useless for debugging a failing helper). That
+makes the output safe to log, paste into a ticket, or pipe to automation.
+
+Two things it surfaces that are otherwise easy to get wrong:
+
+- **Which profile this invocation would use, and why** — `--profile`, then
+  `PAPURIKA_PROFILE`, then `default_profile`, then a fallback to a profile
+  literally named `main`. That last case is the surprising one, so it says so,
+  and flags when the selected profile is not defined at all.
+- **A plaintext password in the config file**, warned on stderr. The JSON form
+  carries the same fact as `secret.plaintext`, so stdout stays pure data.
+
+Machine-readable under `--output json|yaml`, schema `papurika.dev/profiles/v1`,
+profiles sorted by name so the ordering is stable.
 
 ### Low-level (to-the-metal — one client = one subcommand)
 

@@ -25,6 +25,22 @@ Add entries here as you go, under these headings (drop the ones you don't use):
 ### Security    — vulnerability fixes
 -->
 
+### Added
+
+- **`papurika profiles`** — lists the configured profiles, which one the current
+  invocation would use (and whether that came from `--profile`,
+  `PAPURIKA_PROFILE`, `default_profile`, or the fallback to `main`), and where
+  each profile's password comes from. **No password value is ever printed**, so
+  the output is safe to log or pipe; a plaintext password in the config file is
+  reported as present and warned about on stderr, never shown. Reads only the
+  config file — no network, no credentials — so it works before any login.
+  Machine-readable under `--output json|yaml` as `papurika.dev/profiles/v1`.
+- **`config.Config.SourcePath`** — the file a `Config` was loaded from, so
+  callers can report which config is in effect.
+- **`config.Config.SelectProfile`** — reports which profile a given explicit
+  choice resolves to and why. `Resolve` now uses it, so anything reporting the
+  selection agrees with what actually runs.
+
 ## [0.3.0] - 2026-10-21
 
 Makes a lost submit recoverable rather than ambiguous, and stops `/events`

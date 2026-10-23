@@ -80,6 +80,10 @@ papurika runner manage.up
 - Ctrl-C prints the in-flight jid(s) + a `papurika watch <jid>` recovery hint and
   renders whatever was gathered.
 
+`papurika profiles` lists what's configured, which profile the next command
+would use, and where each password comes from — without printing any password
+value, so it's safe to log or pipe (`--output json` for automation).
+
 ### Config (`$XDG_CONFIG_HOME/papurika/config.toml`)
 
 ```toml

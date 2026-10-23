@@ -131,3 +131,61 @@ func TestLoadMissingFileOK(t *testing.T) {
 		t.Errorf("expected empty config")
 	}
 }
+
+// SelectProfile exists so that anything reporting "which profile will be used"
+// agrees with what Resolve actually uses. If these two ever drift, `papurika
+// profiles` reports one profile while commands run against another.
+func TestSelectProfileAgreesWithResolve(t *testing.T) {
+	cfg := &Config{
+		DefaultProfile: "prod",
+		Profiles: map[string]Profile{
+			"prod": {MasterURL: "https://prod:8000"},
+			"lab":  {MasterURL: "https://lab:8000"},
+			"main": {MasterURL: "https://main:8000"},
+		},
+	}
+	for _, tc := range []struct {
+		name     string
+		explicit string
+		env      string
+		want     string
+		source   string
+	}{
+		{"explicit wins", "lab", "prod", "lab", "explicit"},
+		{"env beats default_profile", "", "lab", "lab", "env"},
+		{"default_profile when no env", "", "", "prod", "default_profile"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("PAPURIKA_PROFILE", tc.env)
+
+			sel := cfg.SelectProfile(tc.explicit)
+			if sel.Name != tc.want || sel.Source != tc.source {
+				t.Errorf("SelectProfile = %+v, want %s via %s", sel, tc.want, tc.source)
+			}
+			r, err := cfg.Resolve(tc.explicit, Overrides{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if r.Profile != sel.Name {
+				t.Errorf("Resolve used %q but SelectProfile reported %q", r.Profile, sel.Name)
+			}
+		})
+	}
+
+	// With nothing to go on, both land on "main".
+	t.Run("fallback", func(t *testing.T) {
+		t.Setenv("PAPURIKA_PROFILE", "")
+		bare := &Config{Profiles: map[string]Profile{"main": {MasterURL: "https://m:8000"}}}
+		sel := bare.SelectProfile("")
+		if sel.Name != "main" || sel.Source != "fallback" || !sel.Exists {
+			t.Errorf("SelectProfile = %+v", sel)
+		}
+		r, err := bare.Resolve("", Overrides{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if r.Profile != sel.Name {
+			t.Errorf("Resolve used %q but SelectProfile reported %q", r.Profile, sel.Name)
+		}
+	})
+}

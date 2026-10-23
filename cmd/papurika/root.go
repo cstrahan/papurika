@@ -72,6 +72,7 @@ func newRootCmd() *cobra.Command {
 		newKillCmd(),
 		newEventsCmd(),
 		newKeyCmd(),
+		newProfilesCmd(),
 		newVersionCmd(),
 		// low-level (one client = one subcommand)
 		newClientCmd("local <tgt> <fun> [args...]", "client=local (synchronous)", papurika.ClientLocal, false),

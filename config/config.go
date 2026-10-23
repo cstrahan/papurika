@@ -17,6 +17,11 @@ import (
 type Config struct {
 	DefaultProfile string             `toml:"default_profile"`
 	Profiles       map[string]Profile `toml:"profiles"`
+
+	// SourcePath is the file this Config was read from, empty when no config
+	// file was found (which is not an error — a fully flag/env-driven
+	// invocation is valid). Set by Load; never read from the file itself.
+	SourcePath string `toml:"-"`
 }
 
 // Profile is one named salt-api endpoint and its credentials.
@@ -34,6 +39,35 @@ type Profile struct {
 	VerifySSL *bool  `toml:"verify_ssl"` // nil => default true
 	CACert    string `toml:"ca_cert"`
 	Timeout   string `toml:"timeout"` // e.g. "120s"; client wall-clock budget
+}
+
+// ProfileSelection reports which profile an invocation will use, and why.
+//
+// The "why" matters because the fallback is easy to be surprised by: with no
+// explicit choice, no PAPURIKA_PROFILE and no default_profile, papurika looks
+// for a profile literally named "main", which may not exist.
+type ProfileSelection struct {
+	Name   string
+	Source string // "explicit" | "env" | "default_profile" | "fallback"
+	Exists bool   // whether a profile of that name is defined in the file
+}
+
+// SelectProfile reports which profile `explicit` (typically the -p flag)
+// resolves to. Resolve uses this, so anything reporting the selection agrees
+// with what actually gets used.
+func (c *Config) SelectProfile(explicit string) ProfileSelection {
+	sel := ProfileSelection{Name: explicit, Source: "explicit"}
+	switch {
+	case explicit != "":
+	case os.Getenv("PAPURIKA_PROFILE") != "":
+		sel = ProfileSelection{Name: os.Getenv("PAPURIKA_PROFILE"), Source: "env"}
+	case c.DefaultProfile != "":
+		sel = ProfileSelection{Name: c.DefaultProfile, Source: "default_profile"}
+	default:
+		sel = ProfileSelection{Name: "main", Source: "fallback"}
+	}
+	_, sel.Exists = c.Profiles[sel.Name]
+	return sel
 }
 
 // Resolved is a fully-resolved profile after applying precedence
@@ -88,6 +122,7 @@ func Load(paths ...string) (*Config, error) {
 		if err := toml.Unmarshal(b, &c); err != nil {
 			return nil, fmt.Errorf("config: parsing %s: %w", p, err)
 		}
+		c.SourcePath = p
 		return &c, nil
 	}
 	return &Config{}, nil
@@ -96,9 +131,7 @@ func Load(paths ...string) (*Config, error) {
 // Resolve produces a fully-resolved profile applying precedence
 // flags(ov) > env(PAPURIKA_*) > file > defaults.
 func (c *Config) Resolve(profile string, ov Overrides) (*Resolved, error) {
-	if profile == "" {
-		profile = firstNonEmpty(os.Getenv("PAPURIKA_PROFILE"), c.DefaultProfile, "main")
-	}
+	profile = c.SelectProfile(profile).Name
 	p := c.Profiles[profile] // zero Profile if absent — that's fine if flags/env supply everything
 
 	r := &Resolved{
